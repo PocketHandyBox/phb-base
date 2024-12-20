@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #####################################################################################
-# mklive-bookworm 'MakeLive' for Debian Bookworm (Debian 12)
+# build 01-filesystem.squashfs for Debian Bookworm (Debian 12)
 #####################################################################################
 # fredx181 2017-07-31, 'MakeLive' for Stretch (Debian 9), creates a minimal live system
 # started as above, mklive-stretch, followed by mklive-buster, now:
@@ -21,7 +21,7 @@
 
 # 2024-09-07, added Lxqt basic and Lxqt extended to the DE options
 
-# 2024-12-20, fredx181, modified for mklive-bookworm xfce-gumanzoy as a concept
+# 2024-12-20, fredx181, modified for xfce-gumanzoy as a concept
 # see comments: "● fredx181"
 #####################################################################################
 
@@ -47,7 +47,6 @@ fi
 
 if [ "`whoami`" != "root" ]; then
 echo "This script should be run as root"
-echo "Please run again, e.g. 'sudo ./mklive-bookworm -gui', exiting now..."
 sleep 3
 exit
 fi
@@ -110,7 +109,7 @@ echo -e "Remove cpp=$REM_AUTO_INST" >> build_setup.txt
 # Info architecture for build config
 [ "$ARCH" = "i386" ] && INFO_i386="Config generated for $ARCH, FORCE32 is set to TRUE (this way it works also on 64 bit)"
 ##### Generate config from build #####
-echo '# Configuration for mklive-bookworm, generated for architecture: '$ARCH', modify as desired
+echo '# Configuration generated for architecture: '$ARCH', modify as desired
 # NOTE: Leave every commented (#) line commented as it is
 ### Start configuration
 DE_CONFIG="'"$DE_CONFIG"'"
@@ -172,11 +171,11 @@ export DE_CONFIG=Xfce4
 ########### Options (configuration)  ###########
 # ● fredx181, changed to only one arg needed (conf file)
 
-helptext="mklive-bookworm-gumanzoy\n
+helptext="build 01-filesystem.squashfs for Debian Bookworm (Debian 12)\n
 usage: $(basename $0) <config_file>\n
 	-help show this help\n
 	Example using custom config file: \n
-	mklive-bookworm-gumanzoy mycustom.conf \n"
+	build mycustom.conf \n"
 
 params=$@
 	
@@ -251,7 +250,7 @@ echo -e "\e[0;36mUsing standard configuration defined on top of script\033[0m"
 fi
 echo -e "\e[0;33mBuild setup info can be found in: $PWD/bookworm/build_setup.txt\033[0m"
 echo -e "\e[0;32mIf you'd like a log from the output, run again e.g:\033[0m"
-echo -e "\e[0;33m$0 -gui 2>&1 | tee mklive-bookworm.log\033[0m"
+echo -e "\e[0;33m$0 -gui 2>&1 | tee build.log\033[0m"
 echo -e "\e[0;36mFirst setting up debootstrap, this will take a few minutes\nAfter that you will be asked to set the password for 'root'\033[0m"
 echo
 
@@ -818,7 +817,7 @@ umount -l chroot/sys
 
 cd "$LAUNCHDIR/bookworm/"
 
-rm -f isodata/live/01-filesystem.squashfs # just in case it exists remove first
+rm -f 01-filesystem.squashfs 2> /dev/null # just in case it exists remove first
 
 # copy build_setup.txt to chroot/root
 cp -a build_setup.txt chroot/root/
@@ -861,7 +860,7 @@ fi
 # Download extra squashfs modules if DE config is set
 echo -e "\e[0;36mIf configured, download and extract extra .squashfs modules to squash...\033[0m"
 mkdir squash
-#[ "$DE_CONFIG" = "Openbox" ] && wget --no-check-certificate -P isodata/live -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/openbox/ 2> /dev/null 
+#[ "$DE_CONFIG" = "Openbox" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/openbox/ 2> /dev/null 
 [ "$DE_CONFIG" = "Xfce4" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/xfce4/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash 
 [ "$DE_CONFIG" = "Jwm" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/jwm/ 2> /dev/null && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
 [ "$DE_CONFIG" = "Mate" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/mate/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
@@ -880,65 +879,67 @@ fi
 update-icon-caches chroot/usr/share/icons/hicolor/
 
 # Allow the user to makes changes in chroot just before creating filesystem.squashfs 
-echo "At this point you may want to add/edit files in chroot folder"
-echo "Also you can add .squashfs modules in the isodata/live folder, to be included in the ISO"
-read -sp "Press ENTER to continue . . . "
-echo
+#echo "At this point you may want to add/edit files in chroot folder"
+#echo "Also you can add .squashfs modules in the isodata/live folder, to be included in the ISO"
+#read -sp "Press ENTER to continue . . . "
+#echo
 
 # ● fredx181, only create 01-filesystem.squashfs
 #echo -e "\e[0;33mNow we will create compressed kernel: k-$kernel.squashfs and filesystem: '01-filesystem.squashfs'\nPlease enter your choice, xz compression will give smaller size than gzip,\033[0m"
 echo -e "\e[0;33mNow we will create: filesystem: '01-filesystem.squashfs'\nPlease enter your choice, xz compression will give smaller size than gzip,\033[0m"
-echo -e "\e[0;33mbut xz takes much longer time to compress\033[0m"
-read -p "Type gzip or xz : " choice
+#echo -e "\e[0;33mbut xz takes much longer time to compress\033[0m"
+#read -p "Type gzip or xz : " choice
 
 
 # ● fredx181, create only 01-filesystem.squashfs, kernel squashfs creating is commented out
-case "$choice" in 
-  gzip)
+#case "$choice" in 
+#  gzip)
 #echo -e "\e[0;36mCreating kernel .squashfs isodata/live/k-$kernel.squashfs . . .\033[0m"
 #mksquashfs $kernel isodata/live/k-$kernel.squashfs
-echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
-mksquashfs chroot isodata/live/01-filesystem.squashfs
-;;
-  xz)
+#echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
+#mksquashfs chroot isodata/live/01-filesystem.squashfs
+#;;
+#  xz)
 #echo -e "\e[0;36mCreating kernel .squashfs isodata/live/k-$kernel.squashfs . . .\033[0m"
 #mksquashfs $kernel isodata/live/k-$kernel.squashfs -comp xz -b 512k -Xbcj x86
-echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
-mksquashfs chroot isodata/live/01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
-;;
-*)
-echo -e "\e[0;31mNot a valid choice, please try again, type: gzip or xz \033[0m"
-sleep 1
-TRYAGAIN=yes
-;;
-esac
-
-if [ "$TRYAGAIN" = "yes" ]; then
-### Second chance in case having made a typo
-read -p "Type gzip or xz : " choice
-
-case "$choice" in 
-  gzip)
+#echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
+#mksquashfs chroot isodata/live/01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
+#;;
+#*)
+#echo -e "\e[0;31mNot a valid choice, please try again, type: gzip or xz \033[0m"
+#sleep 1
+#TRYAGAIN=yes
+#;;
+#esac
+#
+#if [ "$TRYAGAIN" = "yes" ]; then
+#### Second chance in case having made a typo
+#read -p "Type gzip or xz : " choice
+#
+#case "$choice" in 
+#  gzip)
 #echo -e "\e[0;36mCreating kernel .squashfs isodata/live/k-$kernel.squashfs . . .\033[0m"
 #mksquashfs $kernel isodata/live/k-$kernel.squashfs
-echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
-mksquashfs chroot isodata/live/01-filesystem.squashfs
-;;
-  xz)
+#echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
+#mksquashfs chroot isodata/live/01-filesystem.squashfs
+#;;
+#  xz)
 #echo -e "\e[0;36mCreating kernel .squashfs isodata/live/k-$kernel.squashfs . . .\033[0m"
 #mksquashfs $kernel isodata/live/k-$kernel.squashfs -comp xz -b 512k -Xbcj x86
-echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
-mksquashfs chroot isodata/live/01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
-;;
-*)
-echo -e "\e[0;31mNot a valid choice, exiting now... \033[0m"
-sleep 1
+#echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
+#mksquashfs chroot isodata/live/01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
+#;;
+#*)
+#echo -e "\e[0;31mNot a valid choice, exiting now... \033[0m"
+#sleep 1
+#
+#exit 0
+#;;
+#esac
+#fi
+#ok_or_failed
 
-exit 0
-;;
-esac
-fi
-ok_or_failed
+mksquashfs chroot 01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
 
 # rm -fr $kernel
 
@@ -949,7 +950,7 @@ rm -rf apt 2> /dev/null
 # ● fredx181, removed ISO creating
 # ...
 
-echo -e "\e[0;32mFinished! If all went well, the required files for a frugal install are in isodata 'live' folder \n\nHave a good day!\033[0m"
+echo -e "\e[0;32mFinished! If all went well, the required files for a frugal install are in 'live' folder \n\nHave a good day!\033[0m"
 
 # read -s -n 1 -p "Press any key to close . . ."
 
