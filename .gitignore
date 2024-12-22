@@ -1,2 +1,5 @@
 */chroot
 01-filesystem.squashfs
+*/apt
+*/build_setup.conf
+*/build_setup.txt
