@@ -22,7 +22,7 @@
 # 2024-09-07, added Lxqt basic and Lxqt extended to the DE options
 
 # 2024-12-20, fredx181, modified for xfce-gumanzoy as a concept
-# see comments: "● fredx181"
+
 #####################################################################################
 
 # Modified by gumanzoy <gumanzoy@gmail.com>
@@ -94,7 +94,6 @@ ok_or_failed () {
 export -f ok_or_failed
 
 cr_build_info () {
-# ● fredx181, probably change some of the info below
 # Create setup info list build_setup.txt
 echo "Live system built on $(uname -m) for $ARCH on $(date)" > build_setup.txt
 echo -e "Preinstalled on top of debootstrap build:\nlive-boot wget menu dialog apt-utils dbus ca-certificates apt-transport-https xserver-xorg-legacy\n" >> build_setup.txt
@@ -102,7 +101,6 @@ echo -e "Base Install:\n$BASE_INSTALL\n" >> build_setup.txt
 echo -e "Base Dog Packages Install:\n$BASE_DOG_APPS_INSTALL\n" >> build_setup.txt
 echo -e "Applications Install:\n$BASE_APPS_INSTALL\n" >> build_setup.txt
 echo -e "Desktop Environment Packages:\n$DESK_APPS_INSTALL\n" >> build_setup.txt
-echo -e "Firmware:\n$FIRMWARE\n" >> build_setup.txt
 echo -e "Extra Dog Packages:\n$EXTRA_DOG_APPS_INSTALL\n" >> build_setup.txt
 echo -e "Remove cpp=$REM_AUTO_INST" >> build_setup.txt
 
@@ -123,8 +121,6 @@ BASE_DOG_APPS_INSTALL="'"$BASE_DOG_APPS_INSTALL"'"
 BASE_APPS_INSTALL="'"$BASE_APPS_INSTALL"'"
 
 DESK_APPS_INSTALL="'"$DESK_APPS_INSTALL"'"
-  
-FIRMWARE="'"$FIRMWARE"'"
 
 EXTRA_DOG_APPS_INSTALL="'"$EXTRA_DOG_APPS_INSTALL"'"
 
@@ -136,24 +132,11 @@ FORCE32="'"$FORCE32"'"
 KEEPLOCALES="'"$KEEPLOCALES"'"
 KEEPMANDOC="'"$KEEPMANDOC"'"
 SYSTEMD="'"$SYSTEMD"'"
-RUNXTERM="'"$RUNXTERM"'"
-LBINITRD="'"$LBINITRD"'"
-ISOUEFI="'"$ISOUEFI"'"
 ### End configuration
 
-# A selection of firmware packages available (mostly for wireless):
-# atmel-firmware firmware-realtek bluez-firmware firmware-atheros firmware-linux-free firmware-linux-nonfree firmware-netxen firmware-ti-connectivity firmware-b43legacy-installer firmware-iwlwifi firmware-ipw2x00 firmware-libertas firmware-brcm80211 firmware-b43-installer firmware-qlogic firmware-bnx2 firmware-misc-nonfree firmware-bnx2x firmware-zd1211 
 # Some extra dog applications:
 # debdoginstallscripts dogradio youtube-get2 youtube-viewer peasyfwmon gifondesktop upgrade-kernel conkyclock redshiftgui mpv peasymount peasyscale peasyxorburn peasyglue
-# Choice of Desktop:
-# Default is openbox with pcmanmfm providing the desktop, lxpanel, etc..
-# To change, replace what is in the DESK_APPS_INSTALL field with for example:
-# mate-core (for MATE), xfce4 (for XFCE), lxde (for LXDE)
-# No guarantee that all work as expected, might require some fixing
-# Remove automatically installed packages:
-# During installing all the packages, some are installed that you might not need, e.g.
-# cpp, REM_AUTO_INST=TRUE will uninstall it.
-# (cpp dependencies then be autoremoved, but depending on your other package choices)
+
 # To force 32 bit build on a 64 bit OS set FORCE32=TRUE' > build_setup.conf
 }
 export -f cr_build_info
@@ -169,7 +152,6 @@ export LAUNCHDIR="$PWD"
 export DE_CONFIG=Xfce4
 
 ########### Options (configuration)  ###########
-# ● fredx181, changed to only one arg needed (conf file)
 
 helptext="build 01-filesystem.squashfs for Debian Bookworm (Debian 12)\n
 usage: $(basename $0) <config_file>\n
@@ -208,17 +190,12 @@ export BASE_INSTALL="$BASE_INSTALL"
 export BASE_DOG_APPS_INSTALL="$BASE_DOG_APPS_INSTALL"
 export BASE_APPS_INSTALL="$BASE_APPS_INSTALL"
 export DESK_APPS_INSTALL="$DESK_APPS_INSTALL"
-export FIRMWARE="$FIRMWARE"
 export EXTRA_DOG_APPS_INSTALL="$EXTRA_DOG_APPS_INSTALL"
 export REM_AUTO_INST="$REM_AUTO_INST"
 export FORCE32="$FORCE32"
 export KEEPLOCALES="$KEEPLOCALES"
 export KEEPMANDOC="$KEEPMANDOC"
 export SYSTEMD="$SYSTEMD"
-export RUNXTERM="$RUNXTERM"
-# ● fredx181, perhaps comment out below ?
-export LBINITRD="$LBINITRD"
-export ISOUEFI="$ISOUEFI"
 
 if [ "$(uname -m)" = "i686" ]; then
 echo
@@ -304,36 +281,13 @@ exit 0
 esac
 fi
 
-# ● fredx181, keep this ? (can be useful)
-if [ $RUNXTERM = TRUE ]; then
-echo -e "\e[0;33mAt the end of the install process you may want to run one or more commands\n (in the chroot) \n Xterm will run and you can type e.g. synaptic, to install more packages\n Or e.g. rox or thunar (filemanager), if installed)\033[0m"
-echo -e "\e[0;36mOK, as configured, will run xterm later, at the end of install process\033[0m"
-fi
-
-# ● fredx181, commented out below
-#if [ $LBINITRD = TRUE ]; then
-#echo -e "\e[0;33mAt the end of the install process the initrd file(s) will be created\nThe  initrd1.xz for porteus-boot will be created anyway, but an initrd for 'live-boot' can be created also (initrd.img)\033[0m"
-#echo -e "\e[0;36mOK, will create initrd.img\033[0m"
-#else
-#echo -e "\e[0;36mOK, will not create initrd.img, only initrd1.xz\033[0m"
-#fi
-
-# ● fredx181, commented out below
-#if [ $ISOUEFI = TRUE ]; then
-#echo -e "\e[0;33mAt the end an ISO will be created\033[0m" 
-#echo -e "\e[0;36mOK, as configured, will create ISO with UEFI support\033[0m"
-#else
-#echo -e "\e[0;33mAt the end an ISO will be created\033[0m"
-#echo -e "\e[0;36mOK, as configured will create ISO without UEFI support\033[0m"
-#fi
-
 sleep 3
 
 if [ $(command -v apt-get 2>/dev/null) ];then
  echo -e "\e[0;36mUpdate the package lists...\033[0m"
  apt-get update
  echo -e "\e[0;36mInstall some required packages, e.g. xz-utils, wget, squashfs-tools, etc...\033[0m"
- apt-get install wget xz-utils squashfs-tools cpio xorriso isolinux -y
+ apt-get install wget xz-utils squashfs-tools cpio -y
  ok_or_failed
 fi
 
@@ -375,34 +329,22 @@ fi
 # create build_info.txt and build_setup.conf
 cr_build_info
 
-# ● fredx181, probably change below ?
-echo -e "\e[0;36mDownload required archives containing scripts, initrd-skel, etc...\033[0m"
-sleep 2
-wget --no-check-certificate https://raw.githubusercontent.com/DebianDog/MakeLive/gh-pages/dog-boot-bookworm-20221013.tar.gz
+# Use rootcopy folder instead of dog-boot-bookworm-20221013.tar.gz
 
-# ● fredx181, probably change below ?  
-[ "$ISOUEFI" = "TRUE" ] && wget --no-check-certificate https://raw.githubusercontent.com/DebianDog/MakeLive/gh-pages/isodata-bookworm-uefi.tar.gz || wget --no-check-certificate https://raw.githubusercontent.com/DebianDog/MakeLive/gh-pages/isodata-bookworm.tar.gz
+#echo -e "\e[0;36mDownload required archives containing scripts, initrd-skel, etc...\033[0m"
+#sleep 2
+#wget --no-check-certificate https://raw.githubusercontent.com/DebianDog/MakeLive/gh-pages/dog-boot-bookworm-20221013.tar.gz
 
-### download and extract porteus-boot skeleton for to create initrd1.xz
-# ● fredx181, below not needed, I guess, commented out
-#wget --no-check-certificate https://raw.githubusercontent.com/DebianDog/MakeLive/gh-pages/initrdport-bullseye.tar.gz
-#ok_or_failed
+#echo -e "\e[0;36mExtracting...\033[0m"
+#tar -zxf dog-boot-bookworm-20221013.tar.gz
 
-echo -e "\e[0;36mExtracting...\033[0m"
-tar -zxf dog-boot-bookworm-20221013.tar.gz
-
-# ● fredx181, change ? 
-[ "$ISOUEFI" = "TRUE" ] && tar -zxf isodata-bookworm-uefi.tar.gz || tar -zxf isodata-bookworm.tar.gz
-
-# ● fredx181, commented out below
-#tar -zxf initrdport-bullseye.tar.gz
-#ok_or_failed
-
-echo -e "\e[0;36mCopy scripts, required for porteus-boot, to the chroot...\033[0m"
-cp -af dog-boot-bookworm-20221013/* chroot/
-# ● fredx181, commented below 
-# cp -af initrdport-bullseye chroot/tmp/
+#echo -e "\e[0;36mCopy scripts, required for porteus-boot, to the chroot...\033[0m"
+#cp -af dog-boot-bookworm-20221013/* chroot/
+cp -raf rootcopy chroot
 ok_or_failed
+
+chown -R root:root chroot
+chown -R 1000:1000 chroot/home/puppy
 
 # mount bind some required directories from host filesystem
 mount --bind /proc chroot/proc
@@ -552,7 +494,7 @@ apt-get update # required, google repository key just added
 fi
 
 # Merge all install variables into one
-INSTALL="$BASE_INSTALL $BASE_APPS_INSTALL $DESK_APPS_INSTALL $BASE_DOG_APPS_INSTALL $EXTRA_DOG_APPS_INSTALL $FIRMWARE"
+INSTALL="$BASE_INSTALL $BASE_APPS_INSTALL $DESK_APPS_INSTALL $BASE_DOG_APPS_INSTALL $EXTRA_DOG_APPS_INSTALL"
 
 # ● fredx181, keep option for systemd ?
 if [ "$SYSTEMD" = "TRUE" ]; then  # if running with systemd, exclude sysvinit-core
@@ -684,23 +626,6 @@ echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook
 fi
 echo
 
-# ● fredx181, below commented out
-#if [ $LBINITRD = TRUE ]; then
-#echo -e "\e[0;36mGenerate initrd.img . . .\033[0m"
-#mkinitramfs -c xz -k -o /tmp/tmpapt/boot/initrd.img  $kernel
-#else
-#echo -e "\e[0;36mAs chosen, not creating initrd.img, only initrd1.xz\033[0m"
-#fi
-#echo -e "\e[0;36mGenerating porteus-boot initrd1.xz . . .\033[0m"
-#/usr/local/mkinitrd $kernel
-#cd /
-
-# ● fredx181, keep this ?
-if [ "$RUNXTERM" = "TRUE" ]; then
-echo -e "\e[0;36mAs requested, running Xterm now\nDo not forget to close Xterm and all other windows, when done\033[0m"
-xterm
-fi
-
 if [ "$KEEPLOCALES" = "FALSE" ]; then
 rm -fr usr/share/locale/*
 else
@@ -780,9 +705,6 @@ uncompress_files usr/share/man
 mandb --create
 fi
 
-# ● fredx181, probably not keep this ?
-rm -f /usr/local/mkinitrd # remove temp. mkinitrd
-rm -f vmlinuz* initrd* 2> /dev/null # remove symlinks on /
 #[ "$KEEP_LOCALES" = "no" ] && rm -fr usr/share/locale/*
 
 rm -f /var/lib/dbus/machine-id
@@ -831,7 +753,6 @@ cat chroot/etc/X11/default-display-manager
 echo -e "\e[0;36mThis probably will conflict with the default login method (through /etc/inittab)\033[0m"
 cp -af chroot/etc/inittab-noauto chroot/etc/inittab
 
-# ● fredx181, keep systemd option ?
 if [ "$SYSTEMD" = "TRUE" ]; then
 rm -f chroot/etc/systemd/system/graphical.target.wants/getty@tty1.service
 rm -f chroot/etc/systemd/system/getty.target.wants/getty@tty1.service
@@ -841,118 +762,22 @@ echo -e "\e[0;32mDisabled autologin, using display-manager for login\033[0m"
 sleep 3
 fi
 
-# ● fredx181, commented out, no initrd.img, initrd1.xz or other kernel related
-#rm -fr chroot/var/tmp/*
-#[ $LBINITRD = TRUE ] && mv -f  chroot/tmp/tmpapt/boot/initrd.img isodata/live/
-#mv -f  chroot/tmp/initrd1.xz isodata/live/
-#mv -f chroot/tmp/tmpapt/boot/vmlinuz-* isodata/live/vmlinuz1
-#kernel=$(ls chroot/lib/modules/)
-
-#mkdir -p $kernel/usr/lib/modules
-#mkdir -p $kernel/boot
-
-#mv chroot/lib/modules/* $kernel/usr/lib/modules/
-#mv chroot/tmp/tmpapt/boot/config-* $kernel/boot/
-#rm -fr chroot/tmp/*
-#echo
-
-# ● fredx181, keep only "$DE_CONFIG" = "Xfce4" ?
 # Download extra squashfs modules if DE config is set
 echo -e "\e[0;36mIf configured, download and extract extra .squashfs modules to squash...\033[0m"
 mkdir squash
-#[ "$DE_CONFIG" = "Openbox" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/openbox/ 2> /dev/null 
 [ "$DE_CONFIG" = "Xfce4" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/xfce4/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash 
-[ "$DE_CONFIG" = "Jwm" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/jwm/ 2> /dev/null && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-[ "$DE_CONFIG" = "Mate" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/mate/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-[ "$DE_CONFIG" = "Lxqt" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/lxqt/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-[ "$DE_CONFIG" = "Lxqt_Full" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/lxqt/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-[ "$DE_CONFIG" = "LxDD" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/lxdd/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-[ "$DE_CONFIG" = "Fvwm-crystal" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/fvwm-crystal/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-if [ "$DE_CONFIG" = "DDog" ]; then
-wget --no-check-certificate -P squash "https://debiandog.github.io/MakeLive/modules-bookworm/ddog/zz_openbox_xfce-jwm.squashfs"  && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-fi
-[ "$DE_CONFIG" = "Kiosk" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/kiosk/  && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-[ "$DE_CONFIG" = "ObDog" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/obdog/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-[ "$DE_CONFIG" = "ChromeDog" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/chromedog/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
-[ "$DE_CONFIG" = "Tint2" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/tint2/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash
 
 update-icon-caches chroot/usr/share/icons/hicolor/
 
-# Allow the user to makes changes in chroot just before creating filesystem.squashfs 
-#echo "At this point you may want to add/edit files in chroot folder"
-#echo "Also you can add .squashfs modules in the isodata/live folder, to be included in the ISO"
-#read -sp "Press ENTER to continue . . . "
-#echo
-
-# ● fredx181, only create 01-filesystem.squashfs
-#echo -e "\e[0;33mNow we will create compressed kernel: k-$kernel.squashfs and filesystem: '01-filesystem.squashfs'\nPlease enter your choice, xz compression will give smaller size than gzip,\033[0m"
-echo -e "\e[0;33mNow we will create: filesystem: '01-filesystem.squashfs'\nPlease enter your choice, xz compression will give smaller size than gzip,\033[0m"
-#echo -e "\e[0;33mbut xz takes much longer time to compress\033[0m"
-#read -p "Type gzip or xz : " choice
-
-
-# ● fredx181, create only 01-filesystem.squashfs, kernel squashfs creating is commented out
-#case "$choice" in 
-#  gzip)
-#echo -e "\e[0;36mCreating kernel .squashfs isodata/live/k-$kernel.squashfs . . .\033[0m"
-#mksquashfs $kernel isodata/live/k-$kernel.squashfs
-#echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
-#mksquashfs chroot isodata/live/01-filesystem.squashfs
-#;;
-#  xz)
-#echo -e "\e[0;36mCreating kernel .squashfs isodata/live/k-$kernel.squashfs . . .\033[0m"
-#mksquashfs $kernel isodata/live/k-$kernel.squashfs -comp xz -b 512k -Xbcj x86
-#echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
-#mksquashfs chroot isodata/live/01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
-#;;
-#*)
-#echo -e "\e[0;31mNot a valid choice, please try again, type: gzip or xz \033[0m"
-#sleep 1
-#TRYAGAIN=yes
-#;;
-#esac
-#
-#if [ "$TRYAGAIN" = "yes" ]; then
-#### Second chance in case having made a typo
-#read -p "Type gzip or xz : " choice
-#
-#case "$choice" in 
-#  gzip)
-#echo -e "\e[0;36mCreating kernel .squashfs isodata/live/k-$kernel.squashfs . . .\033[0m"
-#mksquashfs $kernel isodata/live/k-$kernel.squashfs
-#echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
-#mksquashfs chroot isodata/live/01-filesystem.squashfs
-#;;
-#  xz)
-#echo -e "\e[0;36mCreating kernel .squashfs isodata/live/k-$kernel.squashfs . . .\033[0m"
-#mksquashfs $kernel isodata/live/k-$kernel.squashfs -comp xz -b 512k -Xbcj x86
-#echo -e "\e[0;36mCreating isodata/live/01-filesystem.squashfs...\033[0m"
-#mksquashfs chroot isodata/live/01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
-#;;
-#*)
-#echo -e "\e[0;31mNot a valid choice, exiting now... \033[0m"
-#sleep 1
-#
-#exit 0
-#;;
-#esac
-#fi
-#ok_or_failed
-
+echo -e "\e[0;33mNow we will create: filesystem: '01-filesystem.squashfs'"
 mksquashfs chroot 01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
-
-# rm -fr $kernel
+ok_or_failed
 
 # Move back the cache to chroot
 mv -f ./apt/archives/*.deb chroot/var/cache/apt/archives/ 2> /dev/null
 rm -rf apt 2> /dev/null
 
-# ● fredx181, removed ISO creating
-# ...
-
 echo -e "\e[0;32mFinished! If all went well, the required files for a frugal install are in 'live' folder \n\nHave a good day!\033[0m"
-
-# read -s -n 1 -p "Press any key to close . . ."
 
 exit 0
 
