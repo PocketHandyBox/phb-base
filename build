@@ -240,7 +240,7 @@ echo "But if you are absolutely sure that there is a network connection ..."
 read -sp "   ... then press ENTER to continue"
  esac
 
-if [ -d "bookworm" ]; then 
+if [ -d "bookworm/chroot" ]; then 
 echo -e "\e[0;33m Working directory 'bookworm' already exists \n To be able to continue, contents need to be removed first\n All files in bookworm will be deleted, except the apt cache in chroot\033[0m"
 read -p "Are you sure to delete contents of directory bookworm? (Enter=yes) (Y/n)?" choice
 
@@ -265,7 +265,7 @@ mv bookworm/chroot/var/cache/apt bookworm/ 2> /dev/null
    fi
 mkdir -p bookworm/chroot/var/cache 2> /dev/null
 mv bookworm/apt bookworm/chroot/var/cache/ 2> /dev/null
-find bookworm -mindepth 1 ! -wholename 'bookworm/chroot/*' -delete 2> /dev/null
+#find bookworm -mindepth 1 ! -wholename 'bookworm/chroot/*' -delete 2> /dev/null
 echo -e "\e[0;32mOK, continue...\033[0m"
 ;;
   n|N)
@@ -340,7 +340,7 @@ cr_build_info
 
 #echo -e "\e[0;36mCopy scripts, required for porteus-boot, to the chroot...\033[0m"
 #cp -af dog-boot-bookworm-20221013/* chroot/
-cp -raf rootcopy chroot
+cp -raf rootcopy/* chroot
 ok_or_failed
 
 chown -R root:root chroot
@@ -372,9 +372,6 @@ fi
 export HOME=/root
 export LC_ALL=C
 
-# Google chrome for 64 bit only, so remove on i386
-[ "$ARCH" = "i386" ] && rm -f /etc/apt/sources.list.d/google-chrome.list
-
 # Setup install without install recommends
 echo "APT::Install-Recommends "false"; APT::Install-Suggests "false";" > /etc/apt/apt.conf
 echo "Acquire::Check-Valid-Until "0";" >> /etc/apt/apt.conf
@@ -387,49 +384,7 @@ elif [ "$SYSTEMD" = "TRUE" ]; then
 BOOKW=bookworm  # with systemd
 fi
 
-# repos for 64-bit
-export REPOS64='deb https://github.com/doglinux/'$BOOKW'/raw/master/amd64/ ./
-## package repositories
-deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
-#deb-src http://deb.debian.org/debian bookworm main contrib non-free
-
-deb http://deb.debian.org/debian bookworm-updates main contrib non-free
-#deb-src http://deb.debian.org/debian bookworm-updates main contrib non-free
-
-#deb http://deb.debian.org/debian bookworm-proposed-updates main contrib non-free
-#deb-src http://deb.debian.org/debian bookworm-proposed-updates main contrib non-free
-
-deb http://security.debian.org bookworm-security main contrib non-free
-#deb-src http://security.debian.org bookworm-security main contrib non-free
-
-deb http://deb.debian.org/debian bookworm-backports main contrib non-free non-free-firmware
-#deb-src http://deb.debian.org/debian bookworm-backports main contrib non-free
-
-'
-
-# repos for 32-bit
-export REPOS32='deb https://github.com/doglinux/'$BOOKW'/raw/master/i386/ ./
-## package repositories
-deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
-#deb-src http://deb.debian.org/debian bookworm main contrib non-free
-
-deb http://deb.debian.org/debian bookworm-updates main contrib non-free
-#deb-src http://deb.debian.org/debian bookworm-updates main contrib non-free
-
-#deb http://deb.debian.org/debian bookworm-proposed-updates main contrib non-free
-#deb-src http://deb.debian.org/debian bookworm-proposed-updates main contrib non-free
-
-deb http://security.debian.org bookworm-security main contrib non-free
-#deb-src http://security.debian.org bookworm-security main contrib non-free
-
-deb http://deb.debian.org/debian bookworm-backports main contrib non-free non-free-firmware
-#deb-src http://deb.debian.org/debian bookworm-backports main contrib non-free
-
-'
-
-[ "$ARCH" = "i386" ] && echo "$REPOS32" > /etc/apt/sources.list
-
-[ "$ARCH" = "amd64" ] && echo "$REPOS64" > /etc/apt/sources.list 
+echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/$BOOKW/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
 
 [ "$ARCH" = "amd64" ] && dpkg --add-architecture i386
 
@@ -484,13 +439,6 @@ else
 rm -f /etc/apt/preferences.d/00systemd
 echo -e "\e[0;36mInstall keyboard-configuration and more required packages\033[0m"
 apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" whiptail keyboard-configuration initscripts xz-utils cryptsetup cryptsetup-bin gnupg dirmngr apt-utils wget systemd systemd-sysv libpam-systemd udev --yes
-fi
-
-if [ "$ARCH" = "amd64" ]; then
-# Add google signing key
-wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-apt-get update # required, google repository key just added
-[ $? -ne 0 ] && apt-get update # try again
 fi
 
 # Merge all install variables into one
