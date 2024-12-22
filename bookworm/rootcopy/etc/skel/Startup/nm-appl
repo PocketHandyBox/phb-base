@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# run nm-applet if exist (if network-manager-gnome installed)
+[ -x /usr/bin/nm-applet ] && sudo nm-applet

@@ -1,0 +1,1 @@
+%wheel ALL= NOPASSWD: /sbin/shutdown, /sbin/reboot, /sbin/poweroff, /usr/bin/wmpoweroff, /usr/bin/wmreboot, /usr/bin/save2flash, /usr/sbin/pm-suspend, /usr/bin/nm-applet
