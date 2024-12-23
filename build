@@ -93,54 +93,6 @@ ok_or_failed () {
 }
 export -f ok_or_failed
 
-cr_build_info () {
-# Create setup info list build_setup.txt
-echo "Live system built on $(uname -m) for $ARCH on $(date)" > build_setup.txt
-echo -e "Preinstalled on top of debootstrap build:\nlive-boot wget menu dialog apt-utils dbus ca-certificates apt-transport-https xserver-xorg-legacy\n" >> build_setup.txt
-echo -e "Base Install:\n$BASE_INSTALL\n" >> build_setup.txt
-echo -e "Base Dog Packages Install:\n$BASE_DOG_APPS_INSTALL\n" >> build_setup.txt
-echo -e "Applications Install:\n$BASE_APPS_INSTALL\n" >> build_setup.txt
-echo -e "Desktop Environment Packages:\n$DESK_APPS_INSTALL\n" >> build_setup.txt
-echo -e "Extra Dog Packages:\n$EXTRA_DOG_APPS_INSTALL\n" >> build_setup.txt
-echo -e "Remove cpp=$REM_AUTO_INST" >> build_setup.txt
-
-# Info architecture for build config
-[ "$ARCH" = "i386" ] && INFO_i386="Config generated for $ARCH, FORCE32 is set to TRUE (this way it works also on 64 bit)"
-##### Generate config from build #####
-echo '# Configuration generated for architecture: '$ARCH', modify as desired
-# NOTE: Leave every commented (#) line commented as it is
-### Start configuration
-DE_CONFIG="'"$DE_CONFIG"'"
-# Be careful with removing from this section (mostly essential)  
-BASE_INSTALL="'"$BASE_INSTALL"'"
-
-# Base Dog Packages, recommended to keep:
-# yad gtkdialog obshutdown pup-volume-monitor peasywifi
-BASE_DOG_APPS_INSTALL="'"$BASE_DOG_APPS_INSTALL"'"
-
-BASE_APPS_INSTALL="'"$BASE_APPS_INSTALL"'"
-
-DESK_APPS_INSTALL="'"$DESK_APPS_INSTALL"'"
-
-EXTRA_DOG_APPS_INSTALL="'"$EXTRA_DOG_APPS_INSTALL"'"
-
-REM_AUTO_INST="'"$REM_AUTO_INST"'"
-
-# Force 32 bit on 64 bit OS (set to FALSE for 64-bit build on 64-bit OS)
-# '$INFO_i386'
-FORCE32="'"$FORCE32"'"
-KEEPLOCALES="'"$KEEPLOCALES"'"
-KEEPMANDOC="'"$KEEPMANDOC"'"
-SYSTEMD="'"$SYSTEMD"'"
-### End configuration
-
-# Some extra dog applications:
-# debdoginstallscripts dogradio youtube-get2 youtube-viewer peasyfwmon gifondesktop upgrade-kernel conkyclock redshiftgui mpv peasymount peasyscale peasyxorburn peasyglue
-
-# To force 32 bit build on a 64 bit OS set FORCE32=TRUE' > build_setup.conf
-}
-export -f cr_build_info
-
 ########################## End functions #####################################
 
 ############# Start #############
@@ -225,7 +177,6 @@ else
 echo -e "\e[0;36mNo custom config in use\033[0m"
 echo -e "\e[0;36mUsing standard configuration defined on top of script\033[0m"
 fi
-echo -e "\e[0;33mBuild setup info can be found in: $PWD/bookworm/build_setup.txt\033[0m"
 echo -e "\e[0;32mIf you'd like a log from the output, run again e.g:\033[0m"
 echo -e "\e[0;33m$0 -gui 2>&1 | tee build.log\033[0m"
 echo -e "\e[0;36mFirst setting up debootstrap, this will take a few minutes\nAfter that you will be asked to set the password for 'root'\033[0m"
@@ -242,7 +193,8 @@ read -sp "   ... then press ENTER to continue"
 
 if [ -d "bookworm/chroot" ]; then 
 echo -e "\e[0;33m Working directory 'bookworm' already exists \n To be able to continue, contents need to be removed first\n All files in bookworm will be deleted, except the apt cache in chroot\033[0m"
-read -p "Are you sure to delete contents of directory bookworm? (Enter=yes) (Y/n)?" choice
+#read -p "Are you sure to delete contents of directory bookworm? (Enter=yes) (Y/n)?" choice
+choice=y
 
 case "$choice" in 
   y|Y|"")
@@ -316,7 +268,7 @@ fi
 ########## Set up debootstrap ##########
 echo -e "\e[0;36mSetting up debootstrap in bookworm/chroot\033[0m"
 echo -e "\e[0;36mThis may take a while...\033[0m"
-mkdir -p bookworm/chroot && cd bookworm &&
+mkdir -p bookworm/chroot && cp -a $config bookworm && cd bookworm &&
 debootstrap --arch=$ARCH --variant=minbase --include=apt-transport-https,ca-certificates,initscripts,adduser bookworm chroot http://deb.debian.org/debian/
 ret=$?
 echo $ret
@@ -325,9 +277,6 @@ echo -e "\e[0;31mFailed to install the base system\033[0m"
 echo -e "\e[0;32mThis can happen sometimes, please try again, exiting now...\033[0m"
 exit
 fi
-
-# create build_info.txt and build_setup.conf
-cr_build_info
 
 # Use rootcopy folder instead of dog-boot-bookworm-20221013.tar.gz
 
@@ -376,7 +325,6 @@ export LC_ALL=C
 echo "APT::Install-Recommends "false"; APT::Install-Suggests "false";" > /etc/apt/apt.conf
 echo "Acquire::Check-Valid-Until "0";" >> /etc/apt/apt.conf
 
-# ● fredx181, keep systemd as option or not ?
 # custom repository for systemd or not
 if [ "$SYSTEMD" = "FALSE" ]; then
 BOOKW=book-worm  # without systemd
@@ -395,10 +343,10 @@ apt-get update # required, repositories just added
 
 echo -e "\e[0;36mPlease set the password for 'root'\033[0m"
 echo -e "\e[0;33mAlso now you may want to add to or edit files in bookworm/chroot\033[0m" 
-passwd root
+#passwd root
 if [ $? -ne 0 ]; then # try again if passwords not match
 echo -e "\e[0;36mPlease try again, type password for root\033[0m"
-passwd root
+#passwd root
 fi
 [ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\033[0m"; sleep 3
 
@@ -407,10 +355,10 @@ echo -e "\e[0;36mAdd user 'puppy'...\033[0m"
 adduser puppy --gecos ",,," --disabled-password 2> /dev/null
 echo
 echo -e "\e[0;36mPlease set the password for user 'puppy'\033[0m"
-passwd puppy
+#passwd puppy
 if [ $? -ne 0 ]; then # try again if passwords not match
 echo -e "\e[0;36mPlease try again, type password for puppy\033[0m"
-passwd puppy
+#passwd puppy
 fi
 [ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\033[0m"; sleep 3
 echo
@@ -421,20 +369,18 @@ echo
 usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel puppy
 
 # configure keyboard first
-# ● fredx181, keep option for systemd ?
 if [ "$SYSTEMD" = "FALSE" ]; then
 echo -e "\e[0;36mInstall keyboard-configuration and more required packages\033[0m"
-apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" whiptail keyboard-configuration sysvinit-core elogind xz-utils cryptsetup cryptsetup-bin gnupg dirmngr apt-utils wget elogind libelogind0 libpam-elogind udev --yes
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" whiptail keyboard-configuration sysvinit-core elogind xz-utils cryptsetup cryptsetup-bin gnupg dirmngr apt-utils wget elogind libelogind0 libpam-elogind udev --yes
 else
 rm -f /etc/apt/preferences.d/00systemd
 echo -e "\e[0;36mInstall keyboard-configuration and more required packages\033[0m"
-apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" whiptail keyboard-configuration initscripts xz-utils cryptsetup cryptsetup-bin gnupg dirmngr apt-utils wget systemd systemd-sysv libpam-systemd udev --yes
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" whiptail keyboard-configuration initscripts xz-utils cryptsetup cryptsetup-bin gnupg dirmngr apt-utils wget systemd systemd-sysv libpam-systemd udev --yes
 fi
 
 # Merge all install variables into one
 INSTALL="$BASE_INSTALL $BASE_APPS_INSTALL $DESK_APPS_INSTALL $BASE_DOG_APPS_INSTALL $EXTRA_DOG_APPS_INSTALL"
 
-# ● fredx181, keep option for systemd ?
 if [ "$SYSTEMD" = "TRUE" ]; then  # if running with systemd, exclude sysvinit-core
 INSTALL="$(echo "$INSTALL" | sed "s|sysvinit-core||g")"
 fi
@@ -500,10 +446,10 @@ sleep 3
 # If one of the variables is empty, it will be skipped
 
 ### Do the real installing
-apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
 # try again if failed
 if [ $? -ne 0 ]; then
-apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
 	if [ $? -ne 0 ]; then
 	echo -e "\e[0;31mFAILED\033[0m"
 	touch /exit_
@@ -511,7 +457,6 @@ apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force
 	fi
 fi
 
-# ● fredx181, keep option for systemd ?
 # in case udev installed, replace with eudev
 if [ "$SYSTEMD" = "FALSE" ]; then
 apt-get install -y eudev porteusbootscripts
@@ -679,8 +624,8 @@ cd "$LAUNCHDIR/bookworm/"
 
 rm -f 01-filesystem.squashfs 2> /dev/null # just in case it exists remove first
 
-# copy build_setup.txt to chroot/root
-cp -a build_setup.txt chroot/root/
+# copy config to chroot/root
+mv $(basename $config) chroot/root/
 rm -f chroot/var/cache/apt/*.bin
 mkdir -p apt/archives
 mv -f chroot/var/cache/apt/archives/*.deb ./apt/archives/
