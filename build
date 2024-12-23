@@ -390,16 +390,6 @@ echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux
 
 echo path-exclude=/usr/lib/x86_64-linux-gnu/dri/d3d12_dri.so > etc/dpkg/dpkg.cfg.d/mesa_d3d12_dri
 
-rm -f etc/skel/Desktop/conkytoggle.desktop
-rm -f root/Desktop/conkytoggle.desktop
-rm -f home/puppy/Desktop/conkytoggle.desktop
-rm -rf etc/skel/.config/fontconfig root/.config/fontconfig home/puppy/.config/fontconfig
-rm -rf etc/skel/.icons root/.icons home/puppy/.icons
-rm -f etc/skel/.gtkrc-2.0 root/.gtkrc-2.0 home/puppy/.gtkrc-2.0
-rm -rf etc/skel/desktop.jpg root/desktop.jpg home/puppy/desktop.jpg
-
-rm -f usr/lib/firmware/iwlwifi-3945-2.ucode
-
 apt-get update # required, repositories just added
 [ $? -ne 0 ] && apt-get update # try again if failed
 
