@@ -286,6 +286,9 @@ rm -rf chroot/usr/share/man/??
 rm -rf chroot/usr/share/man/??.*
 rm -rf chroot/usr/share/man/*_*
 
+# Remove debootstrap sources.list. Will use deb822 style /etc/apt/sources.list.d/debian.sources instead
+rm chroot/etc/apt/sources.list
+
 # Use rootcopy folder instead of dog-boot-bookworm-20221013.tar.gz
 
 #echo -e "\e[0;36mDownload required archives containing scripts, initrd-skel, etc...\033[0m"
@@ -343,6 +346,7 @@ elif [ "$SYSTEMD" = "TRUE" ]; then
 BOOKW=bookworm  # with systemd
 fi
 
+# Add DogLinux github repo
 echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/$BOOKW/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
 
 [ "$ARCH" = "amd64" ] && dpkg --add-architecture i386
