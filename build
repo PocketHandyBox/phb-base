@@ -146,7 +146,6 @@ export EXTRA_DOG_APPS_INSTALL="$EXTRA_DOG_APPS_INSTALL"
 export REM_AUTO_INST="$REM_AUTO_INST"
 export FORCE32="$FORCE32"
 export KEEPLOCALES="$KEEPLOCALES"
-export KEEPMANDOC="$KEEPMANDOC"
 export SYSTEMD="$SYSTEMD"
 
 if [ "$(uname -m)" = "i686" ]; then
@@ -217,6 +216,7 @@ mv bookworm/chroot/var/cache/apt bookworm/ 2> /dev/null
    fi
 mkdir -p bookworm/chroot/var/cache 2> /dev/null
 mv bookworm/apt bookworm/chroot/var/cache/ 2> /dev/null
+rm bookworm/*.conf 2> /dev/null
 #find bookworm -mindepth 1 ! -wholename 'bookworm/chroot/*' -delete 2> /dev/null
 echo -e "\e[0;32mOK, continue...\033[0m"
 ;;
@@ -278,6 +278,14 @@ echo -e "\e[0;32mThis can happen sometimes, please try again, exiting now...\033
 exit
 fi
 
+# Cleaning after debootstrap
+rm -rf chroot/usr/share/doc/*/examples
+find chroot/usr/share/doc -type f ! -name copyright -delete 2> /dev/null
+rm -rf chroot/usr/share/info/*
+rm -rf chroot/usr/share/man/??
+rm -rf chroot/usr/share/man/??.*
+rm -rf chroot/usr/share/man/*_*
+
 # Use rootcopy folder instead of dog-boot-bookworm-20221013.tar.gz
 
 #echo -e "\e[0;36mDownload required archives containing scripts, initrd-skel, etc...\033[0m"
@@ -289,10 +297,13 @@ fi
 
 #echo -e "\e[0;36mCopy scripts, required for porteus-boot, to the chroot...\033[0m"
 #cp -af dog-boot-bookworm-20221013/* chroot/
-cp -raf rootcopy/* chroot
+
+cp --preserve=mode,timestamps -rf rootcopy/* chroot/
 ok_or_failed
 
-chown -R root:root chroot
+mkdir chroot/root/Desktop
+mkdir chroot/home/puppy/Desktop
+
 chown -R 1000:1000 chroot/home/puppy
 
 # mount bind some required directories from host filesystem
@@ -336,7 +347,8 @@ echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux
 
 [ "$ARCH" = "amd64" ] && dpkg --add-architecture i386
 
-echo path-exclude=/usr/lib/x86_64-linux-gnu/dri/d3d12_dri.so > etc/dpkg/dpkg.cfg.d/mesa_d3d12_dri
+# Add file to rootcopy instead
+#echo path-exclude=/usr/lib/x86_64-linux-gnu/dri/d3d12_dri.so > etc/dpkg/dpkg.cfg.d/mesa_d3d12_dri
 
 apt-get update # required, repositories just added
 [ $? -ne 0 ] && apt-get update # try again if failed
@@ -526,22 +538,19 @@ rm -rf root/.thumbnails
 rm -f etc/blkid-cache
 rm -f var/lib/dhcp/dhclient.eth0.leases
 rm -f var/lib/dhcpcd/*.lease
-rm -rf lib/consolefonts
-rm -rf lib/keymaps
+#rm -rf lib/consolefonts
+#rm -rf lib/keymaps
 rm -fr var/lib/aptitude/* 2> /dev/null
 ls var/lib/apt/lists | grep -v "lock" | grep -v "partial" | xargs -i rm -r var/lib/apt/lists/{} ;
 rm -f var/cache/debconf/*-old
 rm -f var/lib/dpkg/*-old
 
+rm -rf usr/share/doc/*/examples
+
 rm -f etc/fonts/conf.d/10-hinting-slight.conf
 
 rm -f usr/share/backgrounds/xfce/*.jpg
 rm -f usr/share/backgrounds/xfce/*.png
-
-rm -f usr/share/icons/hicolor/128x128/*/*.png
-rm -f usr/share/icons/hicolor/256x256/*/*.png
-
-update-icon-caches usr/share/icons/hicolor/
 
 # Remove mesa libs from 01-filesystem.squashfs
 # Prefer to make module with mesa and libdrm from backports
@@ -550,6 +559,8 @@ rm -f usr/lib/x86_64-linux-gnu/dri/*_dri.so
 rm -f usr/lib/x86_64-linux-gnu/libdrm_*so.*
 rm -f usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0*
 fi
+
+# https://github.com/Tomas-M/linux-live/blob/master/Slax/debian12/cleanup
 
 # Unzip gzipped files (man pages), so LZMA can compress 2times better.
 # First we fix symlinks, then uncompress files
@@ -564,31 +575,24 @@ uncompress_files()
       ln -sfn "$LINK" "$FILE"
       rm -f "$LINE"
    done
-   find "$1" -type f -name "*.gz" | xargs -r gunzip
+   find "$1" -type f -name "*.gz" | xargs -r gunzip -f
 }
 
 uncompress_files etc/alternatives
-
-if [ "$KEEPMANDOC" = "FALSE" ]; then
-find usr/share/doc -type f -exec rm -f {} 2> /dev/null \;
-find usr/share/man -type f -exec rm -f {} 2> /dev/null \;
-find usr/share/gtk-doc -type f -exec rm -f {} 2> /dev/null \;
-find usr/share/info -type f -exec rm -f {} 2> /dev/null \;
-    chown -R man:root usr/share/man
-else
-find usr/share/doc -type f -exec rm -f {} 2> /dev/null \;
-find usr/share/gtk-doc -type f -exec rm -f {} 2> /dev/null \;
-find usr/share/info -type f -exec rm -f {} 2> /dev/null \;
-rm -f usr/local/bin/man
-rm -fr usr/share/man/??
-rm -fr usr/share/man/??.*
-rm -fr usr/share/man/*_*
 uncompress_files usr/share/man
-    chown -R man:root usr/share/man
-mandb --create
-fi
 
-#[ "$KEEP_LOCALES" = "no" ] && rm -fr usr/share/locale/*
+# remove broken links
+# $1 = search directory
+remove_broken_links()
+{
+   find "$1" -type l -exec test ! -e {} \; -print | xargs rm -vf
+}
+
+remove_broken_links /etc/alternatives
+remove_broken_links /usr/share/man
+
+# Re-create man-db /var/cache/man/
+mandb --create
 
 rm -f /var/lib/dbus/machine-id
 #apt-get clean
