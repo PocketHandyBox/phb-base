@@ -3,23 +3,6 @@
 #####################################################################################
 # build 01-filesystem.squashfs for Debian Bookworm (Debian 12)
 #####################################################################################
-# fredx181 2017-07-31, 'MakeLive' for Stretch (Debian 9), creates a minimal live system
-# started as above, mklive-stretch, followed by mklive-buster, now:
-# 2021-01-03, mklive-bullseye MODIFIED FOR Debian Bullseye
-# 2021-01-22, added fdisk and mtools to base install list
-# 2021-02-10, added check boxes to keep locales and/or man and doc files
-### KEEPLOCALES= and KEEPMANDOC= setting in config files (TRUE or FALSE)
-# 2021-02-19, added choice for UEFI support or not
-# 2021-05-23, Creating initrd1.xz now done with method from Tomas M (much smaller initrd)
-# 2021-07-05, use "whiptail" rather than "dialog" for keyboard-layout dialog
-# 2021-09-12, added option to use systemd as init system
-# 2021-09-26, changes in GUI (tab 'Settings') and CLI (menu for DE choice and settings)
-# Thanks to misko_2083 for the bash-menu concept https://forum.puppylinux.com/viewtopic.php?p=36765#p36765
-# 2021-11-13, mklive-bookworm MODIFIED FOR Debian Bookworm
-# 2022-10-26, create 'usr-merged' system
-# 2023-02-21, no prompt for to replace /etc/rc.local and build_setup.conf has DE_CONFIG variable set
-
-# 2024-09-07, added Lxqt basic and Lxqt extended to the DE options
 
 # 2024-12-20, fredx181, modified for xfce-gumanzoy as a concept
 
@@ -31,34 +14,11 @@
 
 export LD_LIBRARY_PATH=
 
-if [ -z $(which gxmessage) ]; then
-MESSAGE=xmessage
-else
-MESSAGE=gxmessage
-fi
-
-# Not running from terminal ?
-tty -s;
-if [ $? -ne 0 ]; then
-	msg=" Please run this program from terminal"
-	$MESSAGE "`echo -e $msg`"
-	exit 0
-fi
-
 if [ "`whoami`" != "root" ]; then
 echo "This script should be run as root"
 sleep 3
 exit
 fi
-
-echo -e "\e[0;36mChecking network connection...\033[0m"
-# check network
- case "$(curl -k -s --retry-delay 3 --retry 3 --max-time 10 -I https://debiandog.github.io/MakeLive | sed 's/^[^ ]*  *\([0-9]\).*/\1/; 1q')" in
-  [23]) echo -e "\e[0;32mOK\033[0m" ;;
-  *) echo -e "\e[0;33mThere seems to be no network connection.\nPress Ctrl+C to exit and run this script again after it has been fixed.\033[0m";
-echo "But if you are absolutely sure that there is a network connection ..."
-read -sp "   ... then press ENTER to continue"
- esac
 
 # This makes sure when the script is interrupted, that all mount 'binds' will unmount 
 exitfn () {
@@ -181,15 +141,6 @@ echo -e "\e[0;33m$0 -gui 2>&1 | tee build.log\033[0m"
 echo -e "\e[0;36mFirst setting up debootstrap, this will take a few minutes\nAfter that you will be asked to set the password for 'root'\033[0m"
 echo
 
-echo -e "\e[0;36mChecking network connection...\033[0m"
-# check network
- case "$(curl -k -s --retry-delay 3 --retry 3 --max-time 10 -I https://debiandog.github.io/MakeLive | sed 's/^[^ ]*  *\([0-9]\).*/\1/; 1q')" in
-  [23]) echo -e "\e[0;32mOK\033[0m" ;;
-  *) echo -e "\e[0;33mThere seems to be no network connection.\nPress Ctrl+C to exit and run this script again after it has been fixed\033[0m";
-echo "But if you are absolutely sure that there is a network connection ..."
-read -sp "   ... then press ENTER to continue"
- esac
-
 if [ -d "bookworm/chroot" ]; then 
 echo -e "\e[0;33m Working directory 'bookworm' already exists \n To be able to continue, contents need to be removed first\n All files in bookworm will be deleted, except the apt cache in chroot\033[0m"
 #read -p "Are you sure to delete contents of directory bookworm? (Enter=yes) (Y/n)?" choice
@@ -243,17 +194,9 @@ if [ $(command -v apt-get 2>/dev/null) ];then
  ok_or_failed
 fi
 
-# download and install debootstrap deb
-#DEBOOTSTRAP=debootstrap_1.0.134_all.deb
-#wget --no-check-certificate https://debiandog.github.io/MakeLive/$DEBOOTSTRAP -O $DEBOOTSTRAP
-#  fi
-#
-#dpkg -i "$DEBOOTSTRAP"
-
 if [ -z `which debootstrap` ] || [ ! -e /usr/share/debootstrap/scripts/bookworm ]; then
 	msg=" You don't have debootstrap installed.\nIt's a dependency of this program.\n Please install it."
 	echo $msg
-	$MESSAGE "`echo -e $msg`"
 exit 0
 fi
 
@@ -261,7 +204,6 @@ fi
 #if [ -z $(which dpkg) ] || [ -L $(which dpkg) ]; then
 #	msg=" You don't have the (full) package dpkg installed.\nIt's a dependency of this program.\n Please install it."
 #	echo $msg
-#	$MESSAGE "`echo -e $msg`"
 #exit 0
 #fi
 
@@ -350,9 +292,6 @@ fi
 echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/$BOOKW/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
 
 [ "$ARCH" = "amd64" ] && dpkg --add-architecture i386
-
-# Add file to rootcopy instead
-#echo path-exclude=/usr/lib/x86_64-linux-gnu/dri/d3d12_dri.so > etc/dpkg/dpkg.cfg.d/mesa_d3d12_dri
 
 apt-get update # required, repositories just added
 [ $? -ne 0 ] && apt-get update # try again if failed
