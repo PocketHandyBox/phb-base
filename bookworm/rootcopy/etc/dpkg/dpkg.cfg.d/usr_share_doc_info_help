@@ -1,0 +1,5 @@
+path-exclude=/usr/share/doc/*
+path-include=/usr/share/doc/*/copyright
+path-exclude=/usr/share/info/*
+path-exclude=/usr/share/help/*
+path-exclude=/usr/share/gnome/help/*

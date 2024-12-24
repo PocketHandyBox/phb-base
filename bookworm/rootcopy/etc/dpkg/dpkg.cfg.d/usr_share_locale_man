@@ -1,0 +1,6 @@
+path-exclude=/usr/share/locale/*
+path-include=/usr/share/locale/locale.alias
+path-include=/usr/share/locale/en/*
+path-exclude=/usr/share/man/*
+path-include=/usr/share/man/man[0-9]/*
+path-include=/usr/share/man/en/*
