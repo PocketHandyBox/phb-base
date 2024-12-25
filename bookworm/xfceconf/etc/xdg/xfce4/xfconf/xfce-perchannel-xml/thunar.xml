@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="thunar" version="1.0">
+  <property name="last-toolbar-item-order" type="string" value="0,5,6,1,2,3,4,7,8,9,10,11,12,14,15,16,13,17,18,19,20,21"/>
+  <property name="last-toolbar-visible-buttons" type="string" value="0,1,1,1,0,1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0"/>
+  <property name="last-view" type="string" value="ThunarCompactView"/>
+  <property name="last-compact-view-zoom-level" type="string" value="THUNAR_ZOOM_LEVEL_38_PERCENT"/>
+  <property name="last-window-width" type="int" value="800"/>
+  <property name="last-window-height" type="int" value="600"/>
+  <property name="last-show-hidden" type="bool" value="true"/>
+  <property name="misc-exec-shell-scripts-by-default" type="bool" value="true"/>
+  <property name="misc-single-click" type="bool" value="false"/>
+  <property name="misc-volume-management" type="bool" value="false"/>
+  <property name="misc-parallel-copy-mode" type="string" value="THUNAR_PARALLEL_COPY_MODE_NEVER"/>
+  <property name="misc-date-style" type="string" value="THUNAR_DATE_STYLE_YYYYMMDD"/>
+  <property name="misc-thumbnail-mode" type="string" value="THUNAR_THUMBNAIL_MODE_NEVER"/>
+  <property name="misc-recursive-search" type="string" value="THUNAR_RECURSIVE_SEARCH_LOCAL"/>
+  <property name="misc-change-window-icon" type="bool" value="false"/>
+  <property name="misc-middle-click-in-tab" type="bool" value="true"/>
+</channel>
