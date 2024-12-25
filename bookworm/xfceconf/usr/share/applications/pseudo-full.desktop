@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Pseudo Full Install Setup
+Comment=
+Exec=pseudofull-setup
+Icon=application-x-xzm
+Terminal=false
+StartupNotify=false
+Categories=DebianDog;System
