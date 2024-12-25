@@ -246,11 +246,6 @@ rm chroot/etc/apt/sources.list
 cp --preserve=mode,timestamps -rf rootcopy/* chroot/
 ok_or_failed
 
-mkdir chroot/root/Desktop
-mkdir chroot/home/puppy/Desktop
-
-chown -R 1000:1000 chroot/home/puppy
-
 # mount bind some required directories from host filesystem
 mount --bind /proc chroot/proc
 #mount --bind /tmp chroot/tmp
@@ -455,7 +450,6 @@ GNOME_ICON=$(apt-cache rdepends --installed gnome-icon-theme | grep -v "gnome-ic
 # apt-get purge --yes  xserver-xorg-input-libinput # uncomment if lxinput doesn't work
 apt-get --yes autoremove
 #####################################
-mv -f /usr/local/XTerm /etc/X11/app-defaults/
 
 # ● fredx181, not sure anymore if this is needed for encrypted save
 . /etc/cryptsetup-initramfs/conf-hook
@@ -573,6 +567,18 @@ rm -f 01-filesystem.squashfs 2> /dev/null # just in case it exists remove first
 
 # copy config to chroot/root
 mv $(basename $config) chroot/root/
+
+# Copy /etc/skel/{.bashrc,.profile} to /root/
+cp chroot/etc/skel/{.bashrc,.profile} chroot/root/
+
+mkdir chroot/root/Desktop
+mkdir chroot/home/puppy/Desktop
+
+# Copy xfceconf/ to chroot/
+cp --preserve=mode,timestamps -rf xfceconf/* chroot/
+
+chown -R 1000:1000 chroot/home/puppy
+
 rm -f chroot/var/cache/apt/*.bin
 mkdir -p apt/archives
 mv -f chroot/var/cache/apt/archives/*.deb ./apt/archives/
@@ -593,11 +599,11 @@ sleep 3
 fi
 
 # Download extra squashfs modules if DE config is set
-echo -e "\e[0;36mIf configured, download and extract extra .squashfs modules to squash...\033[0m"
-mkdir squash
-[ "$DE_CONFIG" = "Xfce4" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/xfce4/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash 
+#echo -e "\e[0;36mIf configured, download and extract extra .squashfs modules to squash...\033[0m"
+#mkdir squash
+#[ "$DE_CONFIG" = "Xfce4" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/xfce4/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash 
 
-update-icon-caches chroot/usr/share/icons/hicolor/
+#update-icon-caches chroot/usr/share/icons/hicolor/
 
 echo -e "\e[0;33mNow we will create: filesystem: '01-filesystem.squashfs'"
 mksquashfs chroot 01-filesystem.squashfs -comp xz -b 512k -Xbcj x86

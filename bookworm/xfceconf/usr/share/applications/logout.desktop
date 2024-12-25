@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Exec=obshutdown
+Icon=/usr/share/pixmaps/gnome-shutdown.png
+StartupNotify=false
+Terminal=false
+Categories=Utility;X-XFCE;X-Xfce-Toplevel;
+Name=Logout
+Name[nl]=Uitloggen
+NotShowIn=JWM
+OnlyShowIn=XFCE
+
