@@ -41,9 +41,21 @@ if [ -d /etc/profile.d ]; then
   unset i
 fi
 
-if [ -z "${DISPLAY}" ] && [ $(tty) = /dev/tty1 ]
-then
-sleep 3
-startx
+if [ -z "${DISPLAY}" ] && [ $(tty) = /dev/tty1 ]; then
+  /etc/console-setup/cached_setup_font.sh &> /dev/null
+  /etc/console-setup/cached_setup_keyboard.sh &> /dev/null
+  /opt/nvidia-legacy-optimus/nvidia-legacy-optimus-check.sh 2> /dev/null
+  if grep -q autorun /proc/cmdline; then
+  echo "`cat /proc/cmdline|sed -e 's/^/ /'`" > /etc/cmdline
+  AUTORUNCMD=`egrep -o " autorun=[^ ]+" /etc/cmdline | cut -d= -f2;`
+    if [ -n "$AUTORUNCMD" ]; then
+    echo -e "\E[32m\033[1mautorun=$AUTORUNCMD"
+    tput sgr0
+    "$AUTORUNCMD"
+    fi
+  elif ! grep -q text /proc/cmdline; then
+  sleep 3
+  startx
+  fi
 fi
 
