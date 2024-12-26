@@ -224,6 +224,10 @@ fi
 rm -rf chroot/usr/share/doc/*/examples
 find chroot/usr/share/doc -type f ! -name copyright -delete 2> /dev/null
 rm -rf chroot/usr/share/info/*
+rm -rf chroot/usr/share/locale/??
+rm -rf chroot/usr/share/locale/??_*
+rm -rf chroot/usr/share/locale/??@*
+rm -rf chroot/usr/share/locale/???
 rm -rf chroot/usr/share/man/??
 rm -rf chroot/usr/share/man/??.*
 rm -rf chroot/usr/share/man/*_*
@@ -458,13 +462,7 @@ echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook
 fi
 echo
 
-if [ "$KEEPLOCALES" = "FALSE" ]; then
-rm -fr usr/share/locale/*
-else
-echo -e "\e[0;36mAs requested, keep locale files and configure default locale\033[0m"
-apt install locales -y
-dpkg-reconfigure locales
-fi
+apt-get install locales -y
 
 echo "Cleaning..."
 rm -f var/lib/alsa/asound.state
