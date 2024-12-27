@@ -9,7 +9,7 @@
 #####################################################################################
 
 # Modified by gumanzoy <gumanzoy@gmail.com>
-# https://gumanzoy.blogspot.com/2023/05/eng-liveusb-doglinux-debian-12-bookworm.html
+# https://github.com/PocketHandyBox/phb-base
 # https://forum.puppylinux.com/viewtopic.php?p=88473
 
 export LD_LIBRARY_PATH=
@@ -59,10 +59,6 @@ export -f ok_or_failed
 
 export LAUNCHDIR="$PWD"
 
-# ● fredx181, set DE_CONFIG to Xfce4
-# (just in case if not configured, not sure, as it should be configured also in the .conf, DE_CONFIG=...)
-export DE_CONFIG=Xfce4
-
 ########### Options (configuration)  ###########
 
 helptext="build 01-filesystem.squashfs for Debian Bookworm (Debian 12)\n
@@ -98,24 +94,23 @@ exit
 		esac
 
 # export final variables defined from custom .conf file
-export BASE_INSTALL="$BASE_INSTALL"
-export BASE_DOG_APPS_INSTALL="$BASE_DOG_APPS_INSTALL"
-export BASE_APPS_INSTALL="$BASE_APPS_INSTALL"
-export DESK_APPS_INSTALL="$DESK_APPS_INSTALL"
-export EXTRA_DOG_APPS_INSTALL="$EXTRA_DOG_APPS_INSTALL"
-export REM_AUTO_INST="$REM_AUTO_INST"
-export FORCE32="$FORCE32"
-export KEEPLOCALES="$KEEPLOCALES"
 export SYSTEMD="$SYSTEMD"
+export BUILD686="$BUILD686"
+export PL_BASE="$PL_BASE"
+export PL_SYSV="$PL_SYSV"
+export PL_SYSTEMD="$PL_SYSTEMD"
+export INSTALLP1="$INSTALLP1"
+export INSTALLP2="$INSTALLP2"
+export INSTALLP3="$INSTALLP3"
+export PL_AMD64="$PL_AMD64"
 
 if [ "$(uname -m)" = "i686" ]; then
 echo
 echo -e "\e[0;32mOK, running 32-bit OS, building live system for 32-bit: $(uname -m)\033[0m"
 export ARCH="i386"
-export FORCE32="TRUE"
 elif [ "$(uname -m)" = "x86_64" ]; then
 echo
-	if [ "$FORCE32" = "TRUE" ]; then
+	if [ "$BUILD686" = "TRUE" ]; then
 	echo -e "\e[0;32mOK, running 64-bit OS, building live system for 32-bit: i686\033[0m"
 	export ARCH="i386"
 	else
@@ -123,10 +118,11 @@ echo
 	export ARCH="amd64"
 	fi
 fi
+
 echo -e "\e[0;33mCreate a Debian Bookworm minimal live system similar to 'DebianDog'\nWith overlay support and porteus-boot style included\n\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4\033[0m"
 echo -e "\e[0;32mBuilding will be done in: $PWD/bookworm\033[0m"
 if [ "$CONFIG" = "yes" ]; then
-	if [ -z "$BASE_INSTALL" ]; then
+	if [ -z "$PL_BASE" ]; then
 	echo -e "\e[0;31mThis config file cannot be used, sorry, exiting...\033[0m"
 	exit
 	else
@@ -190,7 +186,7 @@ if [ $(command -v apt-get 2>/dev/null) ];then
  echo -e "\e[0;36mUpdate the package lists...\033[0m"
  apt-get update
  echo -e "\e[0;36mInstall some required packages, e.g. xz-utils, wget, squashfs-tools, etc...\033[0m"
- apt-get install wget xz-utils squashfs-tools cpio -y
+ apt-get install debootstrap wget xz-utils squashfs-tools cpio -y
  ok_or_failed
 fi
 
@@ -199,13 +195,6 @@ if [ -z `which debootstrap` ] || [ ! -e /usr/share/debootstrap/scripts/bookworm 
 	echo $msg
 exit 0
 fi
-
-# ● fredx181, below probably not needed, commented out
-#if [ -z $(which dpkg) ] || [ -L $(which dpkg) ]; then
-#	msg=" You don't have the (full) package dpkg installed.\nIt's a dependency of this program.\n Please install it."
-#	echo $msg
-#exit 0
-#fi
 
 ########## Set up debootstrap ##########
 echo -e "\e[0;36mSetting up debootstrap in bookworm/chroot\033[0m"
@@ -235,18 +224,6 @@ rm -rf chroot/usr/share/man/*_*
 # Remove debootstrap sources.list. Will use deb822 style /etc/apt/sources.list.d/debian.sources instead
 rm chroot/etc/apt/sources.list
 
-# Use rootcopy folder instead of dog-boot-bookworm-20221013.tar.gz
-
-#echo -e "\e[0;36mDownload required archives containing scripts, initrd-skel, etc...\033[0m"
-#sleep 2
-#wget --no-check-certificate https://raw.githubusercontent.com/DebianDog/MakeLive/gh-pages/dog-boot-bookworm-20221013.tar.gz
-
-#echo -e "\e[0;36mExtracting...\033[0m"
-#tar -zxf dog-boot-bookworm-20221013.tar.gz
-
-#echo -e "\e[0;36mCopy scripts, required for porteus-boot, to the chroot...\033[0m"
-#cp -af dog-boot-bookworm-20221013/* chroot/
-
 cp --preserve=mode,timestamps -rf rootcopy/* chroot/
 ok_or_failed
 
@@ -258,20 +235,11 @@ mount --bind /sys chroot/sys
 mount -t devpts devpts chroot/dev/pts
 # provide a network connection in chroot
 echo -en "`cat /etc/resolv.conf`" > chroot/etc/resolv.conf
-#cp -a ../libudev0_175-7.3_i386.deb chroot/
 
 #################################################
 ############ Start running in chroot ############
 #################################################
 chroot_in () {
-# ● fredx181, perhaps remove below ? as apt-get assumed installed ? 
-if [ -z $(which apt-get) ]; then
-echo -e "\e[0;31mSorry, apt-get not found, cannot continue\033[0m"
-echo -e "\e[0;36mExiting . . .\033[0m"
-touch /exit_
-sleep 3
-exit
-fi 
 
 export HOME=/root
 export LC_ALL=C
@@ -322,34 +290,49 @@ addgroup wheel
 echo
 usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel puppy
 
-# configure keyboard first
 if [ "$SYSTEMD" = "FALSE" ]; then
-echo -e "\e[0;36mInstall keyboard-configuration and more required packages\033[0m"
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" whiptail keyboard-configuration sysvinit-core elogind xz-utils cryptsetup cryptsetup-bin gnupg dirmngr apt-utils wget elogind libelogind0 libpam-elogind udev --yes
+echo -e "\e[0;36mInstall sysvinit required packages\033[0m"
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYSV
 else
 rm -f /etc/apt/preferences.d/00systemd
-echo -e "\e[0;36mInstall keyboard-configuration and more required packages\033[0m"
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" whiptail keyboard-configuration initscripts xz-utils cryptsetup cryptsetup-bin gnupg dirmngr apt-utils wget systemd systemd-sysv libpam-systemd udev --yes
+echo -e "\e[0;36mInstall systemd required packages\033[0m"
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYSTEMD
 fi
+
+# Install some basic packages (do not edit, essential!)
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_BASE
+# try again if failed
+if [ $? -ne 0 ]; then
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_BASE
+	if [ $? -ne 0 ]; then
+	echo -e "\e[0;31mFAILED\033[0m"
+	touch /exit_
+	exit
+	fi
+fi
+
+# ● fredx181, instead of below here it can be also: "cd /bin; ln -sf bash sh; cd /" 
+# make /bin/sh symlink to bash instead of dash:
+echo -e "\e[0;36mmake /bin/sh symlink to bash instead of default dash\033[0m"
+echo "dash dash/sh boolean false" | debconf-set-selections
+DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
+
+dbus-uuidgen > /var/lib/dbus/machine-id
+echo "live" > /etc/hostname
+echo "127.0.0.1	 localhost" > /etc/hosts
+echo "127.0.1.1	 live" >> /etc/hosts
+mkdir /live
+mkdir -p /opt/bin
+
+update-rc.d snapexit defaults
 
 # Merge all install variables into one
-INSTALL="$BASE_INSTALL $BASE_APPS_INSTALL $DESK_APPS_INSTALL $BASE_DOG_APPS_INSTALL $EXTRA_DOG_APPS_INSTALL"
-
-if [ "$SYSTEMD" = "TRUE" ]; then  # if running with systemd, exclude sysvinit-core
-INSTALL="$(echo "$INSTALL" | sed "s|sysvinit-core||g")"
-fi
-
-# check gnome-mplayer version
-if [ "$(echo "$INSTALL" | grep gnome-mplayer)" ]; then
-G_MPLAYER=$(echo "$INSTALL" | tr ' ' '\n' | grep "gnome-mplayer")
-[ "$ARCH" = "i386" ] && INSTALL="$(echo "$INSTALL" | sed "s/$G_MPLAYER/gnome-mplayer-1.0.7/g")"
-[ "$ARCH" = "amd64" ] && INSTALL="$(echo "$INSTALL" | sed "s/$G_MPLAYER/gnome-mplayer-1.0.6/g")"
-fi
+[ "$ARCH" = "amd64" ] && INSTALLP3="$INSTALLP3 $PL_AMD64"
 
 # simulate install first to check for errors, if there are, exit
 echo -e "\e[0;36mChecking packages . . .\033[0m"
 sleep 3
-apt-get install -s -y $INSTALL
+apt-get install -s -y $INSTALLP1 $INSTALLP2 $INSTALLP3
 ret=$?
 if [ $ret -eq 100 ]; then
 echo -e "\e[0;31mSorry, there are one or more errors, see above.\033[0m"
@@ -363,60 +346,31 @@ echo -e "\e[0;32mAll packages checked OK, continue now to install some basic pac
 sleep 3
 fi
 
-# Install some basic packages (do not edit, essential!)
-apt-get install dialog live-boot cryptsetup-initramfs menu dbus xserver-xorg-legacy --yes
-# try again if failed
-if [ $? -ne 0 ]; then
-apt-get install live-boot cryptsetup-initramfs menu dbus xserver-xorg-legacy --yes
-	if [ $? -ne 0 ]; then
-	echo -e "\e[0;31mFAILED\033[0m"
-	touch /exit_
-	exit
-	fi
-fi
-
-dbus-uuidgen > /var/lib/dbus/machine-id
-echo "live" > /etc/hostname
-echo "127.0.0.1	 localhost" > /etc/hosts
-echo "127.0.1.1	 live" >> /etc/hosts
-mkdir /live
-mkdir -p /opt/bin
-
-update-rc.d snapexit defaults
-
-# ● fredx181, instead of below here it can be also: "cd /bin; ln -sf bash sh; cd /" 
-# make /bin/sh symlink to bash instead of dash:
-echo -e "\e[0;36mmake /bin/sh symlink to bash instead of default dash\033[0m"
-echo "dash dash/sh boolean false" | debconf-set-selections
-DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
-
-
 ############ Start installing packages ############
 
-####### Start installing packages, defined on GUI #######
+####### Start installing packages, as defined in configuration #######
 echo -e "\e[0;36mInstall packages, as defined in configuration\033[0m"
 
 sleep 3
-# If one of the variables is empty, it will be skipped
 
-### Do the real installing
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
-# try again if failed
-if [ $? -ne 0 ]; then
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
+for PART in 1 2 3
+do
+	[ "$PART" = "1" ] && INSTALL="$INSTALLP1"
+	[ "$PART" = "2" ] && INSTALL="$INSTALLP2"
+	[ "$PART" = "3" ] && INSTALL="$INSTALLP3"
+
+	### Do the real installing part1
+	DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
+	# try again if failed
 	if [ $? -ne 0 ]; then
-	echo -e "\e[0;31mFAILED\033[0m"
-	touch /exit_
-	exit
+	DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
+		if [ $? -ne 0 ]; then
+		echo -e "\e[0;31mFAILED\033[0m"
+		touch /exit_
+		exit
+		fi
 	fi
-fi
-
-# in case udev installed, replace with eudev
-if [ "$SYSTEMD" = "FALSE" ]; then
-apt-get install -y eudev porteusbootscripts
-else
-apt-get install -y porteusbootscripts
-fi
+done
 
 # ● fredx181, commented out installing kernel 
 ### install the kernel
@@ -438,15 +392,7 @@ fi
 mkdir -p /etc/systemd/network 2> /dev/null   # might not exist
 ln -s /dev/null /etc/systemd/network/99-default.link # traditional network interface names
 
-##### Extra apt-get remove ###### ● fredx181, below not useful, I think 
-# Remove cpp ? 
-# Takes a lot of space due to (large) dependency libllvm3.9 package
-#if [ "$REM_AUTO_INST" = "TRUE" ] || [ "$REM_AUTO_INST" = "" ]; then
-#echo -e "\e[0;36mRemoving cpp, if installed . . .\033[0m"
-#apt-get purge -y cpp
-#fi
-
-### Uninstall gnome-icon-theme ###### ● fredx181, below can be deleted, I think
+### Uninstall gnome-icon-theme ######
 GNOME_ICON=$(apt-cache rdepends --installed gnome-icon-theme | grep -v "gnome-icon-theme\|Reverse Depends" | grep -v "|")  # check for reverse dependencies, remove only if none
 [ -z "$GNOME_ICON" ] && apt-get purge --yes gnome-icon-theme    # in case installed
 
@@ -454,15 +400,6 @@ GNOME_ICON=$(apt-cache rdepends --installed gnome-icon-theme | grep -v "gnome-ic
 # apt-get purge --yes  xserver-xorg-input-libinput # uncomment if lxinput doesn't work
 apt-get --yes autoremove
 #####################################
-
-# ● fredx181, not sure anymore if this is needed for encrypted save
-. /etc/cryptsetup-initramfs/conf-hook
-if [ "$CRYPTSETUP" = "" ]; then
-echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook
-fi
-echo
-
-apt-get install locales -y
 
 echo "Cleaning..."
 rm -f var/lib/alsa/asound.state
@@ -561,7 +498,7 @@ umount -l chroot/sys
 
 cd "$LAUNCHDIR/bookworm/"
 
-rm -f 01-filesystem.squashfs 2> /dev/null # just in case it exists remove first
+rm -f "$ARCH"/01-filesystem.squashfs 2> /dev/null # just in case it exists remove first
 
 # copy config to chroot/root
 mv $(basename $config) chroot/root/
@@ -603,15 +540,17 @@ fi
 
 #update-icon-caches chroot/usr/share/icons/hicolor/
 
+mkdir -p "$ARCH" 2> /dev/null
+
 echo -e "\e[0;33mNow we will create: filesystem: '01-filesystem.squashfs'"
-mksquashfs chroot 01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
+mksquashfs chroot "$ARCH"/01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
 ok_or_failed
 
 # Move back the cache to chroot
 mv -f ./apt/archives/*.deb chroot/var/cache/apt/archives/ 2> /dev/null
 rm -rf apt 2> /dev/null
 
-echo -e "\e[0;32mFinished! If all went well, the required files for a frugal install are in 'live' folder \n\nHave a good day!\033[0m"
+echo -e "\e[0;32mFinished! If all went well, '01-filesystem.squashfs' file are in ""$ARCH"" folder \n\nHave a good day!\033[0m"
 
 exit 0
 
