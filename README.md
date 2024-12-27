@@ -1,6 +1,5 @@
-sudo bash
-./build bookworm-xfce.conf
-BUILD686=TRUE ./build bookworm-xfce.conf
+`sudo bash`
 
-SYSTEMD=TRUE ./build bookworm-xfce.conf
-SYSTEMD=TRUE BUILD686=TRUE ./build bookworm-xfce.conf
+`./build bookworm-xfce.conf`
+
+`BUILD686=TRUE ./build bookworm-xfce.conf`
