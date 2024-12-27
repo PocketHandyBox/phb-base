@@ -40,6 +40,7 @@ rm -f $LAUNCHDIR/bookworm/apt/archives/lock 2> /dev/null
    exit
    else
    rm -rf $LAUNCHDIR/bookworm/chroot
+   rm -f $LAUNCHDIR/bookworm/*.conf 2> /dev/null
    fi
 exit
 }
@@ -99,10 +100,14 @@ export BUILD686="$BUILD686"
 export PL_BASE="$PL_BASE"
 export PL_SYSV="$PL_SYSV"
 export PL_SYSTEMD="$PL_SYSTEMD"
-export INSTALLP1="$INSTALLP1"
-export INSTALLP2="$INSTALLP2"
-export INSTALLP3="$INSTALLP3"
+export INSTALL="$INSTALL"
 export PL_AMD64="$PL_AMD64"
+
+if [ -n "$TEMPMIRROR" ]; then
+	MIRRORURL="http://""$TEMPMIRROR""/debian/"
+else
+	MIRRORURL="http://deb.debian.org/debian/"
+fi
 
 if [ "$(uname -m)" = "i686" ]; then
 echo
@@ -122,7 +127,7 @@ fi
 echo -e "\e[0;33mCreate a Debian Bookworm minimal live system similar to 'DebianDog'\nWith overlay support and porteus-boot style included\n\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4\033[0m"
 echo -e "\e[0;32mBuilding will be done in: $PWD/bookworm\033[0m"
 if [ "$CONFIG" = "yes" ]; then
-	if [ -z "$PL_BASE" ]; then
+	if [ -z "$PL_BASE" ] || [ -z "$INSTALL" ]; then
 	echo -e "\e[0;31mThis config file cannot be used, sorry, exiting...\033[0m"
 	exit
 	else
@@ -132,8 +137,8 @@ else
 echo -e "\e[0;36mNo custom config in use\033[0m"
 echo -e "\e[0;36mUsing standard configuration defined on top of script\033[0m"
 fi
-echo -e "\e[0;32mIf you'd like a log from the output, run again e.g:\033[0m"
-echo -e "\e[0;33m$0 -gui 2>&1 | tee build.log\033[0m"
+#echo -e "\e[0;32mIf you'd like a log from the output, run again e.g:\033[0m"
+#echo -e "\e[0;33m$0 -gui 2>&1 | tee build.log\033[0m"
 echo -e "\e[0;36mFirst setting up debootstrap, this will take a few minutes\nAfter that you will be asked to set the password for 'root'\033[0m"
 echo
 
@@ -163,7 +168,7 @@ mv bookworm/chroot/var/cache/apt bookworm/ 2> /dev/null
    fi
 mkdir -p bookworm/chroot/var/cache 2> /dev/null
 mv bookworm/apt bookworm/chroot/var/cache/ 2> /dev/null
-rm bookworm/*.conf 2> /dev/null
+rm -f bookworm/*.conf 2> /dev/null
 #find bookworm -mindepth 1 ! -wholename 'bookworm/chroot/*' -delete 2> /dev/null
 echo -e "\e[0;32mOK, continue...\033[0m"
 ;;
@@ -200,7 +205,7 @@ fi
 echo -e "\e[0;36mSetting up debootstrap in bookworm/chroot\033[0m"
 echo -e "\e[0;36mThis may take a while...\033[0m"
 mkdir -p bookworm/chroot && cp -a $config bookworm && cd bookworm &&
-debootstrap --arch=$ARCH --variant=minbase --include=apt-transport-https,ca-certificates,initscripts,adduser bookworm chroot http://deb.debian.org/debian/
+debootstrap --arch=$ARCH --variant=minbase --include=apt-transport-https,ca-certificates,initscripts,adduser bookworm chroot "$MIRRORURL"
 ret=$?
 echo $ret
 if [ $ret -ne 0 ]; then
@@ -226,6 +231,10 @@ rm chroot/etc/apt/sources.list
 
 cp --preserve=mode,timestamps -rf rootcopy/* chroot/
 ok_or_failed
+
+if [ -n "$TEMPMIRROR" ]; then
+	sed -i s/deb.debian.org/"$TEMPMIRROR"/ chroot/etc/apt/sources.list.d/debian.sources
+fi
 
 # mount bind some required directories from host filesystem
 mount --bind /proc chroot/proc
@@ -293,7 +302,7 @@ usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel puppy
 if [ "$SYSTEMD" = "FALSE" ]; then
 echo -e "\e[0;36mInstall sysvinit required packages\033[0m"
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYSV
-else
+elif [ "$SYSTEMD" = "TRUE" ]; then
 rm -f /etc/apt/preferences.d/00systemd
 echo -e "\e[0;36mInstall systemd required packages\033[0m"
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYSTEMD
@@ -327,12 +336,12 @@ mkdir -p /opt/bin
 update-rc.d snapexit defaults
 
 # Merge all install variables into one
-[ "$ARCH" = "amd64" ] && INSTALLP3="$INSTALLP3 $PL_AMD64"
+[ "$ARCH" = "amd64" ] && INSTALL="$INSTALL $PL_AMD64"
 
 # simulate install first to check for errors, if there are, exit
 echo -e "\e[0;36mChecking packages . . .\033[0m"
 sleep 3
-apt-get install -s -y $INSTALLP1 $INSTALLP2 $INSTALLP3
+apt-get install -s -y $INSTALL
 ret=$?
 if [ $ret -eq 100 ]; then
 echo -e "\e[0;31mSorry, there are one or more errors, see above.\033[0m"
@@ -353,24 +362,17 @@ echo -e "\e[0;36mInstall packages, as defined in configuration\033[0m"
 
 sleep 3
 
-for PART in 1 2 3
-do
-	[ "$PART" = "1" ] && INSTALL="$INSTALLP1"
-	[ "$PART" = "2" ] && INSTALL="$INSTALLP2"
-	[ "$PART" = "3" ] && INSTALL="$INSTALLP3"
-
-	### Do the real installing part1
-	DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
-	# try again if failed
+### Do the real installing
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
+# try again if failed
+if [ $? -ne 0 ]; then
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
 	if [ $? -ne 0 ]; then
-	DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
-		if [ $? -ne 0 ]; then
-		echo -e "\e[0;31mFAILED\033[0m"
-		touch /exit_
-		exit
-		fi
+	echo -e "\e[0;31mFAILED\033[0m"
+	touch /exit_
+	exit
 	fi
-done
+fi
 
 # ● fredx181, commented out installing kernel 
 ### install the kernel
@@ -512,7 +514,22 @@ mkdir chroot/home/puppy/Desktop
 # Copy xfceconf/ to chroot/
 cp --preserve=mode,timestamps -rf xfceconf/* chroot/
 
+# Move obshutdown.rc from .conf to home for i386 version
+if [ "$ARCH" = "i386" ]; then
+mv -f chroot/etc/skel/.config/obshutdown/obshutdown.rc chroot/etc/skel/.obshutdown.rc 2> /dev/null
+mv -f chroot/home/puppy/.config/obshutdown/obshutdown.rc chroot/home/puppy/.obshutdown.rc 2> /dev/null
+mv -f chroot/root/.config/obshutdown/obshutdown.rc chroot/root/.obshutdown.rc 2> /dev/null
+fi
+
+# Remove unused background image
+rm -f chroot/usr/local/share/obshutdown/themes/faenza/spacefun-bg.png 2> /dev/null
+rm -f chroot/usr/local/share/obshutdown/themes/spacefun-bg.png 2> /dev/null
+
 chown -R 1000:1000 chroot/home/puppy
+
+if [ -n "$TEMPMIRROR" ]; then
+	sed -i s/"$TEMPMIRROR"/deb.debian.org/ chroot/etc/apt/sources.list.d/debian.sources
+fi
 
 rm -f chroot/var/cache/apt/*.bin
 mkdir -p apt/archives
