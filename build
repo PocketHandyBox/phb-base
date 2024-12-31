@@ -232,6 +232,10 @@ rm chroot/etc/apt/sources.list
 cp --preserve=mode,timestamps -rf rootcopy/* chroot/
 ok_or_failed
 
+mkdir chroot/xfceconf
+cp --preserve=mode,timestamps -rf xfceconf/* chroot/xfceconf/
+ok_or_failed
+
 if [ -n "$TEMPMIRROR" ]; then
 	sed -i s/deb.debian.org/"$TEMPMIRROR"/ chroot/etc/apt/sources.list.d/debian.sources
 fi
@@ -403,6 +407,17 @@ GNOME_ICON=$(apt-cache rdepends --installed gnome-icon-theme | grep -v "gnome-ic
 apt-get --yes autoremove
 #####################################
 
+# Copy xfceconf/ to /
+cp --preserve=mode,timestamps -rf xfceconf/* ./
+rm -rf xfceconf
+
+# Update /usr/share/icons/hicolor/index.theme
+update-icon-caches usr/share/icons/hicolor/
+
+# Update /usr/share/applications/mimeinfo.cache
+# It is need to do after change .desktop files
+update-desktop-database
+
 echo "Cleaning..."
 rm -f var/lib/alsa/asound.state
 rm -f root/.bash_history
@@ -512,7 +527,7 @@ mkdir chroot/root/Desktop
 mkdir chroot/home/puppy/Desktop
 
 # Copy xfceconf/ to chroot/
-cp --preserve=mode,timestamps -rf xfceconf/* chroot/
+#cp --preserve=mode,timestamps -rf xfceconf/* chroot/
 
 # Move obshutdown.rc from .conf to home for i386 version
 if [ "$ARCH" = "i386" ]; then
@@ -524,6 +539,9 @@ fi
 # Remove unused background image
 rm -f chroot/usr/local/share/obshutdown/themes/faenza/spacefun-bg.png 2> /dev/null
 rm -f chroot/usr/local/share/obshutdown/themes/spacefun-bg.png 2> /dev/null
+
+# Remove duplicate icon
+rm -f chroot/usr/share/pixmaps/sfsload.png 2> /dev/null
 
 chown -R 1000:1000 chroot/home/puppy
 
