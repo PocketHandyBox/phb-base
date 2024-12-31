@@ -188,6 +188,24 @@
 	<directories/>
 </action>
 <action>
+	<icon>sfs</icon>
+	<name>Mount/unmount squashfs</name>
+	<unique-id>1424354227747596-14</unique-id>
+	<command>filemnt %f</command>
+	<description></description>
+	<patterns>*.xzm;*.squashfs;*.sfs</patterns>
+	<other-files/>
+</action>
+<action>
+	<icon>application-x-cd-image</icon>
+	<name>Mount/unmount iso</name>
+	<unique-id>1424354227747597-15</unique-id>
+	<command>filemnt %f</command>
+	<description></description>
+	<patterns>*.iso</patterns>
+	<other-files/>
+</action>
+<action>
 	<icon>application-x-xzm</icon>
 	<name>Activate module</name>
 	<unique-id>1424354227747595-8</unique-id>
@@ -215,7 +233,7 @@
 	<other-files/>
 </action>
 <action>
-	<icon>application-x-squashfs</icon>
+	<icon>sfs</icon>
 	<name>Create Squashfs</name>
 	<unique-id>1472389472683874-1</unique-id>
 	<command>cr-squash %f</command>

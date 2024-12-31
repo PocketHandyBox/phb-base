@@ -1,8 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=filemnt
-Exec=filemnt %f
+Name=Install .deb(s)
+Exec=instdeb %F
 Categories=Other;
 NoDisplay=true
-MimeType=application/x-cd-image
+MimeType=application/x-deb;
 Terminal=false
+Icon=deb

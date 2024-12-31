@@ -1,0 +1,11 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Edit-SFS
+Icon=sfs
+Comment=Edit .sfs files
+Exec=edit-sfs
+Terminal=false
+Type=Application
+Categories=Modules;DebianDog
+GenericName=Edit-SFS
+MimeType=application/x-squashfs;application/vnd.squashfs;

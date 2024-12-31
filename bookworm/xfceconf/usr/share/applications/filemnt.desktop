@@ -4,5 +4,6 @@ Name=filemnt
 Exec=filemnt %f
 Categories=Other;
 NoDisplay=true
-MimeType=application/x-cd-image
+MimeType=application/x-cd-image;application/x-squashfs;application/vnd.squashfs;
 Terminal=false
+Icon=application-x-cd-image
