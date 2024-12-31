@@ -1,0 +1,4 @@
+export TEXTEDITOR=l3afpad
+export FILEMANAGER=thunar
+export WEBBROWSER=x-www-browser
+export IMAGEVIEWER=gpicview
