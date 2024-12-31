@@ -12,4 +12,5 @@ read -s -n 1 -p "Press any key to close . . ."
 }
 export -f keyboard_layout
 
-/bin/bash -c 'xterm -T "Keyboard Layout" -si -sb -fg white -bg SkyBlue4 -geometry 80x30 -e "keyboard_layout"'
+keyboard_layout
+#/bin/bash -c 'xterm -T "Keyboard Layout" -si -sb -fg white -bg SkyBlue4 -geometry 80x30 -e "keyboard_layout"'

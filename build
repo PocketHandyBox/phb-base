@@ -337,7 +337,8 @@ echo "127.0.1.1	 live" >> /etc/hosts
 mkdir /live
 mkdir -p /opt/bin
 
-update-rc.d snapexit defaults
+# Disable because included into porteusbootscripts deb postinst
+#update-rc.d snapexit defaults
 
 # Merge all install variables into one
 [ "$ARCH" = "amd64" ] && INSTALL="$INSTALL $PL_AMD64"
