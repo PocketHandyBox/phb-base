@@ -5,7 +5,6 @@ Name=Add new user
 Comment=
 Exec=addnewuser
 Icon=user-home
-Path=
 Terminal=false
 StartupNotify=false
 Categories=System;Utility;X-XFCE;X-Xfce-Toplevel;

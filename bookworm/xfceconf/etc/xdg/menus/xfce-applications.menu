@@ -13,7 +13,7 @@
 
     <Layout>
         <Filename>Create-module-from-changes.desktop</Filename>
-        <Filename>Create Savefile.desktop</Filename>
+        <Filename>Create-Savefile.desktop</Filename>
         <Filename>audio-setup.desktop</Filename>
         <Filename>xfce4-run.desktop</Filename>
         <Separator/>

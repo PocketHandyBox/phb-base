@@ -2,10 +2,9 @@
 Version=1.0
 Type=Application
 Name=Create Savefile
-Comment=
+Comment=Make a Save image file
 Exec=mk-save.gtkdlg
-Icon=createsave
-Path=
+Icon=applications-other
 Terminal=false
 StartupNotify=false
 Categories=DebianDog;X-XFCE;X-Xfce-Toplevel;

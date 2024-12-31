@@ -2,7 +2,7 @@
 Version=1.0
 Type=Application
 Name=SFS-Load GUI
-Comment=
+Comment=Activate or deactivate a module 'On the Fly'
 Exec=loadmodulegui
 Icon=sfs
 Terminal=false

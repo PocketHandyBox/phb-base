@@ -2,7 +2,7 @@
 Version=1.0
 Type=Application
 Exec=obshutdown
-Icon=/usr/share/pixmaps/gnome-shutdown.png
+Icon=gnome-logout
 StartupNotify=false
 Terminal=false
 Categories=X-XFCE;X-Xfce-Toplevel;

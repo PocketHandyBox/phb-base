@@ -5,17 +5,7 @@ sleep 3
 echo
 echo -e " [1;33m-----------------------------------------------------------[0;39m "
 echo
-echo
-echo -e " [1;34m                 _.====.._                 [0;39m "
-echo -e " [1;31m        . ''. [1;34m  ,:._       ~-_                                             [0;39m "
-echo -e " [1;31m       : :'  :[1;34m      '\        ~-_                              		  [0;39m "
-echo -e " [1;31m       .  '-' [1;34m        \        \\.        [0;39m "
-echo -e " [1;31m        '-    [1;34m      ,/           ~-_      [0;39m "
-
-echo -e " [1;34m           -..__..-''             ~~--..__[0;39m "
-echo
-echo -e " [1;33m        DebianDog-Porteus is shutting down...[0;39m "
-echo
+echo -e " [1;33m        Debian-Porteus is shutting down...[0;39m "
 
 if [ -f /mnt/live/tmp/modules ]; then
 CHNGS=/mnt/live/memory/images/SFS  # porteus-boot
