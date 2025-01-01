@@ -3,24 +3,7 @@
 # Writen by gumanzoy <gumanzoy@gmail.com>
 # https://github.com/PocketHandyBox/phb-base
 
-cleanup() {
-chmod go-w usr
-chmod go-w usr/local
-chmod go-w root
-chmod go-w root/Desktop
-
-find -maxdepth 1 -type l -delete
-
-rm -rf dev lost+found media mnt run tmp
-
-rm -rf home/*/.cache root/.cache
-rm -rf home/*/.dbus root/.dbus
-rm -f home/*/.local/share/recently-used.xbel* root/.local/share/recently-used.xbel*
-rm -f home/*/.bash_history root/.bash_history
-rm -f home/*/.ICEauthority root/.ICEauthority
-rm -f home/*/.Xauthority root/.Xauthority
-rm -f home/*/.xsession-errors root/.xsession-errors
-
+# Use functions uncompress_files and remove_broken_links from linux-live
 # https://github.com/Tomas-M/linux-live/blob/master/Slax/debian12/cleanup
 
 # Unzip gzipped files (man pages), so LZMA can compress 2times better.
@@ -38,9 +21,7 @@ uncompress_files()
    done
    find "$1" -type f -name "*.gz" | xargs -r gunzip -f
 }
-
-uncompress_files etc/alternatives
-uncompress_files usr/share/man
+export -f uncompress_files
 
 # remove broken links
 # $1 = search directory
@@ -48,11 +29,65 @@ remove_broken_links()
 {
    find "$1" -type l -exec test ! -e {} \; -print | xargs rm -vf
 }
+export -f remove_broken_links
+
+cleanup() {
+chmod go-w usr
+chmod go-w usr/local
+chmod go-w root
+chmod go-w root/Desktop
+
+# Remove links from /
+find -maxdepth 1 -type l -delete
+
+# Remove unneeded dir's from /
+rm -rf dev live lost+found media mnt run tmp
+
+# Remove user's .cache dir
+rm -rf home/*/.cache root/.cache
+
+rm -rf home/*/.config/l3afpad root/.config/l3afpad
+
+# Remove xfce4 desktop settings config files
+rm -rf home/*/.config/Thunar root/.config/Thunar
+rm -f home/*/.config/xfce4/desktop/icons.screen* root/.config/xfce4/desktop/icons.screen*
+rmdir home/*/.config/xfce4/desktop root/.config/xfce4/desktop
+rm -f home/*/.config/xfce4/panel/whiskermenu*.rc root/.config/xfce4/panel/whiskermenu*.rc
+rmdir home/*/.config/xfce4/panel root/.config/xfce4/panel
+rm -f home/*/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,xsettings.xml}
+rm -f root/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,xsettings.xml}
+rmdir home/*/.config/xfce4/xfconf/xfce-perchannel-xml root/.config/xfce4/xfconf/xfce-perchannel-xml
+rmdir home/*/.config/xfce4/xfconf root/.config/xfce4/xfconf
+rm -rf home/*/.config/xfce4/xfwm4 root/.config/xfce4/xfwm4
+rmdir home/*/.config/xfce4 root/.config/xfce4
+
+# Remove .config dir completly if empty
+rmdir home/*/.config root/.config
+
+# Remove other user's config dir's
+rm -rf home/*/.dbus root/.dbus
+rm -rf home/*/.gnupg root/.gnupg
+rm -f home/*/.local/share/recently-used.xbel* root/.local/share/recently-used.xbel*
+rmdir home/*/.local/share root/.local/share
+rmdir home/*/.local root/.local
+
+# Remove other config files from home/*/ and root/
+rm -f home/*/.bash_history root/.bash_history
+rm -f home/*/.ICEauthority root/.ICEauthority
+rm -f home/*/.Xauthority root/.Xauthority
+rm -f home/*/.xsession-errors root/.xsession-errors
+
+# Remove home/* and root dir's completly if empty
+rmdir home/* root
+
+uncompress_files etc/alternatives
+uncompress_files usr/share/man
 
 remove_broken_links etc/alternatives
 remove_broken_links usr/share/man
 remove_broken_links usr/bin
 
+# Remove some configs from /etc
 rmdir etc/apt
 rmdir etc/alternatives
 rm -f etc/blkid-cache
@@ -63,8 +98,7 @@ rm -f etc/mailcap
 rm -f etc/resolv.conf
 rmdir etc
 
-rm -rf live
-
+# Remove mimeinfo.cache and icon-theme.cache from usr/share/
 rm -f usr/share/applications/mimeinfo.cache
 rmdir usr/share/applications
 rm -f usr/share/icons/*/icon-theme.cache
@@ -75,29 +109,31 @@ rmdir usr/share/xfce4/applications
 rmdir usr/share/xfce4
 rmdir usr/share
 
+# Remove some files/dir's from var/cache
 rm -rf var/cache/apt
+rm -rf var/cache/debconf/tmp.ci
+rm -f var/cache/debconf/templates.dat-old
+rmdir var/cache/debconf
 rm -rf var/cache/fontconfig
 rm -f var/cache/ldconfig/aux-cache
 rmdir var/cache/ldconfig
 rm -rf var/cache/man
 rmdir var/cache
 
-rm -f var/cache/debconf/templates.dat-old
-rm -rf var/cache/debconf/tmp.ci
-
-rm -rf var/lib/alsa
-rm -rf var/lib/apt/lists
-rm -rf var/lib/dbus
-rm -rf var/lib/dhcp
-
+# Remove some files/dir's from var/lib/dpkg
 rm -rf var/lib/dpkg/triggers
 rm -f var/lib/dpkg/updates/tmp.i
 rmdir var/lib/dpkg/updates
 rm -f var/lib/dpkg/lock*
 rm -f var/lib/dpkg/available-old
 rm -f var/lib/dpkg/status-old
+rmdir var/lib/dpkg
 
-rm -f var/lib/lock
+# Remove other dir's from var/lib
+rm -rf var/lib/alsa
+rm -rf var/lib/apt/lists
+rm -rf var/lib/dbus
+rm -rf var/lib/dhcp
 rm -rf var/lib/NetworkManager
 rm -rf var/lib/nfs
 rm -rf var/lib/upower
@@ -106,6 +142,7 @@ rm -rf var/lib/urandom
 rm -rf var/lib/xkb
 rmdir var/lib
 
+# Remove var/log
 rm -rf var/log
 }
 export -f cleanup
