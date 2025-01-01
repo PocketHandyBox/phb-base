@@ -7,5 +7,4 @@ Exec=loadmodulegui
 Icon=sfs
 Terminal=false
 StartupNotify=false
-Categories=Utility;System;Modules;
-
+Categories=System;Modules;

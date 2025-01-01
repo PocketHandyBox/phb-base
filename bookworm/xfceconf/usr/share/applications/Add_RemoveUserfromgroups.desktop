@@ -7,4 +7,4 @@ Exec=addusertogroups
 Icon=user-home
 Terminal=false
 StartupNotify=false
-Categories=System;Utility;
+Categories=System;

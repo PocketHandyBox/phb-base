@@ -89,8 +89,6 @@
                 <Filename>xfce4-terminal-emulator.desktop</Filename>
                 <Filename>xfce4-about.desktop</Filename>
                 <Filename>xfce4-run.desktop</Filename>
-                <Filename>Add-new-user.desktop</Filename>
-                <Filename>Add_RemoveUserfromgroups.desktop</Filename>
                 <Filename>apt2sfs.desktop</Filename>
                 <Filename>apt2sfs-fullinst.desktop</Filename>
                 <Filename>Create-module-from-changes.desktop</Filename>
@@ -202,7 +200,6 @@
     <Exclude>
         <Or>
             <Filename>xfce4-session-logout.desktop</Filename>
-            <Filename>Add-new-user.desktop</Filename>
             <Filename>Remaster-DebianDog.desktop</Filename>
         </Or>
     </Exclude>
