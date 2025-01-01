@@ -20,7 +20,6 @@
 # Replace unionfs-fuse with overlayfs
 # Remove live-boot support
 # Add . /usr/local/lib/cleanup
-# Replace xterm with x-terminal-emulator
 
 #sudo -K
 
@@ -484,6 +483,6 @@ exit 0
 }
 export -f run_xterm
 
-x-terminal-emulator -T "apt2squashfs" -e /bin/bash -c run_xterm
+xterm -T "apt2squashfs" -e /bin/bash -c run_xterm
 
 exit 0

@@ -11,7 +11,7 @@
 # https://github.com/PocketHandyBox/phb-base
 # Renamed from remastercow to changes2sfs
 # Add . /usr/local/lib/cleanup
-# Replace xterm with x-terminal-emulator
+# Not need to enter module name twice. Extension .squashfs added to WRKDIR instead
 
 YADTITLE="Changes2sfs (create module from changes)"
 
@@ -48,7 +48,6 @@ SETUP=`yad --title="$YADTITLE" --center --text=" This script will create a modul
 --window-icon="preferences-system" --form  \
 --field="  Choose where to create module::CB" "$DEVS!/tmp!/" \
 --field="Type custom name of working directory \n  (e.g. mychanges):" "" \
---field="Type name for module with extension \n(e.g. 02-changes.squashfs):" "" \
 --field=" Disable dpkg registration:CHK" "TRUE" \
 --button="gtk-quit:1" --button="gtk-ok:0"`
 ret=$?
@@ -56,9 +55,10 @@ ret=$?
 
 DRV="`echo $SETUP | cut -d "|" -f 2`"
 WRKDIR="`echo $SETUP | cut -d "|" -f 3`"
-SFS="`echo $SETUP | cut -d "|" -f 4`"
-DISDPKG="`echo $SETUP | cut -d "|" -f 5`"
-REGISTERDEL="`echo $SETUP | cut -d "|" -f 6`"
+DISDPKG="`echo $SETUP | cut -d "|" -f 4`"
+REGISTERDEL="`echo $SETUP | cut -d "|" -f 5`"
+
+SFS="$WRKDIR".squashfs
 
 echo $DRV
 echo $WRKDIR
@@ -238,10 +238,10 @@ echo -e "\e[0;36mCreating $SQFS....\033[0m"
 
 case $button1 in
 0)
-x-terminal-emulator -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS""
+xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS""
 ;;
 1)
-x-terminal-emulator -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS" -comp xz -b 1M -Xbcj x86"
+xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS" -comp xz -b 1M -Xbcj x86"
 ;;
 esac
 else
@@ -253,13 +253,13 @@ echo -e "\e[0;36mCreating $SQFS....\033[0m"
 
 case $button1 in
 0)
-x-terminal-emulator -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS" -comp lz4 -Xhc"
+xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS" -comp lz4 -Xhc"
 ;;
 1)
-x-terminal-emulator -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS""
+xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS""
 ;;
 2)
-x-terminal-emulator -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS" -comp xz -b 1M -Xbcj x86"
+xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS" -comp xz -b 1M -Xbcj x86"
 ;;
 esac
 fi
