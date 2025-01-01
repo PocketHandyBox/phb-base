@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Apt2squashfs (create module)
+Comment=Create module from package(s)
+Exec=apt2squashfs
+Icon=sfs
+Terminal=false
+StartupNotify=false
+Categories=Modules;

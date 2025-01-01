@@ -1,0 +1,111 @@
+#!/bin/bash
+
+# Writen by gumanzoy <gumanzoy@gmail.com>
+# https://github.com/PocketHandyBox/phb-base
+
+cleanup() {
+chmod go-w usr
+chmod go-w usr/local
+chmod go-w root
+chmod go-w root/Desktop
+
+find -maxdepth 1 -type l -delete
+
+rm -rf dev lost+found media mnt run tmp
+
+rm -rf home/*/.cache root/.cache
+rm -rf home/*/.dbus root/.dbus
+rm -f home/*/.local/share/recently-used.xbel* root/.local/share/recently-used.xbel*
+rm -f home/*/.bash_history root/.bash_history
+rm -f home/*/.ICEauthority root/.ICEauthority
+rm -f home/*/.Xauthority root/.Xauthority
+rm -f home/*/.xsession-errors root/.xsession-errors
+
+# https://github.com/Tomas-M/linux-live/blob/master/Slax/debian12/cleanup
+
+# Unzip gzipped files (man pages), so LZMA can compress 2times better.
+# First we fix symlinks, then uncompress files
+# $1 = search directory
+uncompress_files()
+{
+   local LINK LINE
+
+   find "$1" -type l -name "*.gz" | while read LINE; do
+      LINK="$(readlink "$LINE" | sed -r 's/.gz$//')"
+      FILE="$(echo "$LINE" | sed -r 's/.gz$//')"
+      ln -sfn "$LINK" "$FILE"
+      rm -f "$LINE"
+   done
+   find "$1" -type f -name "*.gz" | xargs -r gunzip -f
+}
+
+uncompress_files etc/alternatives
+uncompress_files usr/share/man
+
+# remove broken links
+# $1 = search directory
+remove_broken_links()
+{
+   find "$1" -type l -exec test ! -e {} \; -print | xargs rm -vf
+}
+
+remove_broken_links etc/alternatives
+remove_broken_links usr/share/man
+remove_broken_links usr/bin
+
+rmdir etc/apt
+rmdir etc/alternatives
+rm -f etc/blkid-cache
+rm -f etc/fstab
+rm -f etc/ld.so.cache
+rm -f etc/mtab
+rm -f etc/mailcap
+rm -f etc/resolv.conf
+rmdir etc
+
+rm -rf live
+
+rm -f usr/share/applications/mimeinfo.cache
+rmdir usr/share/applications
+rm -f usr/share/icons/*/icon-theme.cache
+rmdir usr/share/icons/*
+rmdir usr/share/icons
+rm -f usr/share/xfce4/applications/mimeinfo.cache
+rmdir usr/share/xfce4/applications
+rmdir usr/share/xfce4
+rmdir usr/share
+
+rm -rf var/cache/apt
+rm -rf var/cache/fontconfig
+rm -f var/cache/ldconfig/aux-cache
+rmdir var/cache/ldconfig
+rm -rf var/cache/man
+rmdir var/cache
+
+rm -f var/cache/debconf/templates.dat-old
+rm -rf var/cache/debconf/tmp.ci
+
+rm -rf var/lib/alsa
+rm -rf var/lib/apt/lists
+rm -rf var/lib/dbus
+rm -rf var/lib/dhcp
+
+rm -rf var/lib/dpkg/triggers
+rm -f var/lib/dpkg/updates/tmp.i
+rmdir var/lib/dpkg/updates
+rm -f var/lib/dpkg/lock*
+rm -f var/lib/dpkg/available-old
+rm -f var/lib/dpkg/status-old
+
+rm -f var/lib/lock
+rm -rf var/lib/NetworkManager
+rm -rf var/lib/nfs
+rm -rf var/lib/upower
+rm -rf var/lib/sudo
+rm -rf var/lib/urandom
+rm -rf var/lib/xkb
+rmdir var/lib
+
+rm -rf var/log
+}
+export -f cleanup

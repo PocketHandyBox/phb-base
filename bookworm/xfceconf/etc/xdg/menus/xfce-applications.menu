@@ -12,6 +12,7 @@
     </Include>
 
     <Layout>
+        <Filename>changes2sfs.desktop</Filename>
         <Filename>Create-module-from-changes.desktop</Filename>
         <Filename>Create-Savefile.desktop</Filename>
         <Filename>audio-setup.desktop</Filename>
