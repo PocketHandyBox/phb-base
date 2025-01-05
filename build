@@ -408,39 +408,77 @@ GNOME_ICON=$(apt-cache rdepends --installed gnome-icon-theme | grep -v "gnome-ic
 apt-get --yes autoremove
 #####################################
 
+# Use functions uncompress_files and remove_broken_links from linux-live
+# https://github.com/Tomas-M/linux-live/blob/master/Slax/debian12/cleanup
+
+# Unzip gzipped files (man pages), so LZMA can compress 2times better.
+# First we fix symlinks, then uncompress files
+# $1 = search directory
+uncompress_files() {
+local LINK LINE
+
+find "$1" -type l -name "*.gz" | while read LINE; do
+	LINK="$(readlink "$LINE" | sed -r 's/.gz$//')"
+	FILE="$(echo "$LINE" | sed -r 's/.gz$//')"
+	ln -sfn "$LINK" "$FILE"
+	rm -f "$LINE"
+done
+find "$1" -type f -name "*.gz" | xargs -r gunzip -f
+}
+
+uncompress_files etc/alternatives
+uncompress_files usr/share/man
+
+# remove broken links
+# $1 = search directory
+remove_broken_links() {
+#find "$1" -type l -exec test ! -e {} \; -print | xargs rm -vf
+find "$1" -xtype l -delete 2> /dev/null
+}
+
+remove_broken_links etc/alternatives
+remove_broken_links usr/share/man
+
+# Re-create man-db /var/cache/man/
+mandb --create
+
 # Copy xfceconf/ to /
 cp --preserve=mode,timestamps -rf xfceconf/* ./
 rm -rf xfceconf
 
+# Create symlink for icon harddrive.png
+for SIZE in 16x16 22x22 24x24 32x32 48x48 64x64; do
+	mkdir -p usr/share/icons/Adwaita/$SIZE/devices 2> /dev/null
+	cp -df usr/share/icons/harddrive.png usr/share/icons/Adwaita/$SIZE/devices
+done
+rm -f usr/share/icons/harddrive.png
+
+# Create symlink for Thunar panel icon view-dual.svg
+for SIZE in 22 24 32; do
+	mkdir -p usr/share/icons/Numix/$SIZE/actions 2> /dev/null
+	cp -df usr/share/icons/view-dual.svg usr/share/icons/Numix/$SIZE/actions
+done
+rm -f usr/share/icons/view-dual.svg
+
+remove_broken_links usr/share/icons/Adwaita
+remove_broken_links usr/share/icons/Numix
+remove_broken_links usr/share/icons/Numix-Light
+
+# Remove empty dir's
+rmdir usr/share/icons/Adwaita/*/* 2> /dev/null
+rmdir usr/share/icons/Adwaita/* 2> /dev/null
+rmdir usr/share/icons/Numix/*/* 2> /dev/null
+rmdir usr/share/icons/Numix-Light/*/* 2> /dev/null
+rmdir usr/share/icons/Numix-Light/* 2> /dev/null
+remove_broken_links usr/share/icons/Numix-Light
+rmdir usr/share/icons/Numix-Light 2> /dev/null
+
 # Update /usr/share/icons/hicolor/index.theme
-update-icon-caches usr/share/icons/hicolor/
+update-icon-caches usr/share/icons/*/
 
 # Update /usr/share/applications/mimeinfo.cache
 # It is need to do after change .desktop files
 update-desktop-database
-
-echo "Cleaning..."
-rm -f var/lib/alsa/asound.state
-rm -f root/.bash_history
-rm -f root/.xsession-errors
-rm -rf root/.cache
-rm -rf root/.thumbnails
-rm -f etc/blkid-cache
-rm -f var/lib/dhcp/dhclient.eth0.leases
-rm -f var/lib/dhcpcd/*.lease
-#rm -rf lib/consolefonts
-#rm -rf lib/keymaps
-rm -fr var/lib/aptitude/* 2> /dev/null
-ls var/lib/apt/lists | grep -v "lock" | grep -v "partial" | xargs -i rm -r var/lib/apt/lists/{} ;
-rm -f var/cache/debconf/*-old
-rm -f var/lib/dpkg/*-old
-
-rm -rf usr/share/doc/*/examples
-
-rm -f etc/fonts/conf.d/10-hinting-slight.conf
-
-rm -f usr/share/backgrounds/xfce/*.jpg
-rm -f usr/share/backgrounds/xfce/*.png
 
 # Remove mesa libs from 01-filesystem.squashfs
 # Prefer to make module with mesa and libdrm from backports
@@ -450,45 +488,26 @@ rm -f usr/lib/x86_64-linux-gnu/libdrm_*so.*
 rm -f usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0*
 fi
 
-# https://github.com/Tomas-M/linux-live/blob/master/Slax/debian12/cleanup
+echo "Cleaning..."
+rm -f var/cache/apt/*.bin
+rm -f var/cache/debconf/*-old
 
-# Unzip gzipped files (man pages), so LZMA can compress 2times better.
-# First we fix symlinks, then uncompress files
-# $1 = search directory
-uncompress_files()
-{
-   local LINK LINE
+find var/lib/apt/lists -type f ! -name lock -delete 2> /dev/null
 
-   find "$1" -type l -name "*.gz" | while read LINE; do
-      LINK="$(readlink "$LINE" | sed -r 's/.gz$//')"
-      FILE="$(echo "$LINE" | sed -r 's/.gz$//')"
-      ln -sfn "$LINK" "$FILE"
-      rm -f "$LINE"
-   done
-   find "$1" -type f -name "*.gz" | xargs -r gunzip -f
-}
+rm -f var/lib/alsa/asound.state
+rm -f var/lib/dhcp/*.leases
+rm -f var/lib/dhcpcd/*.lease
+rm -f var/lib/dpkg/*-old
+rm -f var/log/apt/*
+rm -f var/log/{alternatives.log,bootstrap.log,dpkg.log}
 
-uncompress_files etc/alternatives
-uncompress_files usr/share/man
+rm -rf usr/share/doc/*/examples
 
-# remove broken links
-# $1 = search directory
-remove_broken_links()
-{
-   find "$1" -type l -exec test ! -e {} \; -print | xargs rm -vf
-}
+rm -f etc/fonts/conf.d/10-hinting-slight.conf
 
-remove_broken_links /etc/alternatives
-remove_broken_links /usr/share/man
-
-# Re-create man-db /var/cache/man/
-mandb --create
-
-rm -f /var/lib/dbus/machine-id
-#apt-get clean
-#rm -rf /tmp/*
-rm /etc/resolv.conf
-touch /etc/resolv.conf
+rm -f var/lib/dbus/machine-id
+rm etc/resolv.conf
+touch etc/resolv.conf
 }
 export -f chroot_in
 
@@ -527,9 +546,6 @@ cp chroot/etc/skel/{.bashrc,.profile} chroot/root/
 mkdir chroot/root/Desktop
 mkdir chroot/home/puppy/Desktop
 
-# Copy xfceconf/ to chroot/
-#cp --preserve=mode,timestamps -rf xfceconf/* chroot/
-
 # Move obshutdown.rc from .conf to home for i386 version
 if [ "$ARCH" = "i386" ]; then
 mv -f chroot/etc/skel/.config/obshutdown/obshutdown.rc chroot/etc/skel/.obshutdown.rc 2> /dev/null
@@ -538,8 +554,8 @@ mv -f chroot/root/.config/obshutdown/obshutdown.rc chroot/root/.obshutdown.rc 2>
 fi
 
 # Remove unused background image
-rm -f chroot/usr/local/share/obshutdown/themes/faenza/spacefun-bg.png 2> /dev/null
-rm -f chroot/usr/local/share/obshutdown/themes/spacefun-bg.png 2> /dev/null
+#rm -f chroot/usr/local/share/obshutdown/themes/faenza/spacefun-bg.png 2> /dev/null
+#rm -f chroot/usr/local/share/obshutdown/themes/spacefun-bg.png 2> /dev/null
 
 # Remove duplicate icon
 rm -f chroot/usr/share/pixmaps/sfsload.png 2> /dev/null
@@ -550,7 +566,6 @@ if [ -n "$TEMPMIRROR" ]; then
 	sed -i s/"$TEMPMIRROR"/deb.debian.org/ chroot/etc/apt/sources.list.d/debian.sources
 fi
 
-rm -f chroot/var/cache/apt/*.bin
 mkdir -p apt/archives
 mv -f chroot/var/cache/apt/archives/*.deb ./apt/archives/
 

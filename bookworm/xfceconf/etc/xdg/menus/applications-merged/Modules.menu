@@ -3,10 +3,11 @@
 <Menu>
   <Name>Applications</Name>
   <Menu>
-    <Name>HWMon Tools</Name>
-    <Directory>HWMon.directory</Directory>
+    <Name>Module Tools</Name>
+    <Directory>Modules.directory</Directory>
     <Include>
-        <Category>HWMon</Category>
+        <Category>Modules</Category>
+        <Category>DebianDog</Category>
     </Include>
   </Menu>
 </Menu>

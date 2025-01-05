@@ -165,7 +165,7 @@
   </action>
 
 <action>
-	<icon>application-x-gnome-saved-search</icon>
+	<icon>tool-measure</icon>
 	<name>How Big?</name>
 	<unique-id>1424354227747465-4</unique-id>
 	<command>du -chs --apparent-size %N | sort -h  | yad --width=300 --height=400 --text-info --tail --center</command>
@@ -179,7 +179,7 @@
 	<video-files/>
 </action>
 <action>
-	<icon>spacefm-find</icon>
+	<icon>edit-find</icon>
 	<name>Search</name>
 	<unique-id>1424354227747528-6</unique-id>
 	<command>pfind -d %f</command>
@@ -188,7 +188,7 @@
 	<directories/>
 </action>
 <action>
-	<icon>sfs</icon>
+	<icon>drive-removable-media</icon>
 	<name>Mount/unmount squashfs</name>
 	<unique-id>1424354227747596-14</unique-id>
 	<command>filemnt %f</command>
@@ -197,7 +197,7 @@
 	<other-files/>
 </action>
 <action>
-	<icon>application-x-cd-image</icon>
+	<icon>drive-removable-media</icon>
 	<name>Mount/unmount iso</name>
 	<unique-id>1424354227747597-15</unique-id>
 	<command>filemnt %f</command>
@@ -206,7 +206,7 @@
 	<other-files/>
 </action>
 <action>
-	<icon>application-x-xzm</icon>
+	<icon>media-playback-start</icon>
 	<name>Activate module</name>
 	<unique-id>1424354227747595-8</unique-id>
 	<command>loadmodule -a %f</command>
@@ -215,7 +215,7 @@
 	<other-files/>
 </action>
 <action>
-	<icon>application-x-xzm</icon>
+	<icon>media-playback-start</icon>
 	<name>Activate module (safe mode)</name>
 	<unique-id>1424354227747631-9</unique-id>
 	<command>loadmodule -ano %f</command>
@@ -224,7 +224,7 @@
 	<other-files/>
 </action>
 <action>
-	<icon>application-x-xzm</icon>
+	<icon>media-eject</icon>
 	<name>Deactivate module</name>
 	<unique-id>1424354227747664-10</unique-id>
 	<command>loadmodule -d %f</command>
@@ -233,22 +233,13 @@
 	<other-files/>
 </action>
 <action>
-	<icon>sfs</icon>
+	<icon>add-files-to-archive</icon>
 	<name>Create Squashfs</name>
 	<unique-id>1472389472683874-1</unique-id>
 	<command>cr-squash %f</command>
 	<description></description>
 	<patterns>*</patterns>
 	<directories/>
-</action>
-<action>
-	<icon>debian-logo</icon>
-	<name>Extract deb</name>
-	<unique-id>1424354227747697-11</unique-id>
-	<command>redeb %f</command>
-	<description></description>
-	<patterns>*.deb</patterns>
-	<other-files/>
 </action>
 <action>
 	<icon>deb</icon>
@@ -268,5 +259,13 @@
 	<patterns>*.deb</patterns>
 	<other-files/>
 </action>
-
+<action>
+	<icon>edit-undo-archive</icon>
+	<name>Extract deb</name>
+	<unique-id>1424354227747697-11</unique-id>
+	<command>redeb %f</command>
+	<description></description>
+	<patterns>*.deb</patterns>
+	<other-files/>
+</action>
 </actions>
