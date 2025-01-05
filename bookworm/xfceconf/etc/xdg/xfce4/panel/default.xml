@@ -4,7 +4,7 @@
   <property name="configver" type="int" value="2"/>
   <property name="panels" type="array">
     <value type="int" value="1"/>
-    <property name="dark-mode" type="bool" value="false"/>
+    <property name="dark-mode" type="bool" value="true"/>
     <property name="panel-1" type="empty">
       <property name="position" type="string" value="p=8;x=839;y=1324"/>
       <property name="length" type="uint" value="100"/>
@@ -57,6 +57,7 @@
     </property>
     <property name="plugin-11" type="string" value="systray">
       <property name="icon-size" type="int" value="0"/>
+      <property name="square-icons" type="bool" value="true"/>
       <property name="single-row" type="bool" value="true"/>
     </property>
     <property name="plugin-12" type="string" value="xfce4-clipman-plugin"/>

@@ -1,10 +1,10 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=SFS-Load GUI
+Name=Load Module
 Comment=Activate or deactivate a module 'On the Fly'
 Exec=loadmodulegui
-Icon=sfs
+Icon=media-removable
 Terminal=false
 StartupNotify=false
 Categories=System;Modules;

@@ -1,0 +1,10 @@
+path-exclude=/usr/share/backgrounds/xfce/*.jpg
+path-exclude=/usr/share/backgrounds/xfce/*.png
+path-exclude=/usr/share/themes/Bright/*
+path-exclude=/usr/share/themes/Daloa/*
+path-exclude=/usr/share/themes/Kokodi/*
+path-exclude=/usr/share/themes/Moheli/*
+path-exclude=/usr/share/themes/Retro/*
+path-exclude=/usr/share/themes/ZOMG-PONIES\!/*
+path-exclude=/usr/local/share/obshutdown/themes/faenza/spacefun-bg.png
+path-exclude=/usr/local/share/obshutdown/themes/spacefun-bg.png

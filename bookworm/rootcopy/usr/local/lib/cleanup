@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Writen by gumanzoy <gumanzoy@gmail.com>
+# Written by gumanzoy <gumanzoy@gmail.com>
 # https://github.com/PocketHandyBox/phb-base
 
 # Use functions uncompress_files and remove_broken_links from linux-live
@@ -9,25 +9,24 @@
 # Unzip gzipped files (man pages), so LZMA can compress 2times better.
 # First we fix symlinks, then uncompress files
 # $1 = search directory
-uncompress_files()
-{
-   local LINK LINE
+uncompress_files() {
+local LINK LINE
 
-   find "$1" -type l -name "*.gz" | while read LINE; do
-      LINK="$(readlink "$LINE" | sed -r 's/.gz$//')"
-      FILE="$(echo "$LINE" | sed -r 's/.gz$//')"
-      ln -sfn "$LINK" "$FILE"
-      rm -f "$LINE"
-   done
-   find "$1" -type f -name "*.gz" | xargs -r gunzip -f
+find "$1" -type l -name "*.gz" | while read LINE; do
+	LINK="$(readlink "$LINE" | sed -r 's/.gz$//')"
+	FILE="$(echo "$LINE" | sed -r 's/.gz$//')"
+	ln -sfn "$LINK" "$FILE"
+	rm -f "$LINE"
+done
+find "$1" -type f -name "*.gz" | xargs -r gunzip -f
 }
 export -f uncompress_files
 
 # remove broken links
 # $1 = search directory
-remove_broken_links()
-{
-   find "$1" -type l -exec test ! -e {} \; -print | xargs rm -vf
+remove_broken_links() {
+#find "$1" -type l -exec test ! -e {} \; -print | xargs rm -vf
+find "$1" -xtype l -delete
 }
 export -f remove_broken_links
 
