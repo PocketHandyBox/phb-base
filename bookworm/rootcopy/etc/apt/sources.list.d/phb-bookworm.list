@@ -1,0 +1,1 @@
+deb [signed-by=/etc/apt/keyrings/phb-deb.asc] https://github.com/PocketHandyBox/phb-deb/raw/main/bookworm/ ./
