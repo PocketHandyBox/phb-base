@@ -1,0 +1,9 @@
+accept_language:en
+memory_cache_size:100000000
+disc_cache_size:0
+block_advertisements:1
+homepage_url:html.duckduckgo.com
+search_provider:18
+toolbar_status_size:6670
+toolbar_items:back/history/forward/reloadstop/url_bar/websearch
+bar_show:menu/tool
