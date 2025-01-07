@@ -13,7 +13,7 @@ theme =          oxygen
 buttons =        cancel shutdown restart logout suspend
 
 [actions]
-logout =         xfce4-session-logout -l
+logout =         pkill X
 shutdown =       wmpoweroff
 restart =       wmreboot
 lock = 
