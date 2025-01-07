@@ -1,6 +1,8 @@
 [Desktop Entry]
+Version=1.0
 Type=Application
 Name=Extract .deb
+TryExec=redeb
 Exec=redeb %f
 Categories=Other;
 NoDisplay=true

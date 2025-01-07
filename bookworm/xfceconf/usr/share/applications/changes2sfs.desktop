@@ -3,6 +3,7 @@ Version=1.0
 Type=Application
 Name=Changes2sfs (create module)
 Comment=Create module from changes
+TryExec=changes2sfs
 Exec=changes2sfs
 Icon=tap-create
 Terminal=false

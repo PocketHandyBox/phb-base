@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Icon=network-wireless
+Name=wavemon
+Comment=status monitor for wireless network devices
+TryExec=wavemon
+Exec=env WHOLD=1 WNAME=wavemon WICON=network-wireless WGEOM=90x30 run-in-terminal wavemon
+Terminal=false
+StartupNotify=false
+Categories=HWMon;

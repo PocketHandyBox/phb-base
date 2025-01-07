@@ -1,0 +1,31 @@
+#!/bin/dash
+
+which "$1" > /dev/null || exit 1
+
+CMD="$@"
+
+[ $YADERR ] && CMD="show-error-yad $@"
+
+[ -n "$WNAME" ] && TERMOPTS="-T $WNAME"
+
+XF4TERMOPTS="--hide-menubar --hide-scrollbar"
+
+[ -n "$WICON" ] && XF4TERMOPTS="$XF4TERMOPTS -I $WICON"
+
+if [ -n "$WGEOM" ]; then
+	XF4TERMOPTS="$XF4TERMOPTS --geometry=$WGEOM"
+	XTERMOPTS="-geometry $WGEOM"
+fi
+
+if [ "$WHOLD" ]; then
+	XF4TERMOPTS="$XF4TERMOPTS --hold"
+	XTERMOPTS="$XTERMOPTS -hold"
+fi
+
+if which xfce4-terminal > /dev/null; then
+	exec xfce4-terminal $TERMOPTS $XF4TERMOPTS -e "$CMD"
+elif which xterm > /dev/null; then
+	exec xterm $TERMOPTS $XTERMOPTS -e "$CMD"
+else
+	exec x-terminal-emulator $TERMOPTS -e "$CMD"
+fi

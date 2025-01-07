@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Icon=camera-photo
+Name=luvcview
+Comment=camera viewer for UVC based webcams
+TryExec=luvcview
+Exec=show-error-yad luvcview
+StartupNotify=false
+Terminal=false
+Categories=Video;

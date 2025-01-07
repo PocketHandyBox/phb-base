@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Icon=computer
+Name=watch nvidia-smi
+Comment=nVidia System Management Interface
+TryExec=nvidia-smi
+Exec=env WNAME=nvidia-smi WGEOM=92x24 run-in-terminal watch -t nvidia-smi
+Terminal=false
+StartupNotify=false
+Categories=HWMon;
