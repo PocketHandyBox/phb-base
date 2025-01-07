@@ -1,0 +1,7 @@
+path-exclude=/etc/default/smartmontools
+path-exclude=/etc/init.d/smartmontools
+path-exclude=/etc/smartd.conf
+path-exclude=/etc/smartmontools/run.d/10mail
+path-exclude=/lib/systemd/system/smartmontools.service
+path-exclude=/usr/sbin/smartd
+path-exclude=/usr/share/man/man[5-8]/smartd.*
