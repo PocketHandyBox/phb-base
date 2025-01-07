@@ -1,9 +1,11 @@
 [Desktop Entry]
+Version=1.0
+Type=Application
 Name=FixDep Install
 Comment=Install deb(s) + dependencies
+TryExec=fixdepinstall
 Exec=fixdepinstall
 Icon=application-x-deb
 Terminal=false
-Type=Application
 Categories=Utility;System;
 StartupNotify=false

@@ -1,11 +1,12 @@
 [Desktop Entry]
-Encoding=UTF-8
+Version=1.0
+Type=Application
 Name=Convert-SFS
 Icon=edit-undo-archive
 Comment=Convert .sfs files
+TryExec=conv-sfs
 Exec=conv-sfs
 Terminal=false
-Type=Application
 Categories=DebianDog;Modules
 GenericName=Convert-SFS
 MimeType=application/x-squashfs;application/vnd.squashfs;

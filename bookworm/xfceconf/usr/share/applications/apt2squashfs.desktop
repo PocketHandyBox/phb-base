@@ -3,6 +3,7 @@ Version=1.0
 Type=Application
 Name=Apt2squashfs (create module)
 Comment=Create module from package(s)
+TryExec=apt2squashfs
 Exec=apt2squashfs
 Icon=tap-create
 Terminal=false

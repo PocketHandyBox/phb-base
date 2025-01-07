@@ -1,7 +1,9 @@
 [Desktop Entry]
+Version=1.0
 Type=Application
 Name=filemnt
 Comment=Mount/unmount .squashfs/.iso files
+TryExec=filemnt
 Exec=filemnt %f
 Categories=Other;
 NoDisplay=true

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Icon=drive-harddisk
+Name=whdd
+Comment=HDD Scan Tool
+TryExec=whdd
+Exec=env WHOLD=1 WNAME=WHDD WICON=drive-harddisk WGEOM=90x30 run-in-terminal whdd
+Terminal=false
+StartupNotify=false
+Categories=HWMon;

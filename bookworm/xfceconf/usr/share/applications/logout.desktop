@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Exec=obshutdown
+Exec=dash -c "which obshutdown > /dev/null && exec obshutdown || exec xfce4-session-logout"
 Icon=org.xfce.panel.actions
 StartupNotify=false
 Terminal=false
@@ -10,4 +10,3 @@ Name=Logout
 Name[nl]=Uitloggen
 NotShowIn=JWM
 OnlyShowIn=XFCE
-

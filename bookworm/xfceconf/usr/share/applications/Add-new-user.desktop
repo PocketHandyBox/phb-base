@@ -3,6 +3,7 @@ Version=1.0
 Type=Application
 Name=Add new user
 Comment=
+TryExec=addnewuser
 Exec=addnewuser
 Icon=user-home
 Terminal=false

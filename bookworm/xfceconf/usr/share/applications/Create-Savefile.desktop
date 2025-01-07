@@ -3,6 +3,7 @@ Version=1.0
 Type=Application
 Name=Create Savefile
 Comment=Make a Save image file
+TryExec=mk-save.gtkdlg
 Exec=mk-save.gtkdlg
 Icon=document-save
 Terminal=false

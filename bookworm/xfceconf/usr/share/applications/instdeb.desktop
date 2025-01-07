@@ -1,6 +1,8 @@
 [Desktop Entry]
+Version=1.0
 Type=Application
 Name=Install .deb(s)
+TryExec=instdeb
 Exec=instdeb %F
 Categories=Other;
 NoDisplay=true
