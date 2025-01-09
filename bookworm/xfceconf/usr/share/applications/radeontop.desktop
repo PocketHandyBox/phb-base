@@ -5,7 +5,7 @@ Icon=htop
 Name=radeontop
 Comment=Show Radeon GPU utilization
 TryExec=radeontop
-Exec=env YADERR=1 WNAME=radeontop WICON=htop run-in-terminal radeontop -T
+Exec=env WHOLD=1 WNAME=radeontop WICON=htop run-in-terminal radeontop -T
 Terminal=false
 StartupNotify=false
 Categories=HWMon;
