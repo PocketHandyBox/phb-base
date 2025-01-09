@@ -1,0 +1,1 @@
+deb [signed-by=/etc/apt/keyrings/ppa-whdd.asc] https://ppa.launchpadcontent.net/whdd/stable/ubuntu jammy main
