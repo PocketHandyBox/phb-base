@@ -191,7 +191,7 @@ if [ $(command -v apt-get 2>/dev/null) ];then
  echo -e "\e[0;36mUpdate the package lists...\033[0m"
  apt-get update
  echo -e "\e[0;36mInstall some required packages, e.g. xz-utils, wget, squashfs-tools, etc...\033[0m"
- apt-get install debootstrap wget xz-utils squashfs-tools cpio -y
+ apt-get install debootstrap squashfs-tools wget xz-utils zstd -y
  ok_or_failed
 fi
 
@@ -594,7 +594,7 @@ fi
 mkdir -p "$ARCH" 2> /dev/null
 
 echo -e "\e[0;33mNow we will create: filesystem: '01-filesystem.squashfs'"
-mksquashfs chroot "$ARCH"/01-filesystem.squashfs -comp xz -b 512k -Xbcj x86
+mksquashfs chroot "$ARCH"/01-filesystem.squashfs -b 512k $MKSFSCMP
 ok_or_failed
 
 # Move back the cache to chroot

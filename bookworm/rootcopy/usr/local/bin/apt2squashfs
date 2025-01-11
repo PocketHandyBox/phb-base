@@ -21,6 +21,8 @@
 # Remove live-boot support
 # Add . /usr/local/lib/cleanup
 
+YADTITLE="Apt2squashfs (create module from package(s))"
+
 #sudo -K
 
 if [ -z `which gsu` ]; then
@@ -51,11 +53,10 @@ fi
 # Remove temp file from possible previous run
 rm -f /tmp/mnts /tmp/notrap_ 2> /dev/null
 
-LFONT="<span size='large' foreground='dark blue'><b>          *** Setup apt2squashfs ***</b></span>"
 devs="$(blkid --match-tag TYPE  | grep /dev | grep -E -v "swap|ntfs|vfat"  | sort | cut -d" " -f1 | grep -E -v "/loop|sr0|swap" | sed 's|/dev/||g;s|:||g')"
 echo $devs
 DEVS=`echo $devs | sed 's/ /!/g'`
-SETUP=`yad --borders=6  --center --title="apt2squashfs"  --text="  $LFONT \n Create module from temporary installed package(s) by apt-get. \n <b>Note: These packages will not be registered by dpkg. </b> \n Depending on the sort of application(s) it may work or not. \n An application depending on startup at boot might not work. \n The package(s) will be installed in chroot using 'overlayfs'. \n (but in fact directly into binded write/working directory). \n This way no traces are left behind in the actual running system. \n First, required 'apt-get update' will run (in chroot)." \
+SETUP=`yad --borders=6  --center --title="$YADTITLE"  --text=" Create module from temporary installed package(s) by apt-get. \n <b>Note: These packages will not be registered by dpkg. </b> \n Depending on the sort of application(s) it may work or not. \n An application depending on startup at boot might not work. \n The package(s) will be installed in chroot using 'overlayfs'. \n (but in fact directly into binded write/working directory). \n This way no traces are left behind in the actual running system. \n First, required 'apt-get update' will run (in chroot)." \
 --window-icon="preferences-system" --form --columns=1 \
 --field="   Choose where to create new module,must be linux filesystem,\n   NTFS or FAT filesytems are excluded.  :LBL"  "" \
 --field=" :CB" "$DEVS!/mnt/live" \
@@ -415,55 +416,16 @@ echo -e "\e[0;32mOK\033[0m"
 
 #cd "/mnt/$DRV"
 
-# Check if mksquashfs version is 4.3 or higher
-check_mksquashfs_version=$(mksquashfs -version | awk 'NR==1 { print $3 }' | grep -o 4.3)
-verlte() {
-    [  "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
-}
+grep -sq ^MKSFSCMP= /root/*.conf && \
+MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
 
-verlt() {
-    [ "$1" = "$2" ] && return 1 || verlte $1 $2
-}
+yad --center --title="$YADTITLE" --text "Now you may want to do some extra cleaning to save more space before creating module with mksquashfs. \nFor example: ~/.mozilla  \nOpen filemanager in '$WORK' to do so. \nPress OK to finally create: '$SQFS'" --button="OK"
 
-if verlt $check_mksquashfs_version 4.3
-then
-yad  --center --title="Choose Compression Type" --text "    <b>Choose which algorthim to compress the sfs with.</b> \n  Chosing XZ here will give you a smaller file but \n  may be slower than GZIP on very lowspec machines. " --button=" XZ :1" --button=" GZIP :0" --buttons-layout=spread
-
-button1=$?
-# Create module.
-echo -e "\e[0;36mCreating $SFS.squashfs....\033[0m"
-
-case $button1 in
-0)
-trap 'rm -f "$SQFS"' 1 2 15; mksquashfs "$WORK" "$SQFS"
-;;
-1)
-trap 'rm -f "$SQFS"' 1 2 15; mksquashfs "$WORK" "$SQFS" -comp xz -b 1M -Xbcj x86
-;;
-esac
-else
-yad  --center --title="Choose Compression Type" --text "    <b>Choose which algorthim to compress the sfs with.</b> \n  Chosing XZ here will give you a smaller file but \n  may be slower than GZIP on very lowspec machines \n  LZ4 is the fastest, but gives a larger file as GZIP. " --button=" XZ :2" --button=" GZIP :1" --button=" LZ4 :0" --buttons-layout=spread
-
-button1=$?
-# Create module.
-echo -e "\e[0;36mCreating $SFS.squashfs....\033[0m"
-
-case $button1 in
-0)
-trap 'rm -f "$SQFS"' 1 2 15; mksquashfs "$WORK" "$SQFS" -comp lz4 -Xhc
-;;
-1)
-trap 'rm -f "$SQFS"' 1 2 15; mksquashfs "$WORK" "$SQFS"
-;;
-2)
-trap 'rm -f "$SQFS"' 1 2 15; mksquashfs "$WORK" "$SQFS" -comp xz -b 1M -Xbcj x86
-;;
-esac
-fi
+trap 'rm -f "$SQFS"' 1 2 15; mksquashfs "$WORK" "$SQFS" -b 1M $MKSFSCMP
 
 # Remove working directory?
 if [ -f "$SQFS" ]; then
-yad --title="apt2squashfs" --center --text=" Done creating '$SFS.squashfs' \n Do you want to remove '$WORK'? " --button="gtk-yes:0" --button="gtk-no:1"
+yad --title="$YADTITLE" --center --text=" Done creating '$SFS.squashfs' \n Do you want to remove '$WORK'? " --button="gtk-yes:0" --button="gtk-no:1"
 ret=$?
 [[ $ret -ne 0 ]] && exit 0
 if [[ -n "$SFS" && -n "$DRV" ]]; then
@@ -471,7 +433,7 @@ rm -rf "$WORK"-w
 rm -rf "$WORK"
 fi
 else
-yad --title="apt2squashfs" --center --text=" Error: '$SQFS' is not created. \n Do you want to remove '$WORK'? " --button="gtk-yes:0" --button="gtk-no:1"
+yad --title="$YADTITLE" --center --text=" Error: '$SQFS' is not created. \n Do you want to remove '$WORK'? " --button="gtk-yes:0" --button="gtk-no:1"
 ret=$?
 [[ $ret -ne 0 ]] && exit 0
 if [[ -n "$SFS" && -n "$DRV" ]]; then
@@ -483,6 +445,6 @@ exit 0
 }
 export -f run_xterm
 
-xterm -T "apt2squashfs" -e /bin/bash -c run_xterm
+xterm -T "$YADTITLE" -e /bin/bash -c run_xterm
 
 exit 0
