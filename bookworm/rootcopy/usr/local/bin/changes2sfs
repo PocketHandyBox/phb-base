@@ -218,51 +218,12 @@ cleanup 2> /dev/null
     	find . -name '.wh.*' -delete
 	fi
 
-# Check if mksquashfs version is 4.3 or higher
-check_mksquashfs_version=$(mksquashfs -version | awk 'NR==1 { print $3 }' | grep -o 4.3)
-verlte() {
-    [  "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
-}
+grep -sq ^MKSFSCMP= /root/*.conf && \
+MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
 
-verlt() {
-    [ "$1" = "$2" ] && return 1 || verlte $1 $2
-}
+yad --center --title="$YADTITLE" --text "Now you may want to do some extra cleaning to save more space before creating module with mksquashfs. \nFor example: ~/.mozilla  \nOpen filemanager in '$WORK' to do so. \nPress OK to finally create: '$SQFS'" --button="OK"
 
-if verlt $check_mksquashfs_version 4.3
-then
-yad  --center --title="Changes2sfs Choose Compression Type" --text "  Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n For example: ~/.mozilla  \n Open filemanager in '$WORK' to do so. \n  Make a choice to finally create:\n   '$SQFS'  \n  <b>Choose which algorthim to compress the sfs with.</b> \n  Chosing XZ here will give you a smaller file but \n  may be slower than GZIP on very lowspec machines. " --button=" XZ :1" --button=" GZIP :0" --buttons-layout=spread
-
-button1=$?
-# Create module.
-echo -e "\e[0;36mCreating $SQFS....\033[0m"
-
-case $button1 in
-0)
-xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS""
-;;
-1)
-xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS" -comp xz -b 1M -Xbcj x86"
-;;
-esac
-else
-yad  --center --title="Changes2sfs Choose Compression Type" --text "  Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n  For example: ~/.mozilla  \n  Open filemanager in '$WORK' to do so. \n  Make a choice to finally create:\n   '$SQFS' \n   <b>Choose which algorthim to compress the sfs with.</b> \n  Chosing XZ here will give you a smaller file but \n  may be slower than GZIP on very lowspec machines \n  LZ4 is the fastest, but gives a larger file as GZIP. " --button=" XZ :2" --button=" GZIP :1" --button=" LZ4 :0" --buttons-layout=spread
-
-button1=$?
-# Create module.
-echo -e "\e[0;36mCreating $SQFS....\033[0m"
-
-case $button1 in
-0)
-xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS" -comp lz4 -Xhc"
-;;
-1)
-xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS""
-;;
-2)
-xterm -T "changes2sfs" -e "mksquashfs "$WORK" "$SQFS" -comp xz -b 1M -Xbcj x86"
-;;
-esac
-fi
+xterm -T "$YADTITLE" -e "mksquashfs "$WORK" "$SQFS" -b 1M ""$MKSFSCMP"
 
 # Remove working directory?
 if [ -f "$SQFS" ]; then
