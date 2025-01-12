@@ -1,3 +1,27 @@
-Package: *systemd*
-Pin: origin ""
+Package: systemd-standalone-*
+Pin: release n=bookworm
+Pin-Priority: 200
+
+Package: systemd-standalone-*
+Pin: origin *
+Pin-Priority: 100
+
+Package: systemd
+Pin: origin *
+Pin-Priority: -1
+
+Package: systemd:i386
+Pin: origin *
+Pin-Priority: -1
+
+Package: libsystemd0
+Pin: origin *
+Pin-Priority: -1
+
+Package: libsystemd0:i386
+Pin: origin *
+Pin-Priority: -1
+
+Package: systemd-*
+Pin: origin *
 Pin-Priority: -1
