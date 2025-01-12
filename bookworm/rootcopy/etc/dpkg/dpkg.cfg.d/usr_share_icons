@@ -37,5 +37,6 @@ path-exclude=/usr/share/icons/*/96x96/*
 path-exclude=/usr/share/icons/*/128x128/*
 path-exclude=/usr/share/icons/*/192x192/*
 path-exclude=/usr/share/icons/*/256x256/*
+path-exclude=/usr/share/icons/*/384x384/*
 path-exclude=/usr/share/icons/*/480x480/*
 path-exclude=/usr/share/icons/*/512x512/*
