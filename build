@@ -326,9 +326,9 @@ fi
 
 # ● fredx181, instead of below here it can be also: "cd /bin; ln -sf bash sh; cd /" 
 # make /bin/sh symlink to bash instead of dash:
-echo -e "\e[0;36mmake /bin/sh symlink to bash instead of default dash\033[0m"
-echo "dash dash/sh boolean false" | debconf-set-selections
-DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
+#echo -e "\e[0;36mmake /bin/sh symlink to bash instead of default dash\033[0m"
+#echo "dash dash/sh boolean false" | debconf-set-selections
+#DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
 
 dbus-uuidgen > /var/lib/dbus/machine-id
 echo "live" > /etc/hostname
@@ -441,6 +441,12 @@ remove_broken_links usr/share/man
 
 # Re-create man-db /var/cache/man/
 mandb --create
+
+# Create symlink for /usr/local/sbin/mount.ntfs
+ln -sf /usr/local/sbin/mount.ntfs /usr/sbin/mount.ntfs
+
+# Enable pin priority 99 to ntfs-3g package to disable auto updating
+sed -i s/ntfs3g/ntfs-3g/ etc/apt/preferences.d/noupgrades
 
 # Copy xfceconf/ to /
 cp --preserve=mode,timestamps -rf xfceconf/* ./
