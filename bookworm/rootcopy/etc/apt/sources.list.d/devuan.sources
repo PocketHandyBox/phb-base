@@ -1,0 +1,5 @@
+Types: deb
+URIs: http://deb.devuan.org/devuan
+Suites: daedalus
+Components: main
+Signed-By: /usr/share/keyrings/devuan-archive-keyring.gpg

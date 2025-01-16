@@ -262,14 +262,22 @@ echo "APT::Install-Recommends "false"; APT::Install-Suggests "false";" > /etc/ap
 echo "Acquire::Check-Valid-Until "0";" >> /etc/apt/apt.conf
 
 # custom repository for systemd or not
+#if [ "$SYSTEMD" = "FALSE" ]; then
+#BOOKW=book-worm  # without systemd
+#elif [ "$SYSTEMD" = "TRUE" ]; then
+#BOOKW=bookworm  # with systemd
+#fi
+
 if [ "$SYSTEMD" = "FALSE" ]; then
-BOOKW=book-worm  # without systemd
+PL_SYS=$PL_SYSV
 elif [ "$SYSTEMD" = "TRUE" ]; then
-BOOKW=bookworm  # with systemd
+rm -f /etc/apt/preferences.d/00systemd /etc/apt/sources.list.d/devuan.sources /usr/share/keyrings/devuan-archive-keyring.gpg
+PL_SYS=$PL_SYSTEMD
 fi
 
 # Add DogLinux github repo
-echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/$BOOKW/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
+#echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/$BOOKW/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
+echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/bookworm/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
 
 [ "$ARCH" = "amd64" ] && dpkg --add-architecture i386
 
@@ -303,13 +311,16 @@ addgroup wheel
 echo
 usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel puppy
 
-if [ "$SYSTEMD" = "FALSE" ]; then
-echo -e "\e[0;36mInstall sysvinit required packages\033[0m"
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYSV
-elif [ "$SYSTEMD" = "TRUE" ]; then
-rm -f /etc/apt/preferences.d/00systemd
-echo -e "\e[0;36mInstall systemd required packages\033[0m"
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYSTEMD
+echo -e "\e[0;36mInstall sysvinit/systemd required packages\033[0m"
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYS
+# try again if failed
+if [ $? -ne 0 ]; then
+DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYS
+	if [ $? -ne 0 ]; then
+	echo -e "\e[0;31mFAILED\033[0m"
+	touch /exit_
+	exit
+	fi
 fi
 
 # Install some basic packages (do not edit, essential!)
