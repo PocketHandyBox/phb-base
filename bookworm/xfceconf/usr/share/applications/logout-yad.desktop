@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Exec=logout-yad
+Icon=org.xfce.panel.actions
+StartupNotify=false
+Terminal=false
+Categories=X-XFCE;X-Xfce-Toplevel;
+Name=Logout
+Name[nl]=Uitloggen
+NotShowIn=JWM
+OnlyShowIn=XFCE
