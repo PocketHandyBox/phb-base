@@ -563,17 +563,6 @@ cp chroot/etc/skel/{.bashrc,.profile} chroot/root/
 mkdir chroot/root/Desktop
 mkdir chroot/home/puppy/Desktop
 
-# Move obshutdown.rc from .conf to home for i386 version
-if [ "$ARCH" = "i386" ]; then
-mv -f chroot/etc/skel/.config/obshutdown/obshutdown.rc chroot/etc/skel/.obshutdown.rc 2> /dev/null
-mv -f chroot/home/puppy/.config/obshutdown/obshutdown.rc chroot/home/puppy/.obshutdown.rc 2> /dev/null
-mv -f chroot/root/.config/obshutdown/obshutdown.rc chroot/root/.obshutdown.rc 2> /dev/null
-fi
-
-# Remove unused background image
-#rm -f chroot/usr/local/share/obshutdown/themes/faenza/spacefun-bg.png 2> /dev/null
-#rm -f chroot/usr/local/share/obshutdown/themes/spacefun-bg.png 2> /dev/null
-
 # Remove duplicate icon
 rm -f chroot/usr/share/pixmaps/sfsload.png 2> /dev/null
 

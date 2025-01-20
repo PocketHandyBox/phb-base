@@ -1,0 +1,6 @@
+#!/bin/dash
+
+yad --title Logout --window-icon=system-shutdown --timeout=30 --sticky \
+ --fixed --center --on-top --skip-taskbar --close-on-unfocus \
+ --button=Exit\ X\!system-logout:'pkill X' --button=Restart\!system-reboot:wmreboot \
+ --button=Shutdown\!system-shutdown:wmpoweroff --button=Suspend\!system-suspend:'sudo pm-suspend'

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Exec=dash -c "which obshutdown > /dev/null && exec obshutdown || exec xfce4-session-logout"
+Exec=logout-yad
 Icon=org.xfce.panel.actions
 StartupNotify=false
 Terminal=false
