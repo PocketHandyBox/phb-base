@@ -3,6 +3,12 @@ Pin: origin github.com
 Pin: release l=DebianDog
 Pin-Priority: -1
 
-Package: openbox
-Pin: version 3.6.1-4.3
-Pin-Priority: 1001
+Package: yad
+Pin: origin github.com
+Pin: release l=DebianDog
+Pin-Priority: 500
+
+Package: *
+Pin: origin github.com
+Pin: release l=DebianDog
+Pin-Priority: 200
