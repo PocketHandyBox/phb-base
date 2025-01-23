@@ -463,6 +463,20 @@ sed -i s/ntfs3g/ntfs-3g/ etc/apt/preferences.d/noupgrades
 cp --preserve=mode,timestamps -rf xfceconf/* ./
 rm -rf xfceconf
 
+mkdir -p root/{Desktop,.config} home/puppy/{Desktop,.config}
+
+# After replacing org.gtk.Settings.FileChooser.gschema.xml with modified version
+# Need update /usr/share/glib-2.0/schemas/gschemas.compiled file
+if [ "$ARCH" = "amd64" ]; then
+/usr/lib/x86_64-linux-gnu/glib-2.0/glib-compile-schemas /usr/share/glib-2.0/schemas/
+elif [ "$ARCH" = "i386" ]; then
+/usr/lib/i386-linux-gnu/glib-2.0/glib-compile-schemas /usr/share/glib-2.0/schemas/
+fi
+
+# Copy /etc/skel/.config to /root/ and /home/puppy/
+cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,l3afpad,netsurf,volumeicon,xfce4} root/.config/
+cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,l3afpad,netsurf,volumeicon,xfce4} home/puppy/.config/
+
 # Create symlink for icon harddrive.png
 for SIZE in 16x16 22x22 24x24 32x32 48x48 64x64; do
 	mkdir -p usr/share/icons/Adwaita/$SIZE/devices 2> /dev/null
@@ -559,9 +573,6 @@ mv $(basename $config) chroot/root/
 
 # Copy /etc/skel/{.bashrc,.profile} to /root/
 cp chroot/etc/skel/{.bashrc,.profile} chroot/root/
-
-mkdir chroot/root/Desktop
-mkdir chroot/home/puppy/Desktop
 
 # Remove duplicate icon
 rm -f chroot/usr/share/pixmaps/sfsload.png 2> /dev/null
