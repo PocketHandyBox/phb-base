@@ -168,7 +168,7 @@
 	<icon>tool-measure</icon>
 	<name>How Big?</name>
 	<unique-id>1424354227747465-4</unique-id>
-	<command>du -chs --apparent-size %N | sort -h  | yad --width=300 --height=400 --text-info --tail --center</command>
+	<command>howbig %N</command>
 	<description></description>
 	<patterns>*</patterns>
 	<directories/>

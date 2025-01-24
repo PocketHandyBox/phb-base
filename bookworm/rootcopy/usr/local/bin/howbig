@@ -1,16 +1,16 @@
-#!/bin/bash
+#!/bin/dash
 
-FILES="$@"
-printf '%s\n' "$@" > /tmp/howbig
+print_file() {
+echo "$LINE" | cut -f2
+}
 
-BASENAMES=$(while read f; do echo "$(basename "$f")"; done <<< "$(cat /tmp/howbig)")
+print_to_yad() {
+du -chs -t 1K --apparent-size "$@" | while read LINE; do
+SIZE=$(echo -n "$LINE" | cut -f1)
+echo -n "$SIZE"' \t'
+basename "$(print_file)"
+done
+}
 
-DIRNAME="$(dirname "$(cat /tmp/howbig | head -1)")"
-
-IFS=$'\n'
-
-cd "$DIRNAME"
-du -chs --apparent-size $BASENAMES | sort -h  | yad --title="How Big?" --width=400 --height=400 --text-info --tail --center
-rm -f /tmp/howbig
-
-exit 0
+print_to_yad "$@" | exec yad --title="How Big?" --window-icon=tool-measure \
+ --width=300 --height=350 --mouse --text-info --tail --button=Close\!gtk-close
