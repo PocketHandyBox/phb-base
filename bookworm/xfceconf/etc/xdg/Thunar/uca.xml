@@ -191,7 +191,7 @@
 	<icon>drive-removable-media</icon>
 	<name>Mount/unmount squashfs</name>
 	<unique-id>1424354227747596-14</unique-id>
-	<command>filemnt %f</command>
+	<command>pfilemnt %f</command>
 	<description></description>
 	<patterns>*.xzm;*.squashfs;*.sfs</patterns>
 	<other-files/>
@@ -200,7 +200,7 @@
 	<icon>drive-removable-media</icon>
 	<name>Mount/unmount iso</name>
 	<unique-id>1424354227747597-15</unique-id>
-	<command>filemnt %f</command>
+	<command>pfilemnt %f</command>
 	<description></description>
 	<patterns>*.iso</patterns>
 	<other-files/>
