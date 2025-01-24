@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=pfilemnt
+Comment=Mount/unmount .squashfs/.iso/.img files
+TryExec=pfilemnt
+Exec=pfilemnt %f
+Categories=System;
+NoDisplay=true
+MimeType=application/x-cd-image;application/x-raw-disk-image;application/x-squashfs;application/vnd.squashfs;
+Terminal=false
+Icon=drive-removable-media
+StartupNotify=false
