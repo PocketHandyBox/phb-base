@@ -20,8 +20,10 @@
 # Replace unionfs-fuse with overlayfs
 # Remove live-boot support
 # Add . /usr/local/lib/cleanup
+# Add 'Disable dpkg registration' checkbox
+# Fixes for GTK3 version of yad
 
-YADTITLE="Apt2squashfs (create module from package(s))"
+export YADTITLE="Apt2squashfs (create module from package(s))"
 
 #sudo -K
 
@@ -53,23 +55,44 @@ fi
 # Remove temp file from possible previous run
 rm -f /tmp/mnts /tmp/notrap_ 2> /dev/null
 
+info_dpkg_reg() {
+INFODPKGREG="Question 1: What happens if I leave the default Disable dpkg registration box checked?
+Answer 1: The information for the packages included in this module will stay hidden for the system but the module will work any time you decide to load it. It will be safe also to load it on different debian system. The only disadvantage is some dependencies in this module needed for later created modules will be downloaded again and included also in the other module, but this will make possible for every module to work without the need of dependency included in another module. It is recommended to leave it this way.
+
+Question 2: What happens if I uncheck Disable dpkg registration box?
+Answer 2: Dpkg registration information from this module will overwrite the information in the main module. It is not a problem if you load this module every time on boot. You need to be sure it is the last module loaded from the system on boot by naming with higher number (02, 03, 04-my-changes.squashfs for example) and it is best to place it inside /live folder. But if you are going to load the module from time to time and like to share it with others safely, do not uncheck the box.
+
+More general information what Disable dpkg registration do:
+It simply renames '/var/lib/dpkg/info', '/var/lib/dpkg/status', '/var/lib/dpkg/available' adding 'new' at the end."
+
+echo "$INFODPKGREG" | yad --title='Info dpkg registration' --window-icon=tap-create \
+ --width=600 --height=400 --text-info --wrap --button=Close\!gtk-close
+}
+export -f info_dpkg_reg
+
 devs="$(blkid --match-tag TYPE  | grep /dev | grep -E -v "swap|ntfs|vfat"  | sort | cut -d" " -f1 | grep -E -v "/loop|sr0|swap" | sed 's|/dev/||g;s|:||g')"
 echo $devs
 DEVS=`echo $devs | sed 's/ /!/g'`
-SETUP=`yad --borders=6  --center --title="$YADTITLE"  --text=" Create module from temporary installed package(s) by apt-get. \n <b>Note: These packages will not be registered by dpkg. </b> \n Depending on the sort of application(s) it may work or not. \n An application depending on startup at boot might not work. \n The package(s) will be installed in chroot using 'overlayfs'. \n (but in fact directly into binded write/working directory). \n This way no traces are left behind in the actual running system. \n First, required 'apt-get update' will run (in chroot)." \
---window-icon="preferences-system" --form --columns=1 \
---field="   Choose where to create new module,must be linux filesystem,\n   NTFS or FAT filesytems are excluded.  :LBL"  "" \
---field=" :CB" "$DEVS!/mnt/live" \
---field="   Type packagename(s) separated by a space: :LBL" "" \
---field=" : " "" \
- --button="gtk-quit:1" --button="gtk-ok:0"`
+SETUP=`yad --title="$YADTITLE" --window-icon=tap-create --width=500 \
+ --text="Create module from temporary installed package(s) by apt-get.\n\nDepending on the sort of application(s) it may work or not. An application depending on startup at boot might not work. The package(s) will be installed in chroot using 'overlayfs'. (but in fact directly into binded write/working directory). This way no traces are left behind in the actual running system.\n\nChoose where to create new module, must be linux filesystem, NTFS or FAT filesytems are excluded.\n\nFor no dpkg registration check the box 'Disable dpkg registration'" \
+ --form \
+ --field="*** Click for info about dpkg registration ***:BTN" "bash -c info_dpkg_reg" \
+ --field="Choose where to create new module::CB" "$DEVS!/mnt/live" \
+ --field="Packagename(s) separated by a space:: " "" \
+ --field="Disable dpkg registration:CHK" "TRUE" \
+ --button=Quit\!gtk-quit:1 --button=OK\!gtk-ok:0`
 ret=$?
 [[ $ret -ne 0 ]] && exit
 
-
 #export UNION=/mnt/unionsfs_$RANDOM; mkdir -p "$UNION"
 export DRV="`echo $SETUP | cut -d "|" -f 2`"
-export INSTALL="`echo $SETUP | cut -d "|" -f 4`"
+export INSTALL="`echo $SETUP | cut -d "|" -f 3`"
+export DISDPKG="`echo $SETUP | cut -d "|" -f 4`"
+
+if [ -z "$DRV" ] || [ -z "$INSTALL" ]; then
+yad --title="$YADTITLE" --window-icon=tap-create --center --text="You probably did not fill in all fields, please run apt2squashfs again." --button=Close\!gtk-close
+exit 0
+fi
 
 run_xterm () {
 # Function to cleanly unmount if the script is interrupted
@@ -183,7 +206,7 @@ export -f restore
 
 check_network() {
 echo -e "\e[0;36mChecking network connection...\033[0m"
-if ping -c1 google.com 2>&1 | grep unknown; then 
+if ping -c1 debian.org 2>&1 | grep unknown; then 
 echo -e "\e[0;33mThere is no network connection. Exiting...\033[0m"
 sleep 3
 touch /tmp/_exit
@@ -283,7 +306,7 @@ mount /dev/$DRV /mnt/$DRV 2> /dev/null
 
 # Check for existing directory.
 if [ -d "$WORK" ] || [ -d "$WORK"-w ]; then
-echo -e "Directory "$WORK" already exists, \n Please rename and run again. "
+echo -e "Directory "$WORK" already exists,\nPlease rename and run again."
 touch /tmp/notrap_
 read -s -n 1 -p "Press any key to close . . ."
 rm -f /tmp/notrap_
@@ -292,7 +315,7 @@ fi
 
 # Check if module already exists.
 if [ -f "$SQFS" ]; then
-echo -e "Module: "$SQFS" already exists, \n Please rename and run again. "
+echo -e "Module: "$SQFS" already exists,\nPlease rename and run again."
 touch /tmp/notrap_
 read -s -n 1 -p "Press any key to close . . ."
 rm -f /tmp/notrap_
@@ -400,9 +423,11 @@ cd "$WORK"
 
 echo -e "\e[0;36mCleaning... (removing and zerosizing files in working-directory: $SFS)\033[0m"
 
+if [ "$DISDPKG" = "TRUE" ]; then
 mv -f "$WORK"/var/lib/dpkg/info "$WORK"/var/lib/dpkg/infonew
 mv -f "$WORK"/var/lib/dpkg/available "$WORK"/var/lib/dpkg/availablenew
 mv -f "$WORK"/var/lib/dpkg/status "$WORK"/var/lib/dpkg/statusnew
+fi
 
 rm -f "$WORK"/etc/apt/sources.list
 rm -rf "$WORK"/etc/apt/sources.list.d
@@ -419,13 +444,21 @@ echo -e "\e[0;32mOK\033[0m"
 grep -sq ^MKSFSCMP= /root/*.conf && \
 MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
 
-yad --center --title="$YADTITLE" --text "Now you may want to do some extra cleaning to save more space before creating module with mksquashfs. \nFor example: ~/.mozilla  \nOpen filemanager in '$WORK' to do so. \nPress OK to finally create: '$SQFS'" --button="OK"
+msg="Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n
+For example: ~/.mozilla
+Open filemanager in $WORK to do so.
+Press OK to finally create: $SQFS"
+
+echo -e "$msg" | yad --title="$YADTITLE" --window-icon=tap-create --width=450 \
+ --height=200 --center --text-info --wrap --button=OK\!gtk-ok
 
 trap 'rm -f "$SQFS"' 1 2 15; mksquashfs "$WORK" "$SQFS" -b 1M $MKSFSCMP
 
 # Remove working directory?
 if [ -f "$SQFS" ]; then
-yad --title="$YADTITLE" --center --text=" Done creating '$SFS.squashfs' \n Do you want to remove '$WORK'? " --button="gtk-yes:0" --button="gtk-no:1"
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+ --text="Done creating '$SFS.squashfs'\nDo you want to remove '$WORK'?" \
+ --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
 ret=$?
 [[ $ret -ne 0 ]] && exit 0
 if [[ -n "$SFS" && -n "$DRV" ]]; then
@@ -433,7 +466,9 @@ rm -rf "$WORK"-w
 rm -rf "$WORK"
 fi
 else
-yad --title="$YADTITLE" --center --text=" Error: '$SQFS' is not created. \n Do you want to remove '$WORK'? " --button="gtk-yes:0" --button="gtk-no:1"
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+ --text="Error: '$SQFS' is not created.\nDo you want to remove '$WORK'?" \
+ --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
 ret=$?
 [[ $ret -ne 0 ]] && exit 0
 if [[ -n "$SFS" && -n "$DRV" ]]; then
