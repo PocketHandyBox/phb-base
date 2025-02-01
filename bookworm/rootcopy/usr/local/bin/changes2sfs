@@ -12,6 +12,7 @@
 # Renamed from remastercow to changes2sfs
 # Add . /usr/local/lib/cleanup
 # Not need to enter module name twice. Extension .squashfs added to WRKDIR instead
+# Fixes for GTK3 version of yad
 
 YADTITLE="Changes2sfs (create module from changes)"
 
@@ -26,7 +27,10 @@ dpkg --purge `dpkg --get-selections | grep deinstall | cut -f1` 2> /dev/null
 
 	if [ -f /mnt/live/tmp/modules ]; then
 if [ -f /mnt/live/tmp/changes-exit ]; then
-yad --title="$YADTITLE" --center --text=" You are running the system with boot option: 'changes=EXIT:/' \n Note that the changes made in this recent session will not be included in the module. " --button="gtk-close:0"
+msg="You are running the system with boot option: 'changes=EXIT:/'
+Note that the changes made in this recent session will not be included in the module."
+echo -e "$msg" | yad --title="$YADTITLE" --window-icon=tap-create --width=400 \
+ --height=150 --center --text-info --wrap --button=OK\!gtk-ok
 CHNGS="/mnt/live/memory/images/changes-exit/upperdir"
 else
 CHNGS="/mnt/live/memory/changes/upperdir"
@@ -35,28 +39,38 @@ fi
 CHNGS=/live/cow
 	fi
 
+info_dpkg_reg() {
+INFODPKGREG="Question 1: What happens if I leave the default Disable dpkg registration box checked?
+Answer 1: The information for the packages included in this module will stay hidden for the system but the module will work any time you decide to load it. It will be safe also to load it on different debian system. The only disadvantage is some dependencies in this module needed for later created modules will be downloaded again and included also in the other module, but this will make possible for every module to work without the need of dependency included in another module. It is recommended to leave it this way.
+
+Question 2: What happens if I uncheck Disable dpkg registration box?
+Answer 2: Dpkg registration information from this module will overwrite the information in the main module. It is not a problem if you load this module every time on boot. You need to be sure it is the last module loaded from the system on boot by naming with higher number (02, 03, 04-my-changes.squashfs for example) and it is best to place it inside /live folder. But if you are going to load the module from time to time and like to share it with others safely, do not uncheck the box.
+
+More general information what Disable dpkg registration do:
+It simply renames '/var/lib/dpkg/info', '/var/lib/dpkg/status', '/var/lib/dpkg/available' adding 'new' at the end."
+
+echo "$INFODPKGREG" | yad --title='Info dpkg registration' --window-icon=tap-create \
+ --width=600 --height=400 --text-info --wrap --button=Close\!gtk-close
+}
+export -f info_dpkg_reg
+
 devs="$(blkid --match-tag TYPE  | grep /dev | grep -E -v "swap|ntfs|vfat"  | sort | cut -d" " -f1 | grep -E -v "/loop|sr0|swap" | sed 's|/dev/||g;s|:||g')"
 echo $devs
 DEVS=`echo $devs | sed 's/ /!/g'`
-SETUP=`yad --title="$YADTITLE" --center --text=" This script will create a module from the changes you made to the system. \n <u>Note: Manually loaded squashfs modules will be deactivated.</u>  \n Advised is to run this script from terminal to watch progress.  \n Choose where to create new module, must be on linux filesystem, \n NTFS or FAT filesytems are excluded. \n For no dpkg registration check the box 'Disable dpkg registration'" \
---field="*** Click for info about dpkg registration ***:BTN" "sh -c 'echo -e "'" Question 1: What happens if I leave the default Disable dpkg registration box checked? 
- \n Answer 1: The information for the packages included in this module will stay hidden for the system but the module will work any time you decide to load it. It will be safe also to load it on different debian system. The only disadvantage is some dependencies in this module needed for later created modules will be downloaded again and included also in the other module, but this will make possible for every module to work without the need of dependency included in another module. It is recommended to leave it this way. 
-\n Question 2: What happens if I uncheck Disable dpkg registration box? 
-\n Answer 2: Dpkg registration information from this module will overwrite the information in the main module. It is not a problem if you load this module every time on boot. You need to be sure it is the last module loaded from the system on boot by naming with higher number (02, 03, 04-my-changes.squashfs for example) and it is best to place it inside /live folder. But if you are going to load the module from time to time and like to share it with others safely, do not uncheck the box. 
- \n More general information what Disable dpkg registration do:
- It simply renames /var/lib/dpkg/info, /var/lib/dpkg/status, /var/lib/dpkg/available adding    new at the end. You can extract the content of every module later and make auto-update-safe dpkg database script. You can read how to do this in DebianDog HowTo thread. "'" | yad --title="'"Info dpkg registration"'" --height=550 --width=650 --text-info --wrap --button="'"gtk-close:0"'"'" \
---window-icon="preferences-system" --form  \
---field="  Choose where to create module::CB" "$DEVS!/tmp!/" \
---field="Type custom name of working directory \n  (e.g. mychanges):" "" \
---field=" Disable dpkg registration:CHK" "TRUE" \
---button="gtk-quit:1" --button="gtk-ok:0"`
+SETUP=`yad --title="$YADTITLE" --window-icon=tap-create --width=450 \
+ --text="Create a module from the changes you made to the system.\n\n<u>Note: Manually loaded squashfs modules will be deactivated.</u>\n\nChoose where to create new module, must be on linux filesystem, NTFS or FAT filesytems are excluded.\n\nFor no dpkg registration check the box 'Disable dpkg registration'" \
+ --form \
+ --field="*** Click for info about dpkg registration ***:BTN" "bash -c info_dpkg_reg" \
+ --field="Choose where to create new module::CB" "$DEVS!/tmp" \
+ --field="Type custom name of working directory\n(e.g. mychanges):" "" \
+ --field="Disable dpkg registration:CHK" "TRUE" \
+ --button=Quit\!gtk-quit:1 --button=OK\!gtk-ok:0`
 ret=$?
 [[ $ret -eq 1 ]] && exit
 
 DRV="`echo $SETUP | cut -d "|" -f 2`"
 WRKDIR="`echo $SETUP | cut -d "|" -f 3`"
 DISDPKG="`echo $SETUP | cut -d "|" -f 4`"
-REGISTERDEL="`echo $SETUP | cut -d "|" -f 5`"
 
 SFS="$WRKDIR".squashfs
 
@@ -64,8 +78,8 @@ echo $DRV
 echo $WRKDIR
 echo $SFS
 echo $DISDPKG
-if [ -z "$DRV" ] || [ -z "$WRKDIR" ] || [ -z "$SFS" ]; then
-yad --title="$YADTITLE" --center --text=" You probably did not fill in all fields, \n Please run the script again" --button="gtk-close:0"
+if [ -z "$DRV" ] || [ -z "$WRKDIR" ]; then
+yad --title="$YADTITLE" --window-icon=tap-create --center --text="You probably did not fill in all fields, please run changes2sfs again." --button=Close\!gtk-close
 exit 0
 fi
 
@@ -84,13 +98,13 @@ mount /dev/$DRV /mnt/$DRV 2> /dev/null
 	fi
 
 if [ -d "$WORK" ]; then
-yad --title="Changes2sfs" --center --text=" Directory "$WORK" already exists, \n Please run the script again and use other name" --button="gtk-close:0"
+yad --title="$YADTITLE" --window-icon=tap-create --center --text="Directory '$WORK' already exists,\nPlease rename and run again." --button=Close\!gtk-close
 exit 0
 fi
 mkdir -p "$WORK" # Make new directory.
 
 if [ -e "$SQFS" ]; then
-yad --title="Changes2sfs" --center --text=" File "$SQFS" already exists, \n Please run the script again and use other name" --button="gtk-close:0"
+yad --title="$YADTITLE" --window-icon=tap-create --center --text="Module: '$SQFS' already exists,\nPlease rename and run again." --button=Close\!gtk-close
 exit 0
 fi
 
@@ -185,12 +199,12 @@ YADPID=$(ps -eo pid,cmd | grep -v grep | grep "yad --title=$YADTITLE" | awk '{ p
    echo 100 >> /tmp/changes2sfs_progress
    echo 100 2> /dev/null
    fi 
-) | yad --title="$YADTITLE" --center --height="100" --width="400" --progress --auto-close --text=" Copying files to $WORK... " --button="gtk-cancel"
+) | yad --title="$YADTITLE" --window-icon=tap-create --width=400 --height=100 --center --progress --auto-close --text="Copying files to $WORK..." --button=Cancel\!gtk-cancel
 
     if [ "$(tail -n1 /tmp/changes2sfs_progress)" -lt 100 ] ; then # If cancelled
 echo cancelled
 rm -f /tmp/changes2sfs_progress
-yad --title="Changes2sfs" --center --height="100" --width="400" --text " <b>Creating module Cancelled!</b> \n The working directory: \n $WORK \n will be deleted within a minute after closing this window " --button="gtk-close"
+yad --title="Creating module Cancelled" --window-icon=tap-create --width=300 --height=200 --center --text="The working directory will be deleted within a minute after closing this window.\n\n$WORK" --button=Close\!gtk-close
 if [ -d "$WORK" ]; then
 echo "Removing $WORK..."
 rm -rf "$WORK"
@@ -203,38 +217,44 @@ rm -f /tmp/changes2sfs_progress
 
 echo "Cleaning..."
 
-	if [ "$DISDPKG" = "TRUE" ]; then
+if [ "$DISDPKG" = "TRUE" ]; then
 mv "$WORK"/var/lib/dpkg/info "$WORK"/var/lib/dpkg/infonew
 mv "$WORK"/var/lib/dpkg/status "$WORK"/var/lib/dpkg/statusnew
 mv "$WORK"/var/lib/dpkg/available "$WORK"/var/lib/dpkg/availablenew
-	fi
+fi
 
 cd "$WORK"
 cleanup 2> /dev/null
 
 #    chown -R man:root usr/share/man
 
- 	if [ "$REGISTERDEL" = "FALSE" ]; then
-    	find . -name '.wh.*' -delete
-	fi
-
 grep -sq ^MKSFSCMP= /root/*.conf && \
 MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
 
-yad --center --title="$YADTITLE" --text "Now you may want to do some extra cleaning to save more space before creating module with mksquashfs. \nFor example: ~/.mozilla  \nOpen filemanager in '$WORK' to do so. \nPress OK to finally create: '$SQFS'" --button="OK"
+msg="Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n
+For example: ~/.mozilla
+Open filemanager in $WORK to do so.
+Press OK to finally create: $SQFS"
+
+echo -e "$msg" | yad --title="$YADTITLE" --window-icon=tap-create --width=450 \
+ --height=200 --center --text-info --wrap --button=OK\!gtk-ok
 
 xterm -T "$YADTITLE" -e "mksquashfs "$WORK" "$SQFS" -b 1M ""$MKSFSCMP"
 
 # Remove working directory?
 if [ -f "$SQFS" ]; then
-yad --title="Changes2sfs" --center --text=" Done creating '$SQFS' \n Do you want to remove '$WORK'? " --button="gtk-yes:0" --button="gtk-no:1"
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+ --text="Done creating '$SFS.squashfs'\nDo you want to remove '$WORK'?" \
+ --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
 ret=$?
 [[ $ret -ne 0 ]] && exit 0
 if [[ -n "$SFS" && -n "$DRV" ]]; then
 rm -rf "$WORK"
 fi
 else
-yad --title="Changes2sfs" --center --text=" Error: '$SQFS' is not created. \n Do you want to remove '$WORK'? " --button="gtk-yes:0" --button="gtk-no:1"
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+ --text="Error: '$SQFS' is not created.\nDo you want to remove '$WORK'?" \
+ --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
 ret=$?
 [[ $ret -ne 0 ]] && exit 0
 if [[ -n "$SFS" && -n "$DRV" ]]; then
