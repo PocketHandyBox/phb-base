@@ -23,16 +23,15 @@ dpkg-deb -e $FILE $newdir/DEBIAN
 
 elif [[ $ifdeb != "deb" ]] && [ ! -d $FILE ]; then
 echo " The file you chose is not a .deb file. "
-yad --title="Extract deb" --center --text=" The file you chose is not a .deb file. " --button="gtk-close:0"
+yad --title="Extract deb" --center --text="The file you chose is not a .deb file." --button=Close\!gtk-close
 exit
 
 else
- 
 	if [ -d $FILE ]; then
 lsdeb=`ls $FILE/DEBIAN/control`
 	    if [ -z $lsdeb ]; then
 	  echo "No file DEBIAN/control found, cannot continue"
-	  yad --title="Build deb" --center --text=" No file DEBIAN/control found, cannot build package. " --button="gtk-close:0"
+	  yad --title="Build deb" --center --text="No file DEBIAN/control found, cannot build package." --button=Close\!gtk-close
 	  exit
 	    else
 	  mkdir "$FILE"_newbuild
