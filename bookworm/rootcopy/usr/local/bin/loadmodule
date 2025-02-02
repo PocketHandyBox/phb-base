@@ -1,6 +1,18 @@
 #!/bin/bash
 #set -x
 
+# loadmodule script by fredx181
+# https://github.com/doglinux/bookworm/blob/master/amd64/sfsload_2.0.0_all.deb
+
+# Modified by gumanzoy https://github.com/PocketHandyBox/phb-base
+# Fixes for GTK3 version of yad
+
+if [ -z `which gsu` ]; then
+[ "`whoami`" != "root" ] && exec gksu ${0} "$@"
+else
+[ "`whoami`" != "root" ] && exec gsu ${0} "$@"
+fi
+
 if [ "$1" = "" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
 echo -en "This script will (de)activate a module 'On the Fly', e.g. *.squashfs, *.xzm or *.sfs.\nUsage:\n`basename ${0}` -a </path/to/module> to activate or: \n`basename ${0}` -d </path/to/module> to deactivate \n"
 exit 0
@@ -35,11 +47,11 @@ check_if_deactivated()
 {
   if [ -d $CHNGS/$BUNDLE ]; then
     echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' is already activated"
-yad --title="LoadModule" --center --width="400" --text=" Module '$BUNDLE' is already activated  \n Deactivate the module first. " --button="gtk-close:0"
+yad --title="Load Module" --window-icon=dialog-information --center --width="400" --text="Module '$BUNDLE' is already activated\nDeactivate the module first." --button=Close\!gtk-close
     exit 1
   elif [ -n "$(mount | grep $BUNDLE)" ]; then
     echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' is already mounted"
-yad --title="LoadModule" --center --width="400" --text=" Module '$BUNDLE' \n is already mounted in some way.  \n Unmount the module first. " --button="gtk-close:0"
+yad --title="Load Module" --window-icon=dialog-warning --center --width="400" --text="Module '$BUNDLE' is already mounted in some way.\nUnmount the module first." --button=Close\!gtk-close
     exit 1
   fi
 }
@@ -48,7 +60,7 @@ check_if_activated()
 {
   if [ ! -d $CHNGS/$BUNDLE ]; then
     echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' is not currently activated"
-yad --title="LoadModule" --center --width="400" --text=" Module '$BUNDLE' is not currently activated " --button="gtk-close:0"
+yad --title="Load Module" --window-icon=dialog-warning --center --width="400" --text="Module '$BUNDLE' is not currently activated" --button=Close\!gtk-close
     exit 1
   fi
 }
@@ -105,7 +117,7 @@ bundle_activate()
 {
   check_bundle_defined
   if [ "$ext" = "sfs" ]; then
-yad --title="LoadModule" --center --width="400" --text=" This module has .sfs extension (possibly made for puppy linux) \n There's a chance it will work but it could also break the system \n Continue? " --button="gtk-yes:0" --button="gtk-no:1" 
+yad --title="Load Module" --window-icon=dialog-question --center --width="400" --text="This module has .sfs extension (possibly made for puppy linux)\nThere's a chance it will work but it could also break the system\nContinue?" --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
 ret=$?
 [[ $ret -eq 1 ]] && exit 0
 fi
@@ -149,7 +161,7 @@ rm /tmp/files-${BUNDLE}.txt /tmp/emptydirs-${BUNDLE}.txt
 cp -arsn $CHNGS/$BUNDLE-rw/* / 2> /dev/null      # create symlinks
 
     echo -e $Green"SUCCESS:"$Color_Off" Module '$BUNDLE' activated"
-yad --title="LoadModule" --center --width="400" --text=" SUCCESS: Module '$BUNDLE' activated " --button="gtk-close:0" &
+yad --title="Load Module" --window-icon=dialog-ok --center --width="400" --text="SUCCESS: Module '$BUNDLE' activated" --button=OK\!gtk-ok &
   post_actions_check_if_needed
 
     post_actions_run_list
@@ -162,7 +174,7 @@ yad --title="LoadModule" --center --width="400" --text=" SUCCESS: Module '$BUNDL
     exit 0
   else
     echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' activate failed"
-yad --title="LoadModule" --center --width="400" --text=" ERROR: Module '$BUNDLE' activate failed " --button="gtk-close:0" &
+yad --title="Load Module" --window-icon=dialog-error --center --width="400" --text="ERROR: Module '$BUNDLE' activate failed" --button=Close\!gtk-close &
     umount $CHNGS/$BUNDLE-rw
     umount $CHNGS/$BUNDLE
     rmdir $CHNGS/$BUNDLE-rw
@@ -220,7 +232,7 @@ rm -rf $CHNGS/$BUNDLE-w/
 rm -rf $CHNGS/$BUNDLE-temp
 
     echo -e $Green"SUCCESS:"$Color_Off" Module '$BUNDLE' deactivated"
-yad --title="LoadModule" --center --width="400" --text=" SUCCESS: Module '$BUNDLE' deactivated " --button="gtk-close:0" &
+yad --title="Load Module" --window-icon=dialog-information --center --width="400" --text="SUCCESS: Module '$BUNDLE' deactivated" --button=OK\!gtk-ok &
     post_actions_run_list
     update-menus
 # Ugly workaround for OpenBox version to update the menu:
@@ -231,7 +243,7 @@ yad --title="LoadModule" --center --width="400" --text=" SUCCESS: Module '$BUNDL
 #    exit 0
   else
     echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' deactivate failed"
-yad --title="LoadModule" --center --width="400" --text=" ERROR: Module '$BUNDLE' deactivate failed " --button="gtk-close:0" &
+yad --title="Load Module" --window-icon=dialog-error --center --width="400" --text="ERROR: Module '$BUNDLE' deactivate failed" --button=Close\!gtk-close &
 exit 0
   fi
 }
@@ -248,7 +260,7 @@ case "$1" in
     bundle_activate
 	;;
 	*)
-	yad --center --title="LoadModule" --text=" Not a  valid module file, \n Please run again." --button="gtk-close:0"
+	yad --title="Load Module" --window-icon=dialog-error --center --text="Not a valid module file,\nPlease run again." --button=Close\!gtk-close
 	exit 0
 	;;
 	esac
@@ -265,7 +277,7 @@ case "$1" in
     bundle_deactivate 
  	;;
 	*)
-	yad --center --title="LoadModule" --text=" Not a  valid module file, \n Please run again." --button="gtk-close:0"
+	yad --title="Load Module" --window-icon=dialog-error --center --text="Not a valid module file,\nPlease run again." --button=Close\!gtk-close
 	exit 0
 	;;
 	esac
