@@ -298,6 +298,8 @@ mkdir -p /opt/bin
 # Disable because included into porteusbootscripts deb postinst
 #update-rc.d snapexit defaults
 
+update-rc.d sfsunload defaults
+
 # Merge all install variables into one
 [ "$ARCH" = "amd64" ] && INSTALL="$INSTALL $PL_AMD64"
 
