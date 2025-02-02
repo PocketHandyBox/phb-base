@@ -1,0 +1,273 @@
+#!/bin/bash
+#set -x
+
+if [ "$1" = "" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+echo -en "This script will (de)activate a module 'On the Fly', e.g. *.squashfs, *.xzm or *.sfs.\nUsage:\n`basename ${0}` -a </path/to/module> to activate or: \n`basename ${0}` -d </path/to/module> to deactivate \n"
+exit 0
+fi
+
+if [ -f /mnt/live/tmp/modules ]; then
+CHNGS=/mnt/live/memory/images/SFS  # porteus-boot
+else
+CHNGS=/mnt/SFS  # live-boot
+fi
+
+ext=`echo "${2##*.}"`
+echo $ext
+
+check_bundle_defined()
+{
+  if [ ! $BUNDLE ]; then
+    echo -e $Red"ERROR:"$Color_Off" Please define bundle name to de/activate"
+    exit 1
+  fi
+}
+
+check_if_exists()
+{
+  if [ ! -f $BUNDLE ]; then
+    echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' does not exist"
+    exit 1
+  fi
+}
+
+check_if_deactivated()
+{
+  if [ -d $CHNGS/$BUNDLE ]; then
+    echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' is already activated"
+yad --title="LoadModule" --center --width="400" --text=" Module '$BUNDLE' is already activated  \n Deactivate the module first. " --button="gtk-close:0"
+    exit 1
+  elif [ -n "$(mount | grep $BUNDLE)" ]; then
+    echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' is already mounted"
+yad --title="LoadModule" --center --width="400" --text=" Module '$BUNDLE' \n is already mounted in some way.  \n Unmount the module first. " --button="gtk-close:0"
+    exit 1
+  fi
+}
+
+check_if_activated()
+{
+  if [ ! -d $CHNGS/$BUNDLE ]; then
+    echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' is not currently activated"
+yad --title="LoadModule" --center --width="400" --text=" Module '$BUNDLE' is not currently activated " --button="gtk-close:0"
+    exit 1
+  fi
+}
+
+post_actions_check_if_needed()
+{
+  MODULES=$(ls $CHNGS/$BUNDLE/lib/modules 2>/dev/null)
+  ICONS=$(ls $CHNGS/$BUNDLE/usr/share/icons/hicolor 2>/dev/null)
+  DESKTOP=$(ls $CHNGS/$BUNDLE/usr/share/applications 2>/dev/null)
+  DESKTOP1=$(ls $CHNGS/$BUNDLE/usr/local/share/applications 2>/dev/null)
+  GSETTINGS=$(ls $CHNGS/$BUNDLE/usr/share/glib-2.0/schemas 2>/dev/null)
+  FONTS=$(ls $CHNGS/$BUNDLE/usr/share/fonts/TTF 2>/dev/null)
+  MIME=$(ls $CHNGS/$BUNDLE/usr/share/mime/ 2>/dev/null)
+}
+
+post_actions_run_list()
+{
+  if [ "$MODULES" ]; then 
+    echo -e $Green"ACTION:"$Color_Off" updating loadable kernel modules list"
+    depmod -a
+  fi
+  if [ "$MIME" ]; then
+    echo -e $Green"ACTION:"$Color_Off" updating mime cache"
+    update-mime-database /usr/share/mime &>/dev/null 2>&1
+  fi
+  if [ "$ICONS" ]; then 
+    echo -e $Green"ACTION:"$Color_Off" rebuilding the gtk+ icon cache"
+    update-icon-caches /usr/share/icons/* &>/dev/null 2>&1
+    gtk-update-icon-cache --force /usr/share/icons/hicolor &>/dev/null 2>&1
+  fi
+  if [ "$DESKTOP" ]; then
+    echo -e $Green"ACTION:"$Color_Off" updating mimeinfo cache"
+    update-desktop-database &>/dev/null 2>&1
+    #rm -r $HOME/.cache &>/dev/null 2>&1
+  fi
+  if [ "$DESKTOP1" ]; then
+    echo -e $Green"ACTION:"$Color_Off" updating mimeinfo cache"
+    update-desktop-database /usr/local/share/applications &>/dev/null 2>&1
+    #rm -r $HOME/.cache &>/dev/null 2>&1
+  fi
+  if [ "$GSETTINGS" ]; then
+    echo -e $Green"ACTION:"$Color_Off" gsettings xml schema files"
+    /usr/lib/x86_64-linux-gnu/glib-2.0/glib-compile-schemas /usr/share/glib-2.0/schemas &>/dev/null 2>&1
+  fi
+  if [ "$FONTS" ]; then
+    echo -e $Green"ACTION:"$Color_Off" updating font cache"
+    fc-cache -f -s > /dev/null
+    mkfontscale /usr/share/fonts/TTF
+    mkfontdir /usr/share/fonts/TTF
+  fi
+}
+
+bundle_activate()
+{
+  check_bundle_defined
+  if [ "$ext" = "sfs" ]; then
+yad --title="LoadModule" --center --width="400" --text=" This module has .sfs extension (possibly made for puppy linux) \n There's a chance it will work but it could also break the system \n Continue? " --button="gtk-yes:0" --button="gtk-no:1" 
+ret=$?
+[[ $ret -eq 1 ]] && exit 0
+fi
+  check_if_exists
+  check_if_deactivated
+
+  mkdir -p $CHNGS/$BUNDLE $CHNGS/$BUNDLE-w $CHNGS/$BUNDLE-rw $CHNGS/$BUNDLE-temp
+  mount -o loop $BUNDLE $CHNGS/$BUNDLE
+WRITE=$CHNGS/$BUNDLE-w
+TEMP=$CHNGS/$BUNDLE-temp
+# mount $CHNGS/$BUNDLE read-write on $CHNGS/$BUNDLE-rw
+# directory with changes / modified files is $CHNGS/$BUNDLE-w
+mount -t overlay -o lowerdir=$CHNGS/$BUNDLE,upperdir=$WRITE,workdir=$TEMP overl $CHNGS/$BUNDLE-rw
+
+  if [ $? -eq 0 ]; then
+FILES=$(find $CHNGS/$BUNDLE | sed "s|$CHNGS/$BUNDLE||")
+DIRS=$(find $CHNGS/$BUNDLE -type d | sed "s|$CHNGS/$BUNDLE||")
+
+# check for empty directories (corresponding with dirs in module) in system
+touch /tmp/emptydirs-${BUNDLE}.txt
+while read line; do
+if [ -d "$line" ] && [ -z "$(ls -A -- "$line")" ]; then
+echo "$line" >> /tmp/emptydirs-${BUNDLE}.txt 
+fi
+done <<< "$DIRS"
+
+mkdir -p /etc/SFS
+
+while read line; do
+if [ ! -e "$line" ]; then
+# create temp filelist
+echo "$line" >> /tmp/files-${BUNDLE}.txt
+fi
+done <<< "$FILES"
+
+# create filelist, (possibly) to be used at next boot to remove remaining (broken) symlinks, excluded are already empty folders in the system
+awk '{if (f==1) { r[$0] } else if (! ($0 in r)) { print $0 } } ' f=1 /tmp/emptydirs-${BUNDLE}.txt f=2 /tmp/files-${BUNDLE}.txt | sed '/^$/d' > /etc/SFS/${BUNDLE}.txt
+
+rm /tmp/files-${BUNDLE}.txt /tmp/emptydirs-${BUNDLE}.txt
+
+cp -arsn $CHNGS/$BUNDLE-rw/* / 2> /dev/null      # create symlinks
+
+    echo -e $Green"SUCCESS:"$Color_Off" Module '$BUNDLE' activated"
+yad --title="LoadModule" --center --width="400" --text=" SUCCESS: Module '$BUNDLE' activated " --button="gtk-close:0" &
+  post_actions_check_if_needed
+
+    post_actions_run_list
+    update-menus
+# Ugly workaround for OpenBox version to update the menu:
+# Create a .desktop in /usr/share/applications with random name and remove it directly
+    FILE=$RANDOM
+    touch /usr/share/applications/$FILE.desktop && rm -f /usr/share/applications/$FILE.desktop
+    touch /usr/local/share/applications/$FILE.desktop 2> /dev/null && rm -f /usr/local/share/applications/$FILE.desktop 2> /dev/null
+    exit 0
+  else
+    echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' activate failed"
+yad --title="LoadModule" --center --width="400" --text=" ERROR: Module '$BUNDLE' activate failed " --button="gtk-close:0" &
+    umount $CHNGS/$BUNDLE-rw
+    umount $CHNGS/$BUNDLE
+    rmdir $CHNGS/$BUNDLE-rw
+    rmdir $CHNGS/$BUNDLE
+    rmdir $CHNGS/$BUNDLE-w
+    rm -rf $CHNGS/$BUNDLE-temp
+    exit 1
+  fi
+}
+
+bundle_deactivate()
+{
+#set -x
+  check_bundle_defined
+  check_if_activated
+  post_actions_check_if_needed
+
+FILES=$(find $CHNGS/$BUNDLE ! -type d | sed "s|$CHNGS/$BUNDLE||")
+
+umount $CHNGS/$BUNDLE-rw && rmdir $CHNGS/$BUNDLE-rw
+umount $CHNGS/$BUNDLE && rmdir $CHNGS/$BUNDLE  # unmount squashfs, now check for broken symlinks to be removed...
+  if [ $? -eq 0 ]; then
+while read line; do
+if [ ! -e "$line" ]; then
+# rename possibly existing .dpkg-new files
+if [ -f "${line}".dpkg-new ]; then
+mv -f "$line".dpkg-new "${line}"
+continue
+fi
+
+# send to filelist to be removed with xargs below
+[ -L "$line" ] && echo "$line" >> /tmp/${BUNDLE}.txt
+fi
+done <<< "$FILES"
+
+xargs -d '\n' -a /tmp/${BUNDLE}.txt rm
+
+# remove leftover (empty) directories
+tac /etc/SFS/${BUNDLE}.txt | while read line; do
+if [ -d "$line" ]; then
+rmdir "$line" 2> /dev/null 
+fi
+done
+
+# remove filelist created when previously loading
+rm /etc/SFS/${BUNDLE}.txt
+
+rm /tmp/${BUNDLE}.txt
+#cp -arf $CHNGS/$BUNDLE-w/* /
+cd $CHNGS/$BUNDLE-w/
+find . -type d -exec mkdir -p /"{}" \;
+find . -type f -exec mv -f "{}" /"{}" \;
+cd -
+rm -rf $CHNGS/$BUNDLE-w/
+rm -rf $CHNGS/$BUNDLE-temp
+
+    echo -e $Green"SUCCESS:"$Color_Off" Module '$BUNDLE' deactivated"
+yad --title="LoadModule" --center --width="400" --text=" SUCCESS: Module '$BUNDLE' deactivated " --button="gtk-close:0" &
+    post_actions_run_list
+    update-menus
+# Ugly workaround for OpenBox version to update the menu:
+# Create a .desktop in /usr/share/applications with random name and remove it directly
+    FILE=$RANDOM
+    touch /usr/share/applications/$FILE.desktop && rm -f /usr/share/applications/$FILE.desktop
+    touch /usr/local/share/applications/$FILE.desktop 2> /dev/null && rm -f /usr/local/share/applications/$FILE.desktop 2> /dev/null
+#    exit 0
+  else
+    echo -e $Red"ERROR:"$Color_Off" Module '$BUNDLE' deactivate failed"
+yad --title="LoadModule" --center --width="400" --text=" ERROR: Module '$BUNDLE' deactivate failed " --button="gtk-close:0" &
+exit 0
+  fi
+}
+
+case "$1" in
+  
+  -a|-ano)
+    BUNDLE="$2"
+	case $BUNDLE in
+
+	*.xzm|*.squashfs|*.sfs|*.sb)
+    cd "`dirname "$BUNDLE"`"
+    BUNDLE="`basename "$2"`"
+    bundle_activate
+	;;
+	*)
+	yad --center --title="LoadModule" --text=" Not a  valid module file, \n Please run again." --button="gtk-close:0"
+	exit 0
+	;;
+	esac
+;;
+
+  -d)
+    BUNDLE="$2"
+	case $BUNDLE in
+
+	*.xzm|*.squashfs|*.sfs|*.sb)
+    cd "`dirname "$BUNDLE"`"
+    BUNDLE=`basename "$2"`
+    cd "`dirname "$BUNDLE"`"
+    bundle_deactivate 
+ 	;;
+	*)
+	yad --center --title="LoadModule" --text=" Not a  valid module file, \n Please run again." --button="gtk-close:0"
+	exit 0
+	;;
+	esac
+;;
+esac
