@@ -1,41 +1,46 @@
 #!/bin/bash
+
+if [ -z `which gsu` ]; then
+[ "`whoami`" != "root" ] && exec gksu ${0} "$@"
+else
 [ "`whoami`" != "root" ] && exec gsu ${0} "$@"
+fi
+
 if [ -z "$1" ]; then
 echo "usage: redeb <package>.deb to extract  or: redeb <packagedirectory> to build"
 exit 0
 fi
 
+newbuild() {
+dpkg-deb -b $FILE "$FILE"_newbuild/ && \
+echo -e "----------------------\n""If there are no errors shown above, the package has been build."
+}
+
 FILE=$1
-#echo "${FILE%/*}"
-#cd "${FILE%/*}"
 cd "`dirname $FILE`"
-#newdir=`echo "${FILE%%.*}"`
 
 ifdeb=`echo "${FILE##*.}"`
 
 if [ "$ifdeb" = "deb" ]; then
-
-newdir=`basename $1 .deb`
-echo $newdir
-mkdir $newdir
-dpkg-deb -x $FILE $newdir
-dpkg-deb -e $FILE $newdir/DEBIAN
-
+  newdir=`basename $1 .deb`
+  echo $newdir
+  mkdir $newdir
+  dpkg-deb -x $FILE $newdir
+  dpkg-deb -e $FILE $newdir/DEBIAN
 elif [[ $ifdeb != "deb" ]] && [ ! -d $FILE ]; then
-echo " The file you chose is not a .deb file. "
-yad --title="Extract deb" --center --text="The file you chose is not a .deb file." --button=Close\!gtk-close
-exit
-
+  echo "The file you chose is not a .deb file."
+  yad --title="Extract deb" --window-icon=deb --center --text="The file you chose is not a .deb file." --button=Close\!gtk-close
+  exit
 else
-	if [ -d $FILE ]; then
-lsdeb=`ls $FILE/DEBIAN/control`
-	    if [ -z $lsdeb ]; then
-	  echo "No file DEBIAN/control found, cannot continue"
-	  yad --title="Build deb" --center --text="No file DEBIAN/control found, cannot build package." --button=Close\!gtk-close
-	  exit
-	    else
-	  mkdir "$FILE"_newbuild
-	  dpkg-deb -b $FILE "$FILE"_newbuild/
-	    fi
-	fi
+  if [ -d $FILE ]; then
+    lsdeb=`ls $FILE/DEBIAN/control`
+    if [ -z $lsdeb ]; then
+      echo "No file DEBIAN/control found, cannot continue."
+      yad --title="Build deb" --window-icon=deb --center --text="No file DEBIAN/control found, cannot build package." --button=Close\!gtk-close
+      exit
+    else
+      mkdir "$FILE"_newbuild
+      newbuild 2>&1 | yad --title="Build deb" --window-icon=deb --width=500 --height=200 --center --text-info --wrap --button=Close\!gtk-close
+    fi
+  fi
 fi

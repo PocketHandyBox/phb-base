@@ -245,7 +245,7 @@
 	<icon>deb</icon>
 	<name>Build deb</name>
 	<unique-id>1424354227747747-12</unique-id>
-	<command>make-deb-package %f </command>
+	<command>redeb %f</command>
 	<description></description>
 	<patterns>*</patterns>
 	<directories/>
