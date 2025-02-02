@@ -7,15 +7,15 @@
 # Modified by gumanzoy https://github.com/PocketHandyBox/phb-base
 # Fixes for GTK3 version of yad
 
+if [ "$1" = "" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+echo -en "This script will (de)activate a module 'On the Fly', e.g. *.squashfs, *.xzm or *.sfs.\nUsage:\n`basename ${0}` -a </path/to/module> to activate or: \n`basename ${0}` -d </path/to/module> to deactivate \n"
+exit 0
+fi
+
 if [ -z `which gsu` ]; then
 [ "`whoami`" != "root" ] && exec gksu ${0} "$@"
 else
 [ "`whoami`" != "root" ] && exec gsu ${0} "$@"
-fi
-
-if [ "$1" = "" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-echo -en "This script will (de)activate a module 'On the Fly', e.g. *.squashfs, *.xzm or *.sfs.\nUsage:\n`basename ${0}` -a </path/to/module> to activate or: \n`basename ${0}` -d </path/to/module> to deactivate \n"
-exit 0
 fi
 
 if [ -f /mnt/live/tmp/modules ]; then
