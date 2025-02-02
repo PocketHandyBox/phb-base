@@ -208,13 +208,6 @@ export LC_ALL=C
 echo "APT::Install-Recommends "false"; APT::Install-Suggests "false";" > /etc/apt/apt.conf
 echo "Acquire::Check-Valid-Until "0";" >> /etc/apt/apt.conf
 
-# custom repository for systemd or not
-#if [ "$SYSTEMD" = "FALSE" ]; then
-#BOOKW=book-worm  # without systemd
-#elif [ "$SYSTEMD" = "TRUE" ]; then
-#BOOKW=bookworm  # with systemd
-#fi
-
 if [ "$SYSTEMD" = "FALSE" ]; then
 	PL_SYS=$PL_SYSV
 elif [ "$SYSTEMD" = "TRUE" ]; then
@@ -223,7 +216,6 @@ elif [ "$SYSTEMD" = "TRUE" ]; then
 fi
 
 # Add DogLinux github repo
-#echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/$BOOKW/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
 echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/bookworm/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
 
 [ "$ARCH" = "amd64" ] && dpkg --add-architecture i386
@@ -281,12 +273,6 @@ DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confd
 	exit
 	fi
 fi
-
-# ● fredx181, instead of below here it can be also: "cd /bin; ln -sf bash sh; cd /" 
-# make /bin/sh symlink to bash instead of dash:
-#echo -e "\e[0;36mmake /bin/sh symlink to bash instead of default dash\033[0m"
-#echo "dash dash/sh boolean false" | debconf-set-selections
-#DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
 
 dbus-uuidgen > /var/lib/dbus/machine-id
 echo "live" > /etc/hostname
@@ -517,9 +503,6 @@ mv $(basename $config) chroot/root/
 # Copy /etc/skel/{.bashrc,.profile} to /root/
 cp chroot/etc/skel/{.bashrc,.profile} chroot/root/
 
-# Remove duplicate icon
-rm -f chroot/usr/share/pixmaps/sfsload.png 2> /dev/null
-
 chown -R 1000:1000 chroot/home/puppy
 
 if [ -n "$TEMPMIRROR" ]; then
@@ -537,13 +520,6 @@ if [ "$(cat chroot/etc/X11/default-display-manager 2> /dev/null)" ]; then
 	fi
 	echo -e "\e[0;32mDisabled autologin, using display-manager for login\033[0m"
 fi
-
-# Download extra squashfs modules if DE config is set
-#echo -e "\e[0;36mIf configured, download and extract extra .squashfs modules to squash...\033[0m"
-#mkdir squash
-#[ "$DE_CONFIG" = "Xfce4" ] && wget --no-check-certificate -P squash -r -e robots=off -nd -l1 -A "*squashfs" https://debiandog.github.io/MakeLive/modules-bookworm/xfce4/ && unsquashfs -f -d chroot squash/*.squashfs; rm -rf squash 
-
-#update-icon-caches chroot/usr/share/icons/hicolor/
 
 mkdir -p apt/archives
 mv -f chroot/var/cache/apt/archives/*.deb ./apt/archives/
