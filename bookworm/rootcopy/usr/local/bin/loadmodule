@@ -103,7 +103,11 @@ post_actions_run_list()
   fi
   if [ "$GSETTINGS" ]; then
     echo -e $Green"ACTION:"$Color_Off" gsettings xml schema files"
-    /usr/lib/x86_64-linux-gnu/glib-2.0/glib-compile-schemas /usr/share/glib-2.0/schemas &>/dev/null 2>&1
+    if [ "$(uname -m)" = "i686" ]; then
+      /usr/lib/i386-linux-gnu/glib-2.0/glib-compile-schemas /usr/share/glib-2.0/schemas &>/dev/null 2>&1
+    elif [ "$(uname -m)" = "x86_64" ]; then
+      /usr/lib/x86_64-linux-gnu/glib-2.0/glib-compile-schemas /usr/share/glib-2.0/schemas &>/dev/null 2>&1
+    fi
   fi
   if [ "$FONTS" ]; then
     echo -e $Green"ACTION:"$Color_Off" updating font cache"
