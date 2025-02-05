@@ -1,6 +1,11 @@
 #!/bin/bash
 
-[ "`whoami`" != "root" ] && exec gsu ${0} "$@"
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
+fi
        
 function new_user(){
     add_user=$(yad --title "Add a new user" --text "<b>Add a new user</b>\nRecommended is to add the user (in the next step) to the most important groups:\nsudo, audio, cdrom, video, fuse and more." --form --field "Username (use lowercase only):       : " --field "Password:       :H" --field "Retype Password:       :H")

@@ -11,17 +11,17 @@
 #20240623 change losetup-FULL to losetup. 
 #  note: losetup no longer supports -E and -e options, will need to revise this code sometime.
 
-# Modified by gumanzoy <gumanzoy@gmail.com>
-# https://github.com/PocketHandyBox/phb-base
+# Modified by gumanzoy https://github.com/PocketHandyBox
 # Renamed from filemnt to pfilemnt
 # Replace rox with xdg-open
 # Disable encrypted save-files
 # Use notify-send, remove gtkdialog-splash, pupdialog, pupmessage
 
-if [ -z `which gsu` ]; then
-[ "`whoami`" != "root" ] && exec gksu ${0} "$@"
-else
-[ "`whoami`" != "root" ] && exec gsu ${0} "$@"
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
 fi
 
 #export TEXTDOMAIN=filemnt
