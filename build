@@ -245,10 +245,11 @@ fi
 [ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\033[0m"; sleep 3
 echo
 # add groups fuse and wheel
-addgroup fuse
-addgroup wheel
+#addgroup fuse
+#addgroup wheel
 echo
-usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel puppy
+#usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel puppy
+usermod -a -G sudo,cdrom,disk,audio,video,plugdev puppy
 
 echo -e "\e[0;36mInstall sysvinit/systemd required packages\033[0m"
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYS
