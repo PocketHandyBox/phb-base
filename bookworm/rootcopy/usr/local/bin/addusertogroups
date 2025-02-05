@@ -1,9 +1,10 @@
 #!/bin/bash
 
-if [ -z `which gsu` ]; then
-[ "`whoami`" != "root" ] && exec gksu ${0} "$@"
-else
-[ "`whoami`" != "root" ] && exec gsu ${0} "$@"
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
 fi
 
 USERS=$(awk -F'[/:]' '{if ($3 >= 1000 && $3 != 65534) print $1}' /etc/passwd | tr '\n' '!')

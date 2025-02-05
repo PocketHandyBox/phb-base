@@ -14,8 +14,7 @@
 # this prevents possible problems when deactivating a module
 # version 1.1.2: jd7654, make possible to add version number of package, e.g. mpv=0.23.0-2+b2
 
-# Modified by gumanzoy <gumanzoy@gmail.com>
-# https://github.com/PocketHandyBox/phb-base
+# Modified by gumanzoy https://github.com/PocketHandyBox
 # Renamed from apt2sfs to apt2squashfs
 # Replace unionfs-fuse with overlayfs
 # Remove live-boot support
@@ -25,19 +24,12 @@
 
 export YADTITLE="Apt2squashfs (create module from package(s))"
 
-#sudo -K
-
-if [ -z `which gsu` ]; then
-[ "`whoami`" != "root" ] && exec gksu ${0} "$@"
-else
-[ "`whoami`" != "root" ] && exec gsu ${0} "$@"
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
 fi
-#export SUDO_USER=root
-#exe=$(basename $0)
-
-#sudopid="$(ps -eo pid,cmd | grep -w "sudo $exe\|sudo $SUDO_COMMAND" | grep -v grep | grep -v "sudo xterm" | grep -v "sudo -S" | awk '{ print $1 }')"
-#echo $sudopid
-#[ "$sudopid" ] && echo -e "\e[0;33mPlease run without sudo, e.g. $SUDO_COMMAND,\nExiting now...\033[0m" && exit
 
 #if [ -z `which unionfs-fuse` ]; then
 #	msg="You don't have unionfs-fuse installed.\nIt's a dependency of this program.\n Please install it first."

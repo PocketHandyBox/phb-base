@@ -7,8 +7,7 @@
 # april 11 2015, added /tmp and / to the choices for where to create the module
 # febr 10 2016 delete doc and man files instead of zerosizing them.
 
-# Modified by gumanzoy <gumanzoy@gmail.com>
-# https://github.com/PocketHandyBox/phb-base
+# Modified by gumanzoy https://github.com/PocketHandyBox
 # Renamed from remastercow to changes2sfs
 # Add . /usr/local/lib/cleanup
 # Not need to enter module name twice. Extension .squashfs added to WRKDIR instead
@@ -16,10 +15,11 @@
 
 YADTITLE="Changes2sfs (create module from changes)"
 
-if [ -z `which gsu` ]; then
-[ "`whoami`" != "root" ] && exec gksu ${0} "$@"
-else
-[ "`whoami`" != "root" ] && exec gsu ${0} "$@"
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
 fi
 
 dpkg --purge `dpkg --get-selections | grep deinstall | cut -f1` 2> /dev/null

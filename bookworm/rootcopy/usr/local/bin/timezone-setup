@@ -1,7 +1,11 @@
 #!/bin/bash
 
-#xterm -T "Set Timezone" -si -sb -fg white -bg SkyBlue4 -geometry 80x20 -e sudo dpkg-reconfigure tzdata
-#xterm -T "Set Timezone" -si -sb -fg white -bg SkyBlue4 -geometry 80x20 -e sudo tzselect
+if [ "`whoami`" != "root" ]; then
+	which pkexec > /dev/null && exec pkexec ${0} "$@"
+	which sudo > /dev/null && exec sudo ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
+fi
 
-sudo dpkg-reconfigure tzdata
+dpkg-reconfigure tzdata
 read -s -n 1 -p "Press any key to close . . ."

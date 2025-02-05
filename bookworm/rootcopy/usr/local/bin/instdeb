@@ -3,10 +3,11 @@
 # instdeb: script to install local deb(s) with dependencies from filemanager
 # by gumanzoy https://github.com/PocketHandyBox
 
-if [ -z `which gsu` ]; then
-[ "`whoami`" != "root" ] && exec gksu ${0} "$@"
-else
-[ "`whoami`" != "root" ] && exec gsu ${0} "$@"
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
 fi
 
 export DEBS="$@"
