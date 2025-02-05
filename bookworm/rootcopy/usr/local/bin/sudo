@@ -8,8 +8,8 @@
 PATH="$PATH:/usr/local/sbin:/usr/sbin:/sbin"
 
 # Pass options to original sudo (if installed)
-if [ -z `command -v "$1" 2> /dev/null` ] && [ -x /bin/sudo ]; then
-	exec /bin/sudo $@
+if [ -z `command -v "$1" 2> /dev/null` ] && [ -x /usr/bin/sudo ]; then
+	exec /usr/bin/sudo $@
 fi
 
 # Ignore sudo arguments
@@ -31,8 +31,8 @@ if [ "`whoami`" = "root" ]; then
 	exec $@
 fi
 
-if [ -z `which pkexec` ] && [ -x /bin/sudo ]; then
-	exec /bin/sudo $@
+if [ -z `which pkexec` ] && [ -x /usr/bin/sudo ]; then
+	exec /usr/bin/sudo $@
 elif [ -z `which pkexec` ]; then
 	echo "pkexec is not installed. Run the command as root or install pkexec or sudo."
 	exit 1
