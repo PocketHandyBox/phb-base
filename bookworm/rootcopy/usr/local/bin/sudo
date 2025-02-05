@@ -26,7 +26,9 @@ if [ "`whoami`" = "root" ]; then
 	exec $@
 fi
 
-if [ -z `which pkexec` ]; then
+if [ -z `which pkexec` ] && [ -x /bin/sudo ]; then
+	exec /bin/sudo $@
+elif [ -z `which pkexec` ]; then
 	echo "pkexec is not installed. Run the command as root or install pkexec or sudo."
 	exit 1
 fi
