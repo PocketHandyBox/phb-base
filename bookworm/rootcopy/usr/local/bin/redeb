@@ -1,18 +1,12 @@
 #!/bin/bash
 
-if [ -z `which gsu` ]; then
-[ "`whoami`" != "root" ] && exec gksu ${0} "$@"
-else
-[ "`whoami`" != "root" ] && exec gsu ${0} "$@"
-fi
-
 if [ -z "$1" ]; then
 echo "usage: redeb <package>.deb to extract  or: redeb <packagedirectory> to build"
 exit 0
 fi
 
 newbuild() {
-dpkg-deb -b $FILE "$FILE"_newbuild/ && \
+dpkg-deb --root-owner-group --build $FILE "$FILE"_newbuild/ && \
 echo -e "----------------------\n""If there are no errors shown above, the package has been build."
 }
 
@@ -25,8 +19,8 @@ if [ "$ifdeb" = "deb" ]; then
   newdir=`basename $1 .deb`
   echo $newdir
   mkdir $newdir
-  dpkg-deb -x $FILE $newdir
-  dpkg-deb -e $FILE $newdir/DEBIAN
+  dpkg-deb --extract $FILE $newdir
+  dpkg-deb --control $FILE $newdir/DEBIAN
 elif [[ $ifdeb != "deb" ]] && [ ! -d $FILE ]; then
   echo "The file you chose is not a .deb file."
   yad --title="Extract deb" --window-icon=deb --center --text="The file you chose is not a .deb file." --button=Close\!gtk-close
