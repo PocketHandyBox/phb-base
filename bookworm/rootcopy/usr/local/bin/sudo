@@ -7,6 +7,11 @@
 
 PATH="$PATH:/usr/local/sbin:/usr/sbin:/sbin"
 
+# Pass options to original sudo (if installed)
+if [ -z `command -v "$1" 2> /dev/null` ] && [ -x /bin/sudo ]; then
+	exec /bin/sudo $@
+fi
+
 # Ignore sudo arguments
 if [ -z `command -v "$1" 2> /dev/null` ]; then
 	until [ "$#" = 0 ]; do
