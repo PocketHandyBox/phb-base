@@ -1,6 +1,12 @@
 #!/bin/dash
 
+if [ "`whoami`" != "root" ]; then
+	which pkexec > /dev/null && exec pkexec logout-yad
+	echo "This script should be run as root"
+	exit 1
+fi
+
 yad --title Logout --window-icon=system-shutdown --timeout=30 --borders=10 \
  --sticky --fixed --center --on-top --skip-taskbar --close-on-unfocus \
  --button=Exit\ X\!system-logout:'pkill X' --button=Restart\!system-reboot:wmreboot \
- --button=Shutdown\!system-shutdown:wmpoweroff --button=Suspend\!system-suspend:'sudo pm-suspend'
+ --button=Shutdown\!system-shutdown:wmpoweroff --button=Suspend\!system-suspend:pm-suspend
