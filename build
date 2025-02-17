@@ -404,8 +404,8 @@ elif [ "$ARCH" = "i386" ]; then
 fi
 
 # Copy /etc/skel/.config to /root/ and /home/puppy/
-cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,l3afpad,netsurf,volumeicon,xfce4} root/.config/
-cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,l3afpad,netsurf,volumeicon,xfce4} home/puppy/.config/
+cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,l3afpad,netsurf,volumeicon,xfce4} root/.config/
+cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,l3afpad,netsurf,volumeicon,xfce4} home/puppy/.config/
 
 # Create symlink for icon harddrive.png
 for SIZE in 16x16 22x22 24x24 32x32 48x48 64x64; do
