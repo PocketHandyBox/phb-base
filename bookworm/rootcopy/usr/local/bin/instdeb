@@ -19,7 +19,7 @@ echo -e "\E[32m\nInstallation starting . . ."
 tput sgr0
 APT_ERRMSG=`apt-get -s -y --allow-downgrades install $DEBS`
 if [ "$?" = 0 ]; then
-	apt --allow-downgrades install $DEBS
+	apt --allow-downgrades --reinstall install $DEBS
 	[ "$?" = 0 ] && echo -en "\nDeb(s): \E[32m$DEBSNAME\n\033[1m\nInstalled. "
 else
 	echo "$APT_ERRMSG"
