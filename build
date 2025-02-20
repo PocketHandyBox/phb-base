@@ -407,27 +407,35 @@ fi
 cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,l3afpad,netsurf,volumeicon,xfce4} root/.config/
 cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,l3afpad,netsurf,volumeicon,xfce4} home/puppy/.config/
 
-# Create symlink for icon harddrive.png
-for SIZE in 16x16 22x22 24x24 32x32 48x48 64x64; do
-	mkdir -p usr/share/icons/Adwaita/$SIZE/devices 2> /dev/null
-	cp -df usr/share/icons/harddrive.png usr/share/icons/Adwaita/$SIZE/devices
+# Create symlinks for devices icons
+for SIZE in 16x16 22x22 24x24 32x32 48x48; do
+	cp -df usr/share/icons/devices/* usr/share/icons/AdwaitaLegacy/$SIZE/devices/ 2> /dev/null
 done
-rm -f usr/share/icons/harddrive.png
+rm -rf usr/share/icons/devices
+
+# Create symlink for icon harddrive.png
+#for SIZE in 16x16 22x22 24x24 32x32 48x48 64x64; do
+#	mkdir -p usr/share/icons/Adwaita/$SIZE/devices 2> /dev/null
+#	cp -df usr/share/icons/harddrive.png usr/share/icons/Adwaita/$SIZE/devices
+#done
+#rm -f usr/share/icons/harddrive.png
 
 # Create symlink for Thunar panel icon view-dual.svg
-for SIZE in 22 24 32; do
-	mkdir -p usr/share/icons/Numix/$SIZE/actions 2> /dev/null
-	cp -df usr/share/icons/view-dual.svg usr/share/icons/Numix/$SIZE/actions
-done
-rm -f usr/share/icons/view-dual.svg
+#for SIZE in 22 24 32; do
+#	mkdir -p usr/share/icons/Numix/$SIZE/actions 2> /dev/null
+#	cp -df usr/share/icons/view-dual.svg usr/share/icons/Numix/$SIZE/actions
+#done
+#rm -f usr/share/icons/view-dual.svg
 
 remove_broken_links usr/share/icons/Adwaita
+remove_broken_links usr/share/icons/AdwaitaLegacy
 remove_broken_links usr/share/icons/Numix
 remove_broken_links usr/share/icons/Numix-Light
 
 # Remove empty dir's
 rmdir usr/share/icons/Adwaita/*/* 2> /dev/null
 rmdir usr/share/icons/Adwaita/* 2> /dev/null
+rmdir usr/share/icons/AdwaitaLegacy/*/* 2> /dev/null
 rmdir usr/share/icons/Numix/*/* 2> /dev/null
 rmdir usr/share/icons/Numix-Light/*/* 2> /dev/null
 rmdir usr/share/icons/Numix-Light/* 2> /dev/null
