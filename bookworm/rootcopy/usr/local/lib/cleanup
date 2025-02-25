@@ -48,13 +48,14 @@ rm -rf home/*/.cache root/.cache
 rm -rf home/*/.config/l3afpad root/.config/l3afpad
 
 # Remove xfce4 desktop settings config files
+rm -rf home/*/.config/Mousepad root/.config/Mousepad
 rm -rf home/*/.config/Thunar root/.config/Thunar
 rm -f home/*/.config/xfce4/desktop/icons.screen* root/.config/xfce4/desktop/icons.screen*
 rmdir home/*/.config/xfce4/desktop root/.config/xfce4/desktop
 rm -f home/*/.config/xfce4/panel/whiskermenu*.rc root/.config/xfce4/panel/whiskermenu*.rc
 rmdir home/*/.config/xfce4/panel root/.config/xfce4/panel
-rm -f home/*/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,xsettings.xml}
-rm -f root/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,xsettings.xml}
+rm -f home/*/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,gsettings.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,xsettings.xml}
+rm -f root/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,gsettings.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,xsettings.xml}
 rmdir home/*/.config/xfce4/xfconf/xfce-perchannel-xml root/.config/xfce4/xfconf/xfce-perchannel-xml
 rmdir home/*/.config/xfce4/xfconf root/.config/xfce4/xfconf
 rm -rf home/*/.config/xfce4/xfwm4 root/.config/xfce4/xfwm4
