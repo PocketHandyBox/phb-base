@@ -1,4 +1,4 @@
-export TEXTEDITOR=l3afpad
+export TEXTEDITOR=mousepad
 export FILEMANAGER=thunar
 export WEBBROWSER=x-www-browser
 export IMAGEVIEWER=gpicview
