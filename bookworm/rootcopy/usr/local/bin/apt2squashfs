@@ -21,6 +21,7 @@
 # Add . /usr/local/lib/cleanup
 # Add 'Disable dpkg registration' checkbox
 # Fixes for GTK3 version of yad
+# Copy to chroot apt/*pkgcache.bin and apt/lists/* files
 
 export YADTITLE="Apt2squashfs (create module from package(s))"
 
@@ -399,8 +400,15 @@ sleep 1
 xhost +local:
 chroot "$UNION" /bin/bash -c check_network
 [ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\033[0m" && restore 
-chroot "$UNION" /bin/bash -c update_repo
-[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\033[0m" && restore 
+if [ -f /var/cache/apt/pkgcache.bin ]; then
+	echo -e "\e[0;36mCopy apt/*pkgcache.bin and apt/lists/* files.\033[0m"
+	cp -a /var/cache/apt/*pkgcache.bin "$UNION"/var/cache/apt/
+	find /var/lib/apt/lists -type f ! -name lock -exec cp {} "$UNION"/var/lib/apt/lists/ \;
+	[ $? -eq 0 ] && echo -e "\e[0;32mOK\033[0m"
+else
+	chroot "$UNION" /bin/bash -c update_repo
+	[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\033[0m" && restore 
+fi
 chroot "$UNION" /bin/bash -c install_packages
 [ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\033[0m" && restore 
 
