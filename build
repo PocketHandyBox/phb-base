@@ -263,6 +263,9 @@ DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confd
 	fi
 fi
 
+# Run 'apt-get upgrade' to force update packages from security.debian.org
+DEBIAN_FRONTEND=noninteractive apt-get upgrade -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y
+
 # Install some basic packages (do not edit, essential!)
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_BASE
 # try again if failed
