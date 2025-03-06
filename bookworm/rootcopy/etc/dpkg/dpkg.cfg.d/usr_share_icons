@@ -11,6 +11,7 @@ path-include=/usr/share/icons/Adwaita/*/actions/go-down-symbolic.svg
 path-include=/usr/share/icons/Adwaita/*/actions/go-next-symbolic*.svg
 path-include=/usr/share/icons/Adwaita/*/actions/go-previous-symbolic*.svg
 path-include=/usr/share/icons/Adwaita/*/actions/go-up-symbolic.svg
+path-include=/usr/share/icons/Adwaita/*/actions/view-more-*.svg
 path-include=/usr/share/icons/Adwaita/*/emblems/*
 path-include=/usr/share/icons/Adwaita/*/ui/*
 path-exclude=/usr/share/icons/Adwaita/cursors/*
