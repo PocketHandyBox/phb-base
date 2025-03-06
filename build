@@ -396,7 +396,7 @@ sed -i s/ntfs3g/ntfs-3g/ etc/apt/preferences.d/noupgrades
 cp --preserve=mode,timestamps -rf xfceconf/* ./
 rm -rf xfceconf
 
-mkdir -p root/{Desktop,.config} home/puppy/{Desktop,.config}
+mkdir -p root/{Desktop,Startup,.config} home/puppy/{Desktop,Startup,.config}
 
 # After replacing org.gtk.Settings.FileChooser.gschema.xml with modified version
 # Need update /usr/share/glib-2.0/schemas/gschemas.compiled file
@@ -409,6 +409,10 @@ fi
 # Copy /etc/skel/.config to /root/ and /home/puppy/
 cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,netsurf,volumeicon,xfce4,mimeapps.list} root/.config/
 cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,netsurf,volumeicon,xfce4,mimeapps.list} home/puppy/.config/
+
+# Copy /etc/skel/Startup to /root/ and /home/puppy/
+cp --preserve=mode,timestamps -f etc/skel/Startup/volumeicon root/Startup/
+cp --preserve=mode,timestamps -f etc/skel/Startup/volumeicon home/puppy/Startup/
 
 # Create symlinks for devices icons
 for SIZE in 16x16 22x22 24x24 32x32 48x48; do
