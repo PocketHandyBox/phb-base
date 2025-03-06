@@ -1,3 +1,5 @@
-#!/bin/bash
+#!/bin/dash
 
-volumeicon
+[ -c /dev/snd/controlC0 ] || sleep 5
+
+[ -c /dev/snd/controlC0 ] && exec volumeicon
