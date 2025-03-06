@@ -1,0 +1,4 @@
+[Default Applications]
+application/vnd.squashfs=pfilemnt.desktop
+application/x-squashfs=pfilemnt.desktop
+image/webp=gpicview.desktop
