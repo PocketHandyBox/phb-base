@@ -1,11 +1,11 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Icon=audio-speakers
 Name=speaker-test
 Comment=speaker-test -c 2 -t wav
 TryExec=speaker-test
 Exec=speaker-test -c 2 -t wav
+Icon=audio-speakers
 Terminal=true
 StartupNotify=false
 Categories=Audio;
