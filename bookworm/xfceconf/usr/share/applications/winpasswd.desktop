@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=winpasswd
+Comment=Reset Windows users passwords
+TryExec=winpasswd
+Exec=winpasswd -gui
+Icon=changes-allow
+Terminal=false
+StartupNotify=false
+Categories=System;
