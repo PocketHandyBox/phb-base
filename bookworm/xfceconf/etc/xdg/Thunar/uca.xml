@@ -236,7 +236,7 @@
 	<icon>add-files-to-archive</icon>
 	<name>Create Squashfs</name>
 	<unique-id>1472389472683874-1</unique-id>
-	<command>cr-squash %f</command>
+	<command>dir2squashfs -runterm %f</command>
 	<description></description>
 	<patterns>*</patterns>
 	<directories/>
