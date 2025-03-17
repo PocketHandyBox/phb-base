@@ -10,14 +10,10 @@
 # bits.
 #
 # By default this script does nothing.
-if [ -f /mnt/live/tmp/modules ]; then
-/usr/local/bin/mountlink
-else
-/usr/local/bin/mnt-backing
+if [ -f /mnt/live/tmp/modules ]; then /usr/local/bin/mountlink
+#else /usr/local/bin/mnt-backing
 fi
-#/opt/bin/load
 cat /opt/docs/welcome </dev/console >/dev/console 2>&1
 sleep 2
-#/opt/bin/mnt-all
-/usr/local/bin/cowsave
+#/usr/local/bin/cowsave
 exit 0
