@@ -1,0 +1,74 @@
+#!/bin/bash
+#set -x
+# fredx181 2021 Lesser GPL licence v2 (http://www.fsf.org/licensing/licenses/lgpl.html)
+
+export LANG=C
+
+PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/X11R7/bin"
+
+if grep -q pfull= /proc/cmdline; then
+UPPER=filesystem
+else
+UPPER=upperdir
+fi
+
+SNAP="/mnt/live/memory/changes"
+cd $SNAP || exit 1
+
+BASE="/mnt/live/memory/images/changes-exit"
+
+FILESAVELIST="/mnt/live/tmp/filesave$RANDOM"
+FILERMLIST="/mnt/live/tmp/filerm$RANDOM"
+
+echo "Merging $SNAP onto $BASE..."
+
+ while IFS= read -r line; do
+if [[ -c $line ]] && [[ ! -s $line ]]; then  # check for "mask" files in $SNAP
+wh=`echo "$line" | sed -e "s^./$UPPER/^^g"`;
+
+    # scan base .squashfs's in /mnt/live/memory/images/ 
+  for N in $(ls /mnt/live/memory/images/ | grep -v "changes-exit\|SFS"); do
+
+    # check if exist in base .squashfs's
+    if [ -e "/mnt/live/memory/images/$N/$wh" ] || [ -L "/mnt/live/memory/images/$N/$wh" ]; then
+    # send "mask" files to list to be copied later
+    echo "$line" >> "$FILESAVELIST"
+    break
+    else
+    # send files to a list to be removed later 
+#    echo "$BASE/$UPPER/$wh" >> $FILERMLIST
+#    break
+  if [ -e "$BASE/$UPPER/$wh" ] && [ ! -c "$SNAP/$UPPER/$wh" ]; then
+  echo "$BASE/$UPPER/$wh" >> $FILERMLIST
+  break
+  fi
+    fi
+  done
+
+else
+# send "regular" files to list to be copied later
+echo "$line" >> "$FILESAVELIST"
+fi
+
+ done <<< "$(find . ! -wholename "./$UPPER/tmp/*" ! -wholename "./$UPPER/mnt/*" ! -wholename "./$UPPER/run/*")"
+
+while IFS= read -r line; do
+[ -n "$line" ] && ch="/mnt/live/memory/images/changes-exit/${UPPER}${line}"
+if [ ! -e "$line" ] && [ ! -L "$line" ]; then
+[ ! -c "$ch" ] && echo "$ch" >> $FILERMLIST
+fi
+done <<< "$(find "/mnt/live/memory/images/changes-exit/$UPPER" \( -type l -o -type f -o -type d \) | sed "s#/mnt/live/memory/images/changes-exit/$UPPER##")"
+
+
+# remove files from $FILERMLIST from $BASE
+[ -f "$FILERMLIST" ] && xargs -d '\n' -a $FILERMLIST rm -rf
+# copy from $FILESAVELIST to $BASE
+[ -f "$FILESAVELIST" ] && rsync -a --files-from=$FILESAVELIST "$SNAP" "$BASE"
+
+ 
+sync
+rm -f $FILESAVELIST $FILERMLIST
+exit 0
+
+
+

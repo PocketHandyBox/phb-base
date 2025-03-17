@@ -285,8 +285,7 @@ echo "127.0.1.1	 live" >> /etc/hosts
 mkdir /live
 mkdir -p /opt/bin
 
-# Disable because included into porteusbootscripts deb postinst
-#update-rc.d snapexit defaults
+update-rc.d snapexit defaults
 
 update-rc.d sfsunload defaults
 
