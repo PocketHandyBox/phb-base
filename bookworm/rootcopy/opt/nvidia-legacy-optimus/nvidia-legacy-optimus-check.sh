@@ -12,5 +12,12 @@ if egrep -qe "nv340|nv390" /mnt/live/tmp/modules; then
   /var/opt/nvidia-legacy-optimus-xrandr.sh 2> /dev/null
   chmod +x /var/opt/nvidia-legacy-optimus-xrandr.sh
 
+  else rm -f /etc/X11/xorg.conf.d/nvidia-legacy-optimus-outputclass.conf \
+    /var/opt/nvidia-legacy-optimus-xrandr.sh
+
   fi
+
+else rm -f /etc/X11/xorg.conf.d/nvidia-legacy-optimus-outputclass.conf \
+  /var/opt/nvidia-legacy-optimus-xrandr.sh
+
 fi
