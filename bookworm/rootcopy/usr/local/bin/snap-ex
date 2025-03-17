@@ -1,56 +1,15 @@
 #! /bin/bash
 
+# snap-ex save changes on exit when shutdown from console
+# Written/modified by fredx181
+
 sleep 3
 #clear
 echo
 echo -e " [1;33m-----------------------------------------------------------[0;39m "
 echo
 echo -e " [1;33m        Debian-Porteus is shutting down...[0;39m "
-
-if [ -f /mnt/live/tmp/modules ]; then
-CHNGS=/mnt/live/memory/images/SFS  # porteus-boot
-else
-CHNGS=/mnt/SFS  # live-boot
-fi
-
-if [ "$(ls $CHNGS 2> /dev/null)" ]; then
-    for BUNDLE in $(ls $CHNGS); do
- FILES=$(find $CHNGS/$BUNDLE ! -type d | sed "s|$CHNGS/$BUNDLE||")
-umount $CHNGS/$BUNDLE-rw && rmdir $CHNGS/$BUNDLE-rw
-umount $CHNGS/$BUNDLE && rmdir $CHNGS/$BUNDLE  # unmount squashfs, now check for broken symlinks to be removed...
-    if [ $? -eq 0 ]; then
-while read line; do
- if [ ! -e "$line" ]; then
-# rename possibly existing .dpkg-new files
-if [ -f "${line}".dpkg-new ]; then
-mv -f "$line".dpkg-new "${line}"
-continue
-fi
-# send to filelist to be executed with xargs below
-[ -L "$line" ] && echo "$line" >> /tmp/${BUNDLE}.txt
- fi
-done <<< "$FILES"
-xargs -d '\n' -a /tmp/${BUNDLE}.txt rm   # remove symlinks
-
-# remove leftover (empty) directories
-tac /etc/SFS/${BUNDLE}.txt | while read line; do
-if [ -d "$line" ]; then
-rmdir "$line" 2> /dev/null 
-fi
-done
-
-rm -f /etc/SFS/${BUNDLE}.txt
-rm -f /tmp/${BUNDLE}.txt
-cd $CHNGS/$BUNDLE-w/
-find . -type d -exec mkdir -p /"{}" \;
-find . -type f -exec mv -f "{}" /"{}" \;
-cd -
-rm -rf $CHNGS/$BUNDLE-w/
-rm -rf $CHNGS/$BUNDLE-temp
-echo "Module $BUNDLE deactivated"
-    fi
-    done
-fi
+echo
 
 if [ ! -f /mnt/live/tmp/changesx ]; then
 	if [ -f /mnt/live/tmp/changes-exit ]; then
@@ -64,7 +23,7 @@ echo -e "Your session will be saved in [1;33m10[0m seconds.\nPress [1;29mEnte
 echo
 echo "[1;32m""Saving session...""[0m"
 echo
-/usr/bin/snapmergepuppy 2> /dev/null
+snapmergepuppy 2> /dev/null
 echo
 else
 echo
@@ -81,7 +40,7 @@ Or, press TAB then ENTER to not save session..." 0 0  >/dev/console
 echo 
 echo "[1;32m""Saving session...""[0m"
 
-/usr/bin/snapmergepuppy 2> /dev/null 
+snapmergepuppy 2> /dev/null 
 
 else
 echo
