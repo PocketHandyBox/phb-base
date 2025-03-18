@@ -1,8 +1,12 @@
-#!/bin/bash
+#!/bin/dash
 
 # sfsunload script by fredx181
 # Unload manually activated sfs modules and remove leftover symlinks
-# https://github.com/doglinux/bookworm/blob/master/amd64/sfsload_2.0.0_all.deb
+# https://github.com/doglinux/bookworm/raw/master/amd64/sfsload_2.0.0_all.deb
+
+# Modified by gumanzoy https://github.com/PocketHandyBox
+# Re-write for 'dash' shell
+# Suppress 'find' and 'umount' error outputs
 
 if [ -f /mnt/live/tmp/modules ]; then
 CHNGS=/mnt/live/memory/images/SFS  # porteus-boot
@@ -10,41 +14,46 @@ else
 CHNGS=/mnt/SFS  # live-boot
 fi
 
-if [ "$(ls $CHNGS 2> /dev/null)" ]; then
-    for BUNDLE in $(ls $CHNGS); do
- FILES=$(find $CHNGS/$BUNDLE ! -type d | sed "s|$CHNGS/$BUNDLE||")
-umount $CHNGS/$BUNDLE-rw && rmdir $CHNGS/$BUNDLE-rw
-umount $CHNGS/$BUNDLE && rmdir $CHNGS/$BUNDLE  # unmount squashfs, now check for broken symlinks to be removed...
-    if [ $? -eq 0 ]; then
-while read line; do
- if [ ! -e "$line" ]; then
-# rename possibly existing .dpkg-new files
-if [ -f "${line}".dpkg-new ]; then
-mv -f "$line".dpkg-new "${line}"
-continue
+if [ -z "$(ls $CHNGS 2> /dev/null)" ]; then
+exit 0
 fi
-# send to filelist to be executed with xargs below
-[ -L "$line" ] && echo "$line" >> /tmp/${BUNDLE}.txt
- fi
-done <<< "$FILES"
+
+rm_brk_lnks_empty_dirs_fn() {
+echo "$FILES" | while read line; do
+if [ ! -e "$line" ]; then
+	# rename possibly existing .dpkg-new files
+	if [ -f "${line}".dpkg-new ]; then
+		mv -f "$line".dpkg-new "${line}"
+		continue
+	fi
+	# send to filelist to be executed with xargs below
+	[ -L "$line" ] && echo "$line" >> /tmp/${BUNDLE}.txt
+fi
+done
 xargs -d '\n' -a /tmp/${BUNDLE}.txt rm   # remove symlinks
 
 # remove leftover (empty) directories
 tac /etc/SFS/${BUNDLE}.txt | while read line; do
-if [ -d "$line" ]; then
-rmdir "$line" 2> /dev/null 
-fi
+[ -d "$line" ] && rmdir "$line" 2> /dev/null
 done
 
 rm -f /etc/SFS/${BUNDLE}.txt
 cd $CHNGS/$BUNDLE-w/
-find . -type d -exec mkdir -p /"{}" \;
-find . -type f -exec mv -f "{}" /"{}" \;
-cd -
+find . -type d -exec mkdir -p /"{}" \; 2> /dev/null
+find . -type f -exec mv -f "{}" /"{}" \; 2> /dev/null
+cd - > /dev/null
 rm -rf $CHNGS/$BUNDLE-w/
 rm -rf $CHNGS/$BUNDLE-temp
 rm -f /tmp/${BUNDLE}.txt
+}
+
+for BUNDLE in $(ls $CHNGS); do
+FILES=$(find $CHNGS/$BUNDLE ! -type d 2> /dev/null | sed "s|$CHNGS/$BUNDLE||")
+( umount $CHNGS/$BUNDLE-rw && rmdir $CHNGS/$BUNDLE-rw ) 2> /dev/null
+( umount $CHNGS/$BUNDLE && rmdir $CHNGS/$BUNDLE ) 2> /dev/null
+if [ $? -eq 0 ]; then
+# unmount squashfs, now check for broken symlinks to be removed...
+rm_brk_lnks_empty_dirs_fn > /dev/null 2>&1
 echo "Module $BUNDLE deactivated"
-    fi
-    done
 fi
+done
