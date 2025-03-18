@@ -14,8 +14,9 @@ if [ ! -f /mnt/live/tmp/changesx ]; then
 sleep 1
 echo "[1;36m""Save Changes?""[0m"
 if [ -z `which dialog` ]; then
-echo -e "Your session will be saved in [1;33m10[0m seconds.\nPress [1;29mEnter[0;29m to start doing it now or [1;29many other key[0;29m to [1;29mnot save[0;29m the session."; x=10 
-while [ $x -gt 0 ]; do read -s -t1 -n1 ans && break || let x=x-1; echo -n " $x"; done
+echo -e "Your session will be saved in [1;33m10[0m seconds.\nPress [1;29mEnter or Space[0;29m to start doing it now or [1;29many other key[0;29m to [1;29mnot save[0;29m the session."; x=10 
+while [ $x -gt 0 ]; do read -s -t1 -n1 ans && break || x=$((x-1)); echo -n " $x"; done
+[ "$ans" = "" ] && SAVE="yes"
 else
 dialog --timeout 10 --yes-label "SAVE" --no-label "NO SAVE" --yesno "Press ENTER key to save session...
 Or, wait 10 seconds to save the session...
@@ -23,7 +24,7 @@ Or, press TAB then ENTER to not save session..." 0 0  >/dev/console
 [ $? -eq 1 ] || SAVE="yes"
 fi
 
-if [ "$ans" = "" ] || [ "$SAVE" = "yes" ]; then
+if [ "$SAVE" = "yes" ]; then
 echo
 echo "[1;32m""Saving session...""[0m"
 echo
