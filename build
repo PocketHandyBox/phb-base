@@ -287,7 +287,7 @@ mkdir -p /opt/bin
 
 update-rc.d snapexit defaults
 
-update-rc.d sfsunload defaults
+#update-rc.d sfsunload defaults
 
 # Merge all install variables into one
 [ "$ARCH" = "amd64" ] && INSTALL="$INSTALL $PL_AMD64"

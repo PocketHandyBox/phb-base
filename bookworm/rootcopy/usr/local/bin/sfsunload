@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# sfsunload script by fredx181
+# Unload manually activated sfs modules and remove leftover symlinks
+# https://github.com/doglinux/bookworm/blob/master/amd64/sfsload_2.0.0_all.deb
+
+if [ -f /mnt/live/tmp/modules ]; then
+CHNGS=/mnt/live/memory/images/SFS  # porteus-boot
+else
+CHNGS=/mnt/SFS  # live-boot
+fi
+
+if [ "$(ls $CHNGS 2> /dev/null)" ]; then
+    for BUNDLE in $(ls $CHNGS); do
+ FILES=$(find $CHNGS/$BUNDLE ! -type d | sed "s|$CHNGS/$BUNDLE||")
+umount $CHNGS/$BUNDLE-rw && rmdir $CHNGS/$BUNDLE-rw
+umount $CHNGS/$BUNDLE && rmdir $CHNGS/$BUNDLE  # unmount squashfs, now check for broken symlinks to be removed...
+    if [ $? -eq 0 ]; then
+while read line; do
+ if [ ! -e "$line" ]; then
+# rename possibly existing .dpkg-new files
+if [ -f "${line}".dpkg-new ]; then
+mv -f "$line".dpkg-new "${line}"
+continue
+fi
+# send to filelist to be executed with xargs below
+[ -L "$line" ] && echo "$line" >> /tmp/${BUNDLE}.txt
+ fi
+done <<< "$FILES"
+xargs -d '\n' -a /tmp/${BUNDLE}.txt rm   # remove symlinks
+
+# remove leftover (empty) directories
+tac /etc/SFS/${BUNDLE}.txt | while read line; do
+if [ -d "$line" ]; then
+rmdir "$line" 2> /dev/null 
+fi
+done
+
+rm -f /etc/SFS/${BUNDLE}.txt
+cd $CHNGS/$BUNDLE-w/
+find . -type d -exec mkdir -p /"{}" \;
+find . -type f -exec mv -f "{}" /"{}" \;
+cd -
+rm -rf $CHNGS/$BUNDLE-w/
+rm -rf $CHNGS/$BUNDLE-temp
+rm -f /tmp/${BUNDLE}.txt
+echo "Module $BUNDLE deactivated"
+    fi
+    done
+fi

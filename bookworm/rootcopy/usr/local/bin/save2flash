@@ -1,10 +1,72 @@
 #!/bin/bash
 
 # save2flash save changes in the middle of a session, or at shutdown
-# In case of changes=EXIT: is specifiied on kernel boot command line
+# In case of changes=EXIT:/ is specifiied on kernel boot command line
 # Written/modified by fredx181
 
-[ "`whoami`" != "root" ] && exec gsu ${0}
+# Modified by gumanzoy https://github.com/PocketHandyBox
+# Deprecated gtkdialog-splash replaced by notify-send (libnotify-bin package required)
+# Xdialog replaced by yad
+
+if [ "`whoami`" != "root" ]; then
+	which pkexec > /dev/null && exec pkexec ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
+fi
+
+save2flashfn() {
+RAMUSED=$(du -cs --apparent-size /mnt/live/memory/changes | awk 'END {print $1}')
+
+SAVEFREE=$(df -k /mnt/live/memory/images/changes-exit | tr -s ' ' | cut -f 4 -d ' ' | tail -1)
+
+RAMUSEDMB=$(du -chs --apparent-size /mnt/live/memory/changes | awk 'END {print $1}')
+echo -e "Not saved yet session data:
+\e[0;32m$RAMUSEDMB\033[0m"
+
+SAVEFREEMB=$(df -m /mnt/live/memory/images/changes-exit | tr -s ' ' | cut -f 4 -d ' ' | tail -1)
+echo -e "Your save file/folder has free space:
+\e[0;34m$SAVEFREEMB MB\033[0m"
+
+   if [ "$SAVEFREE" -gt "$RAMUSED" ]; then
+	if [ ! -f /mnt/live/tmp/changesx ]; then
+if [ -f /mnt/live/tmp/modules ]; then
+CHNGS=/mnt/live/memory/images/SFS  # porteus-boot
+else
+CHNGS=/mnt/SFS  # live-boot
+fi
+
+if [ "$(ls $CHNGS 2> /dev/null)" ]; then
+yad --title="Save Session" --window-icon=document-save --center \
+ --text="Required is to unload modules that were manually loaded,\notherwise your changes will include broken symlinks.\n\nContinue ?"
+[ $? -ne 0 ] && exit
+sfsunload
+fi
+	fi
+
+#msg=`echo -e "    Saving session...\n\nSession data to save: $RAMUSEDMB \nFree space in save storage: $SAVEFREEMB MB"`
+#gtkdialog-splash -icon /usr/share/pixmaps/deb3.gif -bg blue -fg yellow -text "$msg" -close never &
+notify-send --app-name=save2flash --icon=document-save "Saving session" "Session data to save: ${RAMUSEDMB}\nFree space in save storage: ${SAVEFREEMB}MB"
+
+snapmergepuppy 2> /dev/null
+rm -fr /mnt/live/memory/images/changes-exit/$UPPER/run
+rm -f /mnt/live/memory/images/changes-exit/$UPPER/etc/blkid-cache
+rm -f /mnt/live/memory/images/changes-exit/$UPPER/etc/udev/rules.d/70-persistent-net.rules
+sleep 2
+# next commented out now, already done in snapmergepuppy
+#mount -no remount,add:1:/mnt/live/memory/images/changes-exit=ro+wh aufs /
+#chmod a=rwx,o+t /mnt/live/memory/images/changes-exit/tmp 2> /dev/null
+
+sleep 2
+
+kill $!
+   else
+echo -e "\e[0;31mNo save can be done, $SAVEFREEMB MB is not enough available space.\033[0m"
+#Xdialog --title "Save Session" --msgbox " Sorry, not enough space available in savefile (or folder) \n No saving has been done \n Session data to copy: $RAMUSEDMB \n Available free space in save file/folder: $SAVEFREEMB MB  " 0 0
+yad --title="Save Session" --window-icon=document-save --center --button=Close\!gtk-close \
+ --text="Sorry, not enough space available in savefile (or folder)\nNo saving has been done\nSession data to copy: ${RAMUSEDMB}\nAvailable free space in save file/folder: ${SAVEFREEMB}MB"
+exit 1
+   fi
+}
 
 if grep -q pfull= /proc/cmdline; then
 UPPER=filesystem
@@ -26,107 +88,18 @@ SAVEFILE_MNT="/mnt/live/memory/images/changes-exit"
   mount --bind $SAVEFILE $SAVEFILE_MNT
   fi
 
-RAMUSED=$(du -cs --apparent-size /mnt/live/memory/changes | awk 'END {print $1}')
+save2flashfn
 
-SAVEFREE=$(df -k /mnt/live/memory/images/changes-exit | tr -s ' ' | cut -f 4 -d ' ' | tail -1)
-
-RAMUSEDMB=$(du -chs --apparent-size /mnt/live/memory/changes | awk 'END {print $1}')
-echo -e "Not saved yet session data:
-\e[0;32m$RAMUSEDMB\033[0m"
-
-SAVEFREEMB=$(df -m /mnt/live/memory/images/changes-exit | tr -s ' ' | cut -f 4 -d ' ' | tail -1)
-echo -e "Your save file/folder has free space:
-\e[0;34m$SAVEFREEMB MB\033[0m"
-
-   if [ "$SAVEFREE" -gt "$RAMUSED" ]; then
-	if [ ! -f /mnt/live/tmp/changesx ]; then
-if [ -f /mnt/live/tmp/modules ]; then
-CHNGS=/mnt/live/memory/images/SFS  # porteus-boot
-else
-CHNGS=/mnt/SFS  # live-boot
-fi
-
-if [ "$(ls $CHNGS 2> /dev/null)" ]; then
-yad --center --title="Unload modules" --text=" Required is to unload modules that were manually loaded,\n otherwise your changes will include broken symlinks.\n\n   Continue ?"
-[ $? -ne 0 ] && exit
-/etc/init.d/sfsunload stop
-fi
-	fi
-
-msg=`echo -e "    Saving session...\n\nSession data to save: $RAMUSEDMB \nFree space in save storage: $SAVEFREEMB MB"`
-gtkdialog-splash -icon /usr/share/pixmaps/deb3.gif -bg blue -fg yellow -text "$msg" -close never &
-
-snapmergepuppy 2> /dev/null
-rm -fr /mnt/live/memory/images/changes-exit/$UPPER/run
-rm -f /mnt/live/memory/images/changes-exit/$UPPER/etc/blkid-cache
-rm -f /mnt/live/memory/images/changes-exit/$UPPER/etc/udev/rules.d/70-persistent-net.rules
-sleep 2
-# next commented out now, already done in snapmergepuppy
-#mount -no remount,add:1:/mnt/live/memory/images/changes-exit=ro+wh aufs /
-#chmod a=rwx,o+t /mnt/live/memory/images/changes-exit/tmp 2> /dev/null
-
-sleep 2
-
-kill $!
-   else
-echo -e "\e[0;31mNo save can be done, $SAVEFREEMB MB is not enough available space.\033[0m"
-Xdialog --title "Save Session" --msgbox " Sorry, not enough space available in savefile (or folder) \n No saving has been done \n Session data to copy: $RAMUSEDMB \n Available free space in save file/folder: $SAVEFREEMB MB  " 0 0
-exit 1
-   fi
 	else
 
    if [ -f /mnt/live/tmp/changes-exit ]; then
 
-RAMUSED=$(du -cs --apparent-size /mnt/live/memory/changes | awk 'END {print $1}')
-
-SAVEFREE=$(df -k /mnt/live/memory/images/changes-exit | tr -s ' ' | cut -f 4 -d ' ' | tail -1)
-
-RAMUSEDMB=$(du -chs --apparent-size /mnt/live/memory/changes | awk 'END {print $1}')
-echo -e "Not saved yet session data:
-\e[0;32m$RAMUSEDMB\033[0m"
-
-SAVEFREEMB=$(df -m /mnt/live/memory/images/changes-exit | tr -s ' ' | cut -f 4 -d ' ' | tail -1)
-echo -e "Your save file/folder has free space:
-\e[0;34m$SAVEFREEMB MB\033[0m"
-
-   if [ "$SAVEFREE" -gt "$RAMUSED" ]; then
-	if [ ! -f /mnt/live/tmp/changesx ]; then
-if [ -f /mnt/live/tmp/modules ]; then
-CHNGS=/mnt/live/memory/images/SFS  # porteus-boot
-else
-CHNGS=/mnt/SFS  # live-boot
-fi
-
-if [ "$(ls $CHNGS 2> /dev/null)" ]; then
-yad --center --title="Unload modules" --text=" Required is to unload modules that were manually loaded,\n otherwise your changes will include broken symlinks.\n\n   Continue ?"
-[ $? -ne 0 ] && exit
-/etc/init.d/sfsunload stop
-fi
-	fi
-
-msg=`echo -e "    Saving session...\n\nSession data to save: $RAMUSEDMB \nFree space in save storage: $SAVEFREEMB MB..."`
-gtkdialog-splash -icon /usr/share/pixmaps/deb3.gif -bg blue -fg yellow -text "$msg" -close never &
-
-snapmergepuppy 2> /dev/null
-rm -fr /mnt/live/memory/images/changes-exit/$UPPER/run
-rm -f /mnt/live/memory/images/changes-exit/$UPPER/etc/blkid-cache
-rm -f /mnt/live/memory/images/changes-exit/$UPPER/etc/udev/rules.d/70-persistent-net.rules
-sleep 2
-# next commented out now, already done in snapmergepuppy
-#mount -no remount,add:1:/mnt/live/memory/images/changes-exit=ro+wh aufs /
-#chmod a=rwx,o+t /mnt/live/memory/images/changes-exit/tmp 2> /dev/null
-
-sleep 2
-
-kill $!
-   else
-echo -e "\e[0;31mNo save can be done, $SAVEFREEMB MB is not enough available space .\033[0m" 
-Xdialog --title "Save Session" --msgbox " Sorry, not enough space available in savefile (or folder) \n No saving has been done \n Session data to copy: $RAMUSEDMB \n Available free space in save file/folder: $SAVEFREEMB MB  " 0 0
-exit 1
-   fi
+save2flashfn
 
    else
-Xdialog --title "Save2flash" --msgbox "  Not booted with the 'changes=EXIT:/' option " 0 0
+#Xdialog --title "Save2flash" --msgbox "  Not booted with the 'changes=EXIT:/' option " 0 0
+yad --title="Save Session" --window-icon=document-save --center --button=Close\!gtk-close \
+ --text="Not booted with the 'changes=EXIT:/' option"
    fi
 	fi
 

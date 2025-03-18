@@ -1,11 +1,11 @@
 #! /bin/sh
 ### BEGIN INIT INFO
 # Provides:          snapexit
-# Required-Start:   
-# Required-Stop:    $local_fs $remote_fs alsa-utils frisbee
-# Default-Start:    
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs alsa-utils
+# Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Save on exit
+# Short-Description: Save on exit, unload manually activated modules
 # Description: Save on exit when shutdown from console
 ### END INIT INFO
 
@@ -16,13 +16,14 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 
 case "$1" in
   start)
-# no-opt
+	/usr/local/bin/sfsunload
 	;;
   restart|reload|force-reload)
 	echo "Error: argument '$1' not supported" >&2
 	exit 3
 	;;
   stop)
+	/usr/local/bin/sfsunload
 	exec /usr/local/bin/snap-ex </dev/console >/dev/console 2>&1
         ;;
   *)
