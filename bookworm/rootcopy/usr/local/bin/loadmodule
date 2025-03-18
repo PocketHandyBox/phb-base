@@ -2,7 +2,7 @@
 #set -x
 
 # loadmodule script by fredx181
-# https://github.com/doglinux/bookworm/blob/master/amd64/sfsload_2.0.0_all.deb
+# https://github.com/doglinux/bookworm/raw/master/amd64/sfsload_2.0.0_all.deb
 
 # Modified by gumanzoy https://github.com/PocketHandyBox
 # Fixes for GTK3 version of yad

@@ -33,17 +33,17 @@ exit
 touch /mnt/live/tmp/changesx
 ;;
 0|70)
+save2flash
 touch /mnt/live/tmp/changesx
 touch /mnt/live/tmp/sessionsaved
-save2flash
 ;;
 esac
 fi
 
-if [ -f /mnt/live/etc/nochanges ] && [ -f /tmp/savefile.txt ]; then
+if [ -f /tmp/savefile.txt ] && [ -f /mnt/live/etc/nochanges ]; then
+save2flash
 touch /mnt/live/tmp/changesx
 touch /mnt/live/tmp/sessionsaved
-save2flash
 fi
 
 umount -l /mnt/live/memory/images/changes-exit 2> /dev/null

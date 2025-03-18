@@ -4,65 +4,64 @@
 # Written/modified by fredx181
 # Modified by gumanzoy https://github.com/PocketHandyBox
 
-echo
-echo -e " [1;33m-----------------------------------------------------------[0;39m "
-echo
-echo -e " [1;33m        Debian-Porteus is shutting down...[0;39m "
+[ ! -f /mnt/live/tmp/changesx ] && sleep 1
 
-if [ ! -f /mnt/live/tmp/changesx ]; then
-	if [ -f /mnt/live/tmp/changes-exit ]; then
-sleep 1
-echo "[1;36m""Save Changes?""[0m"
+echo -e "\n \033[1;36m-----------------------------------------------------------\033[0m \n"
+echo -e " \033[1;36m        Debian-Porteus is shutting down . . .\033[0m "
+echo -e "\n \033[1;36m-----------------------------------------------------------\033[0m \n"
+
+changes_ask_fn() {
+echo -e " \033[1;35m""Save Changes?""\033[0m \n"
 if [ -z `which dialog` ]; then
-echo -e "Your session will be saved in [1;33m10[0m seconds.\nPress [1;29mEnter or Space[0;29m to start doing it now or [1;29many other key[0;29m to [1;29mnot save[0;29m the session."; x=10 
+echo -e "Your session will be saved in ""\033[1;33m""10""\033[0m"" seconds."
+echo -en "Press ""\033[1;29m""Enter or Space""\033[0;29m"" to start doing it now, or "
+echo -e "\033[1;29m""any other key""\033[0;29m"" to ""\033[1;29m""not save""\033[0;29m"" the session."; x=10 
 while [ $x -gt 0 ]; do read -s -t1 -n1 ans && break || x=$((x-1)); echo -n " $x"; done
 [ "$ans" = "" ] && SAVE="yes"
+echo -e "\n"
 else
 dialog --timeout 10 --yes-label "SAVE" --no-label "NO SAVE" --yesno "Press ENTER key to save session...
 Or, wait 10 seconds to save the session...
 Or, press TAB then ENTER to not save session..." 0 0  >/dev/console
 [ $? -eq 1 ] || SAVE="yes"
 fi
+}
 
-if [ "$SAVE" = "yes" ]; then
-echo
-echo "[1;32m""Saving session...""[0m"
-echo
-/usr/local/bin/snapmergepuppy 2> /dev/null
-echo
-else
-echo
-echo "[1;31m""Session not saved""[0m"
-echo
+if [ ! -f /tmp/savefile.txt ] && [ ! -f /mnt/live/etc/nochanges ] && [ ! -f /mnt/live/tmp/changes-exit ]; then
+echo -e " \033[1;32m""Session already saved (using overlay)""\033[0m \n"
+exit 0
 fi
+
+if [ -f /mnt/live/tmp/sessionsaved ]; then
+echo -e " \033[1;32m""Session saved""\033[0m \n"
+exit 0
 fi
 
 SAVEFILE_MNT="/mnt/live/memory/images/changes-exit"
 
-	if [ -f /tmp/savefile.txt ] && [ -f /mnt/live/etc/nochanges ]; then 
-  . /tmp/savefile.txt
-  if [ ! -d $SAVEFILE_MNT ] ; then
-    mkdir $SAVEFILE_MNT
-  fi
-  	mount $SAVEFILE $SAVEFILE_MNT
-echo
-echo "[1;32m""Saving session...""[0m"
-/usr/local/bin/snapmergepuppy 2> /dev/null
-echo
+if [ ! -f /mnt/live/tmp/changesx ] && [ -f /tmp/savefile.txt ] && [ -f /mnt/live/etc/nochanges ]; then
+	. /tmp/savefile.txt
+	if [ ! -d $SAVEFILE_MNT ] ; then
+	mkdir $SAVEFILE_MNT
 	fi
-else
-if [ -f /mnt/live/tmp/sessionsaved ]; then
-echo
-echo "[1;32m""Session already saved""[0m"
-echo
-fi
-fi
-if [ ! -f /tmp/savefile.txt ] && [ ! -f /mnt/live/etc/nochanges ] && [ ! -f /mnt/live/tmp/changes-exit ]; then
-echo
-echo "[1;32m""Session already saved (using overlay)""[0m"
-echo
-fi
-echo
-echo -e " [1;33m-----------------------------------------------------------[0;39m "
-echo
 
+	if [ ! -d $SAVEFILE ] ; then
+	mount $SAVEFILE $SAVEFILE_MNT
+	else
+	mount --bind $SAVEFILE $SAVEFILE_MNT
+	fi
+
+	echo -e " \033[1;32m""Saving session...""\033[0m \n"
+	/usr/local/bin/snapmergepuppy 2> /dev/null
+
+elif [ ! -f /mnt/live/tmp/changesx ] && [ -f /mnt/live/tmp/changes-exit ]; then
+	sleep 1
+	changes_ask_fn
+
+	if [ "$SAVE" = "yes" ]; then
+	echo -e " \033[1;32m""Saving session...""\033[0m \n"
+	/usr/local/bin/snapmergepuppy 2> /dev/null
+	else
+	echo -e " \033[1;31m""Session not saved!""\033[0m \n"
+	fi
+fi
