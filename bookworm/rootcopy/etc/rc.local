@@ -10,16 +10,18 @@
 # bits.
 #
 # By default this script does nothing.
-if [ -f /mnt/live/tmp/modules ]; then /usr/local/bin/mountlink
-#else /usr/local/bin/mnt-backing
-fi
+
+[ -f /mnt/live/tmp/modules ] && /usr/local/bin/mountlink 2> /dev/null
+
 [ -x /etc/console-setup/cached_setup_font.sh ] && [ -f /run/console-setup/font-loaded ] || \
  /etc/console-setup/cached_setup_font.sh 2> /dev/null
 [ -x /etc/console-setup/cached_setup_keyboard.sh ] && [ -f /run/console-setup/keymap_loaded ] || \
  /etc/console-setup/cached_setup_keyboard.sh 2> /dev/null
+
 ( /usr/local/sbin/alsaswitch & )
+
 /opt/nvidia-legacy-optimus/nvidia-legacy-optimus-check.sh 2> /dev/null
+
 cat /opt/docs/welcome </dev/console >/dev/console 2>&1
-sleep 2
-#/usr/local/bin/cowsave
+
 exit 0
