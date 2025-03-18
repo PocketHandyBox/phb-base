@@ -8,7 +8,7 @@
 
 #####################################################################################
 
-# Modified by gumanzoy <gumanzoy@gmail.com>
+# Modified by gumanzoy
 # https://github.com/PocketHandyBox/phb-base
 # https://forum.puppylinux.com/viewtopic.php?t=13647
 
@@ -209,10 +209,10 @@ echo "APT::Install-Recommends "false"; APT::Install-Suggests "false";" > /etc/ap
 echo "Acquire::Check-Valid-Until "0";" >> /etc/apt/apt.conf
 
 if [ "$SYSTEMD" = "FALSE" ]; then
-	PL_SYS=$PL_SYSV
+	PL_SYS="$PL_SYSV"
 elif [ "$SYSTEMD" = "TRUE" ]; then
 	rm -f /etc/apt/preferences.d/00systemd /etc/apt/sources.list.d/devuan.sources /usr/share/keyrings/devuan-archive-keyring.gpg
-	PL_SYS=$PL_SYSTEMD
+	PL_SYS="$PL_SYSTEMD"
 fi
 
 # Add DogLinux github repo

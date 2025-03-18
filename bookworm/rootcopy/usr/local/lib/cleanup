@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Written by gumanzoy <gumanzoy@gmail.com>
-# https://github.com/PocketHandyBox/phb-base
+# Written by gumanzoy https://github.com/PocketHandyBox
 
 # Use functions uncompress_files and remove_broken_links from linux-live
 # https://github.com/Tomas-M/linux-live/blob/master/Slax/debian12/cleanup
