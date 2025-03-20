@@ -6,16 +6,16 @@
 
 [ ! -f /mnt/live/tmp/changesx ] && sleep 1
 
-echo -e "\n \033[1;36m-----------------------------------------------------------\033[0m \n"
-echo -e " \033[1;36m        Debian-Porteus is shutting down . . .\033[0m "
-echo -e "\n \033[1;36m-----------------------------------------------------------\033[0m \n"
+echo -e "\n \e[1;36m-----------------------------------------------------------\e[0m \n"
+echo -e " \e[1;36m        Debian-Porteus is shutting down . . .\e[0m "
+echo -e "\n \e[1;36m-----------------------------------------------------------\e[0m \n"
 
 changes_ask_fn() {
-echo -e " \033[1;35m""Save Changes?""\033[0m \n"
+echo -e " \e[1;35m""Save Changes?""\e[0m \n"
 if [ -z `which dialog` ]; then
-echo -e "Your session will be saved in ""\033[1;33m""10""\033[0m"" seconds."
-echo -en "Press ""\033[1;29m""Enter or Space""\033[0;29m"" to start doing it now, or "
-echo -e "\033[1;29m""any other key""\033[0;29m"" to ""\033[1;29m""not save""\033[0;29m"" the session."; x=10 
+echo -e "Your session will be saved in ""\e[1;33m""10""\e[0m"" seconds."
+echo -en "Press ""\e[1m""Enter or Space""\e[0m"" to start doing it now, or "
+echo -e "\e[1m""any other key""\e[0m"" to ""\e[1m""not save""\e[0m"" the session."; x=10 
 while [ $x -gt 0 ]; do read -s -t1 -n1 ans && break || x=$((x-1)); echo -n " $x"; done
 [ "$ans" = "" ] && SAVE="yes"
 echo -e "\n"
@@ -28,12 +28,12 @@ fi
 }
 
 if [ ! -f /tmp/savefile.txt ] && [ ! -f /mnt/live/etc/nochanges ] && [ ! -f /mnt/live/tmp/changes-exit ]; then
-echo -e " \033[1;32m""Session already saved (using overlay)""\033[0m \n"
+echo -e " \e[1;32m""Session already saved (using overlay)""\e[0m \n"
 exit 0
 fi
 
 if [ -f /mnt/live/tmp/sessionsaved ]; then
-echo -e " \033[1;32m""Session saved""\033[0m \n"
+echo -e " \e[1;32m""Session saved""\e[0m \n"
 exit 0
 fi
 
@@ -51,7 +51,7 @@ if [ ! -f /mnt/live/tmp/changesx ] && [ -f /tmp/savefile.txt ] && [ -f /mnt/live
 	mount --bind $SAVEFILE $SAVEFILE_MNT
 	fi
 
-	echo -e " \033[1;32m""Saving session...""\033[0m \n"
+	echo -e " \e[1;32m""Saving session...""\e[0m \n"
 	/usr/local/bin/snapmergepuppy 2> /dev/null
 
 elif [ ! -f /mnt/live/tmp/changesx ] && [ -f /mnt/live/tmp/changes-exit ]; then
@@ -59,9 +59,9 @@ elif [ ! -f /mnt/live/tmp/changesx ] && [ -f /mnt/live/tmp/changes-exit ]; then
 	changes_ask_fn
 
 	if [ "$SAVE" = "yes" ]; then
-	echo -e " \033[1;32m""Saving session...""\033[0m \n"
+	echo -e " \e[1;32m""Saving session...""\e[0m \n"
 	/usr/local/bin/snapmergepuppy 2> /dev/null
 	else
-	echo -e " \033[1;31m""Session not saved!""\033[0m \n"
+	echo -e " \e[1;31m""Session not saved!""\e[0m \n"
 	fi
 fi
