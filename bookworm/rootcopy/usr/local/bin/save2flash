@@ -35,10 +35,10 @@ RAMUSED=$(du -cs --apparent-size /mnt/live/memory/changes | awk 'END {print $1}'
 SAVEFREE=$(df -k /mnt/live/memory/images/changes-exit | tr -s ' ' | cut -f 4 -d ' ' | tail -1)
 
 RAMUSEDMB=$(du -chs --apparent-size /mnt/live/memory/changes | awk 'END {print $1}')
-echo -e "Not saved yet session data: ""\e[0;32m""${RAMUSEDMB}""\033[0m"
+echo -e "Not saved yet session data: ""\e[0;32m""${RAMUSEDMB}""\e[0m"
 
 SAVEFREEMB=$(df -m /mnt/live/memory/images/changes-exit | tr -s ' ' | cut -f 4 -d ' ' | tail -1)
-echo -e "Your save file/folder has free space: ""\e[0;34m""${SAVEFREEMB}MB""\033[0m"
+echo -e "Your save file/folder has free space: ""\e[0;34m""${SAVEFREEMB}MB""\e[0m"
 
 if [ "$SAVEFREE" -gt "$RAMUSED" ]; then
 notify-send --app-name=save2flash --icon=document-save "Saving session" \
@@ -56,7 +56,7 @@ snapmergepuppy 2> /dev/null
 #kill $!
 
 else
-echo -e "\e[0;31m""No save can be done, ${SAVEFREEMB}MB is not enough available space.""\033[0m"
+echo -e "\e[0;31m""No save can be done, ${SAVEFREEMB}MB is not enough available space.""\e[0m"
 TEXT="Sorry, not enough space available in savefile (or folder)
 No saving has been done
 Session data to copy: ${RAMUSEDMB}

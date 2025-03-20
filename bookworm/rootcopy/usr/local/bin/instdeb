@@ -20,7 +20,7 @@ tput sgr0
 APT_ERRMSG=`apt-get -s -y --allow-downgrades install $DEBS`
 if [ "$?" = 0 ]; then
 	apt --allow-downgrades --reinstall install $DEBS
-	[ "$?" = 0 ] && echo -en "\nDeb(s): \E[32m$DEBSNAME\n\033[1m\nInstalled. "
+	[ "$?" = 0 ] && echo -en "\nDeb(s): \e[32m$DEBSNAME\n\e[1m\nInstalled. "
 else
 	echo "$APT_ERRMSG"
 	echo -en "\nExit. "
