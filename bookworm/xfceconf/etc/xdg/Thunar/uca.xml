@@ -179,15 +179,6 @@
 	<video-files/>
 </action>
 <action>
-	<icon>edit-find</icon>
-	<name>Search</name>
-	<unique-id>1424354227747528-6</unique-id>
-	<command>pfind -d %f</command>
-	<description></description>
-	<patterns>*</patterns>
-	<directories/>
-</action>
-<action>
 	<icon>drive-removable-media</icon>
 	<name>Mount/unmount squashfs</name>
 	<unique-id>1424354227747596-14</unique-id>
