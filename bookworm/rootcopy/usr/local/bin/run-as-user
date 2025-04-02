@@ -1,0 +1,103 @@
+#!/bin/dash
+# generic wrapper to run as normal user (when currently running as root)
+# (C) James Budiono 2012
+# License: GPL version 3 or later
+# Modified by fredx181 for DebianDog/DevuanDog
+# Modified by gumanzoy https://github.com/PocketHandyBox
+
+PROG="$1"
+if [ "$1" = "" ]; then
+GUICMD=yes
+if [ ! -f /root/.config/run-as-user-firstrun ]; then
+Xdialog --title "Run as unprivileged user" --msgbox " First run info: Next you can type the name of the program to run \n e.g. chromium or firefox \n You can also run this script from commandine, e.g. \n run-as-user vlc \n The program will run as user 'guest' \n (will be created (with no password) if not exist \n This is modified 'run-as-spot' from Fatdog by jamesbond " 0 0
+echo "this file was created by 'run-as-user' at first run to prevent showing first-run message again" > /root/.config/run-as-user-firstrun
+fi
+LANG=C APPCMD=$(Xdialog --title "Run as user" --inputbox " Please type application name to run as unprivileged user \n e.g. chromium or firefox \n You can also run this script from commandine, e.g. \n run-as-user vlc " 0 0 2>&1)
+[ $? -ne 0 ] && exit
+fi
+
+if grep -sq ^GUESTUSER= /root/*.conf ; then
+  GUESTUSER=`grep ^GUESTUSER= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
+else
+  GUESTUSER=guest
+fi
+
+SPOT_HOME="/home/$GUESTUSER"
+
+CWD=$(pwd)
+APP="$1"; shift
+if [ "$GUICMD" = "yes" ]; then
+APP=$(echo $APPCMD | awk '{print $1}')
+  if [ -z $(command -v $APP) ]; then
+  Xdialog --timeout 5 --title "Run as user" --msgbox " Command $APP not found \n Please try again with command existing in PATH, exiting...  " 0 0
+  exit
+  fi
+else
+  if [ -z $(command -v  $APP) ]; then
+  Xdialog --timeout 5 --title "Run as user" --msgbox " Command $APP not found \n Please try again with command existing in PATH, exiting...  " 0 0
+  exit
+  fi
+fi
+
+if [ $(id -u) -eq 0 ]; then
+	[ -z "$XAUTHORITY" ] && XAUTHORITY=/root/.Xauthority
+	[ -e "$XAUTHORITY" ] && cp $XAUTHORITY $SPOT_HOME/.Xauthority &&
+	chown "$GUESTUSER":"$GUESTUSER" $SPOT_HOME/.Xauthority && 
+	export XAUTHORITY=$SPOT_HOME/.Xauthority  
+
+	# replace all occurences of /root in XDG_* with /home/spot, because we don't
+	# run a login shell and source /etc/profile.d/*
+	OLD_HOME="$HOME"
+	env | while IFS='=' read NAME VAL; do
+		case "$NAME" in
+		XDG_*) export $NAME="`echo "$VAL" | sed -e s~^$OLD_HOME~$SPOT_HOME~ -e s~:$OLD_HOME~:$SPOT_HOME~g`" ;;
+		esac
+	done
+	
+	export XDG_CONFIG_HOME=$SPOT_HOME/.config
+	mkdir -p ${XDG_CONFIG_HOME}/pulse; touch ${XDG_CONFIG_HOME}/pulse/cookie; chown "$GUESTUSER":"$GUESTUSER" ${XDG_CONFIG_HOME}/pulse/cookie;
+	export XDG_CACHE_HOME=$SPOT_HOME/.cache
+	export XDG_DATA_HOME=$SPOT_HOME/.local/share
+        mkdir -p $XDG_DATA_HOME
+
+	for i in ${XDG_CONFIG_HOME} ${XDG_CACHE_HOME} ${XDG_DATA_HOME} ${XDG_STATE_HOME}
+	do
+		if ! [ -d $i ] ; then
+			mkdir -p $i
+			chown "$GUESTUSER" $i
+		fi
+	done
+
+IDU=$(id -u "$GUESTUSER")
+export XDG_RUNTIME_DIR=/run/user/${IDU}
+
+	if [ ! -d ${XDG_RUNTIME_DIR} ] ; then
+	mkdir -p ${XDG_RUNTIME_DIR}
+	chmod 0700 ${XDG_RUNTIME_DIR}
+	chown "$GUESTUSER" ${XDG_RUNTIME_DIR}
+	fi
+
+	if [ -s /tmp/."$GUESTUSER"-session-bus ]; then
+		. /tmp/."$GUESTUSER"-session-bus
+		export DBUS_SESSION_BUS_ADDRESS
+		export DBUS_SESSION_BUS_PID
+	fi
+
+	# close all file descriptors except std{in,out,err}, in case one of
+	# them points to a file under /root
+#	if [ "$PROG" != "/usr/bin/Xwayland" ]; then
+#		for FD in /proc/self/fd/*; do
+#			FD="${FD##*/}"
+#			[ $FD -gt 2 ] && eval "exec ${FD}<&-"
+#		done
+#	fi
+
+chpupsocket "$GUESTUSER":"$GUESTUSER" &
+[ "$GUICMD" = "yes" ] && exec su "$GUESTUSER" --session-command /bin/dash -c "cd \"$CWD\"; dbus-launch $APPCMD"
+	ARGS=""
+	while [ "$1" ]; do ARGS="$ARGS \"$1\""; shift; done
+	exec su "$GUESTUSER" --session-command /bin/dash -c "cd \"$CWD\"; dbus-launch \"$APP\" $ARGS"
+else
+[ "$GUICMD" = "yes" ] && exec su "$GUESTUSER" --session-command /bin/dash -c "cd \"$CWD\"; $APPCMD"
+	exec "$APP" "$@"
+fi
