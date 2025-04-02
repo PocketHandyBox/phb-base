@@ -13,8 +13,7 @@
 
     <Layout>
         <Filename>changes2sfs.desktop</Filename>
-        <Filename>Create-module-from-changes.desktop</Filename>
-        <Filename>Create-Savefile.desktop</Filename>
+        <Filename>makepfile.desktop</Filename>
         <Filename>audio-setup.desktop</Filename>
         <Filename>xfce4-run.desktop</Filename>
         <Separator/>
@@ -38,15 +37,6 @@
             <Category>HWMon</Category>
             <Filename>gsmartcontrol.desktop</Filename>
             <Filename>nvtop.desktop</Filename>
-        </Include>
-    </Menu>
-
-    <Menu>
-        <Name>Module Tools</Name>
-        <Directory>xfce-modules.directory</Directory>
-        <Include>
-            <Category>Modules</Category>
-            <Category>DebianDog</Category>
         </Include>
     </Menu>
 
@@ -89,12 +79,6 @@
                 <Filename>xfce4-terminal-emulator.desktop</Filename>
                 <Filename>xfce4-about.desktop</Filename>
                 <Filename>xfce4-run.desktop</Filename>
-                <Filename>apt2sfs.desktop</Filename>
-                <Filename>apt2sfs-fullinst.desktop</Filename>
-                <Filename>Create-module-from-changes.desktop</Filename>
-                <Filename>fixdepinstall.desktop</Filename>
-                <Filename>Remaster-DebianDog.desktop</Filename>
-                <Filename>SFS-Load-GUI.desktop</Filename>
             </Or>
         </Exclude>
     </Menu>
@@ -200,7 +184,6 @@
     <Exclude>
         <Or>
             <Filename>xfce4-session-logout.desktop</Filename>
-            <Filename>Remaster-DebianDog.desktop</Filename>
         </Or>
     </Exclude>
 

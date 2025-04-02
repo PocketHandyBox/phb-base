@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Setup Timezone
+Comment=dpkg-reconfigure tzdata
+TryExec=timezone-setup
+Exec=timezone-setup
+Icon=applications-internet
+Terminal=true
+StartupNotify=false
+Categories=System;

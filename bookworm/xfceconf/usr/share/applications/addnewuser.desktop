@@ -1,11 +1,11 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Pseudo Full Install Setup
+Name=Add new user
 Comment=
-TryExec=pseudofull-setup
-Exec=pseudofull-setup
-Icon=open-menu
+TryExec=addnewuser
+Exec=addnewuser
+Icon=user-home
 Terminal=false
 StartupNotify=false
 Categories=System;
