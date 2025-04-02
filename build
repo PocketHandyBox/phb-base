@@ -75,6 +75,10 @@ else
 	echo -e "\e[0;36mRunning with configuration: \e[1;29m$(readlink -f $config)\e[0;29m\033[0m"
 fi
 
+if [ -z "$GUESTUSER" ]; then export GUESTUSER=guest
+else export GUESTUSER="$GUESTUSER"
+fi
+
 # export final variables defined from custom .conf file
 export SYSTEMD="$SYSTEMD"
 export BUILD686="$BUILD686"
@@ -223,33 +227,33 @@ echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux
 apt-get update # required, repositories just added
 [ $? -ne 0 ] && apt-get update # try again if failed
 
-echo -e "\e[0;36mPlease set the password for 'root'\033[0m"
-echo -e "\e[0;33mAlso now you may want to add to or edit files in bookworm/chroot\033[0m" 
+#echo -e "\e[0;36mPlease set the password for 'root'\033[0m"
+#echo -e "\e[0;33mAlso now you may want to add to or edit files in bookworm/chroot\033[0m" 
 #passwd root
-if [ $? -ne 0 ]; then # try again if passwords not match
-	echo -e "\e[0;36mPlease try again, type password for root\033[0m"
-	#passwd root
-fi
-[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\033[0m"; sleep 3
+#if [ $? -ne 0 ]; then # try again if passwords not match
+#	echo -e "\e[0;36mPlease try again, type password for root\033[0m"
+#	#passwd root
+#fi
+#[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\033[0m"; sleep 3
 
-# create user puppy
-echo -e "\e[0;36mAdd user 'puppy'...\033[0m"
-adduser puppy --gecos ",,," --disabled-password 2> /dev/null
-echo
-echo -e "\e[0;36mPlease set the password for user 'puppy'\033[0m"
-#passwd puppy
-if [ $? -ne 0 ]; then # try again if passwords not match
-	echo -e "\e[0;36mPlease try again, type password for puppy\033[0m"
-	#passwd puppy
-fi
-[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\033[0m"; sleep 3
-echo
+# create user guest
+echo -e "\e[0;36mAdd user 'guest'...\033[0m"
+adduser "$GUESTUSER" --gecos ",,," --disabled-password 2> /dev/null
+#echo
+#echo -e "\e[0;36mPlease set the password for user 'guest'\033[0m"
+#passwd guest
+#if [ $? -ne 0 ]; then # try again if passwords not match
+#	echo -e "\e[0;36mPlease try again, type password for guest\033[0m"
+#	#passwd guest
+#fi
+#[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\033[0m"; sleep 3
+#echo
 # add groups fuse and wheel
 #addgroup fuse
 #addgroup wheel
-echo
-#usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel puppy
-usermod -a -G sudo,cdrom,disk,audio,video,plugdev puppy
+#echo
+#usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel guest
+usermod -a -G cdrom,audio,video,plugdev "$GUESTUSER"
 
 echo -e "\e[0;36mInstall sysvinit/systemd required packages\033[0m"
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYS
@@ -395,7 +399,8 @@ sed -i s/ntfs3g/ntfs-3g/ etc/apt/preferences.d/noupgrades
 cp --preserve=mode,timestamps -rf xfceconf/* ./
 rm -rf xfceconf
 
-mkdir -p root/{Desktop,Startup,.config} home/puppy/{Desktop,Startup,.config}
+mkdir -p root/{Desktop,Startup,.config} home/"$GUESTUSER"/{Desktop,Downloads,Startup,.config}
+ln -s /home/"$GUESTUSER"/Downloads /root/Downloads
 
 # After replacing org.gtk.Settings.FileChooser.gschema.xml with modified version
 # Need update /usr/share/glib-2.0/schemas/gschemas.compiled file
@@ -405,13 +410,13 @@ elif [ "$ARCH" = "i386" ]; then
 /usr/lib/i386-linux-gnu/glib-2.0/glib-compile-schemas /usr/share/glib-2.0/schemas/
 fi
 
-# Copy /etc/skel/.config to /root/ and /home/puppy/
+# Copy /etc/skel/.config to /root/ and /home/guest/
 cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,netsurf,volumeicon,xfce4,mimeapps.list} root/.config/
-cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,netsurf,volumeicon,xfce4,mimeapps.list} home/puppy/.config/
+cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,netsurf,volumeicon,xfce4,mimeapps.list} home/"$GUESTUSER"/.config/
 
-# Copy /etc/skel/Startup to /root/ and /home/puppy/
+# Copy /etc/skel/Startup to /root/ and /home/guest/
 cp --preserve=mode,timestamps -f etc/skel/Startup/volumeicon root/Startup/
-cp --preserve=mode,timestamps -f etc/skel/Startup/volumeicon home/puppy/Startup/
+cp --preserve=mode,timestamps -f etc/skel/Startup/volumeicon home/"$GUESTUSER"/Startup/
 
 # Create symlinks for devices icons
 for SIZE in 16x16 22x22 24x24 32x32 48x48; do
@@ -518,7 +523,7 @@ mv $(basename $config) chroot/root/
 # Copy /etc/skel/{.bashrc,.profile} to /root/
 cp chroot/etc/skel/{.bashrc,.profile} chroot/root/
 
-chown -R 1000:1000 chroot/home/puppy
+chown -R 1000:1000 chroot/home/"$GUESTUSER"
 
 if [ -n "$TEMPMIRROR" ]; then
 	sed -i s/"$TEMPMIRROR"/deb.debian.org/ chroot/etc/apt/sources.list.d/debian.sources
