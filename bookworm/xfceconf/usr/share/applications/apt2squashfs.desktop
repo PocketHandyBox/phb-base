@@ -8,4 +8,4 @@ Exec=apt2squashfs
 Icon=tap-create
 Terminal=false
 StartupNotify=false
-Categories=Modules;
+Categories=Development;

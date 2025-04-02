@@ -8,4 +8,4 @@ Exec=pseudofull-setup
 Icon=open-menu
 Terminal=false
 StartupNotify=false
-Categories=DebianDog;System
+Categories=System;
