@@ -1,4 +1,0 @@
-export TEXTEDITOR=mousepad
-export FILEMANAGER=thunar
-export WEBBROWSER=x-www-browser
-export IMAGEVIEWER=gpicview
