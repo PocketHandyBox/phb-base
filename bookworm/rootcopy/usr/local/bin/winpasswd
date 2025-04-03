@@ -49,13 +49,8 @@ done
 
 show_userlist() {
 if [ -n "$WYAD" ]; then
-ULFILE=/tmp/winpasswd_userlist_$$
-echo -n '<tt>' > "$ULFILE"
-print_userlist >> "$ULFILE"
-echo -n '</tt>' >> "$ULFILE"
-yad --text="$TITLE" --filename="$ULFILE" --width=520 --height=240 --title=winpasswd \
- --window-icon=user-info --text-info --formatted --button=Close\!gtk-close
-rm -f "$ULFILE"
+yad --title=winpasswd --form --window-icon=user-info --width=520 --height=240 \
+ --field="$TITLE"':TXT' '<tt>'"`print_userlist`"'</tt>' --button=Close\!gtk-close
 else print_userlist
 fi
 }
@@ -151,7 +146,7 @@ getsams
 ERROR="`revert_changes 2>&1`"
 if [ -n "$ERROR" ] && [ -n "$WYAD" ]; then
     echo "$ERROR" | yad --text='No such file or directory:' --width=520 --height=200 --title=winpasswd \
-    --window-icon=dialog-error --text-info --button=Close\!gtk-close
+    --window-icon=dialog-error --text-info --wrap --button=Close\!gtk-close
 elif [ -n "$ERROR" ]; then
     echo "$ERROR"
 else
@@ -165,7 +160,7 @@ getsams
 if [ -n "$WYAD" ]; then
     yad --text='Remove backup file?\nSAM.bak' --title=winpasswd --window-icon=dialog-password \
     --image=dialog-question && remove_backup 2>&1 | yad --text='Remove backup file:' --width=520 --height=200 \
-    --title=winpasswd --window-icon=dialog-information --text-info --button=Close\!gtk-close
+    --title=winpasswd --window-icon=dialog-information --text-info --wrap --button=Close\!gtk-close
 else
     echo 'Remove backup file:'
     remove_backup
