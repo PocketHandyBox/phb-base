@@ -18,6 +18,8 @@
 [ -x /etc/console-setup/cached_setup_keyboard.sh ] && [ -f /run/console-setup/keymap_loaded ] || \
  /etc/console-setup/cached_setup_keyboard.sh 2> /dev/null
 
+[ -x /usr/local/bin/chownguest ] && /usr/local/bin/chownguest 2> /dev/null
+
 ( /usr/local/sbin/alsaswitch & )
 
 /opt/nvidia-legacy-optimus/nvidia-legacy-optimus-check.sh 2> /dev/null
