@@ -1,12 +1,12 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Sound Card Selector
+Name=alsaselect
 Comment=Select a sound card and set ALSA defaults
 GenericName=ALSA config tool
 Icon=audio-card
-TryExec=sound-card-selector
-Exec=sound-card-selector
+TryExec=alsaselect
+Exec=alsaselect
 Terminal=false
 StartupNotify=false
 Categories=System;Audio;
