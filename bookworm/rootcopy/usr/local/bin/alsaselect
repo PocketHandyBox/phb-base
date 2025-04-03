@@ -1,0 +1,95 @@
+#! /bin/bash
+# Multiple-Sound-Card-Wizard
+#120323 npierce: remove OK button if no cards detected. refer: http://murga-linux.com/puppy/viewtopic.php?t=76182&start=90
+#120815 rodin.s: i18n
+#130216 01micko, BK: fix retrovol.
+#150630 rg66, Geoffrey, change GUI uses buttons, only non active cards selectable, save retrovol mixer settings for each sound card
+
+# Modified by gumanzoy https://github.com/PocketHandyBox
+# Renamed from Multiple-Sound-Card-Wizard to alsaselect
+# Deprecated gtkdialog-splash replaced by yad
+# Add speaker-test
+# Can run under non-root user
+# Unmute HDMI
+
+DEVICES="`aplay -l | grep card | grep -v pcspeaker`"
+if [ "$DEVICES" = "" ]; then
+yad --title=alsaselect --text="No Sound Devices Detected" --window-icon=audio-card --center --button=Close\!gtk-close
+exit
+fi
+
+if [ "`whoami`" = "root" ] && [ -f /root/.asoundrc ]; then ASOUNDCONF=/root/.asoundrc
+elif [ "`whoami`" = "root" ]; then ASOUNDCONF=/etc/asound.conf
+elif [ -f /etc/asound.conf ]; then ASOUNDCONF=~/.asoundrc
+cp /etc/asound.conf ~/.asoundrc
+else ASOUNDCONF=~/.asoundrc
+fi
+
+if [ ! -f "$ASOUNDCONF" -a "$DEVICES" != "" ]; then
+echo defaults.pcm.card 0 > "$ASOUNDCONF"
+echo defaults.pcm.device 0 >> "$ASOUNDCONF"
+echo defaults.ctl.card 0 >> "$ASOUNDCONF"
+fi
+
+unmute_hdmi() {
+CONTROLS=""
+CONTROLS="`LANG=C amixer scontrols 2> /dev/null | sed s/'Simple mixer control '//g | grep -v PCM`"
+if [ "$CONTROLS" != "" ]; then
+for CONTROL in $CONTROLS
+do
+amixer sset $CONTROL unmute 2> /dev/null
+done
+fi
+}
+
+alsaselect_wizard() {
+ACARD=`awk 'FNR == 1 {print $2}' "$ASOUNDCONF"`
+ADEVICE=`awk 'FNR == 2 {print $2}' "$ASOUNDCONF"`
+ACTIVE=`aplay -l | grep card | grep -w "card $ACARD" | grep -w "device $ADEVICE"`
+CURRENT=`echo "$ACTIVE" | cut -f1,2 -d'['`
+
+#150623 rg66, change gui
+echo "export MAIN_DIALOG='
+<window title=\"alsaselect\" image-name=\"/usr/share/icons/AdwaitaLegacy/24x24/legacy/audio-card.png\" resizable=\"false\">
+  <vbox>
+    <text use-markup=\"true\"><label>\"<b>Choose default sound card</b>\"</label></text>
+    <text wrap=\"false\" justify=\"2\" use-markup=\"true\"><label>\"<b>Current:</b> $CURRENT\"</label></text>" > /tmp/mscw.tmp
+
+aplay -l | grep card | grep -v pcspeaker | grep -xvF "$ACTIVE" | cut -f1,2 -d'[' | while read line; do
+echo "<button>
+      <label>$line</label>     
+      </button>" >> /tmp/mscw.tmp ;
+done   
+echo "<hbox homogeneous=\"true\">
+       <button cancel></button>
+    </hbox>
+  </vbox>
+</window>
+'" >> /tmp/mscw.tmp
+
+. /tmp/mscw.tmp
+
+I=$IFS; IFS=""
+  for STATEMENTS in $(gtkdialog --center --program MAIN_DIALOG); do
+    eval $STATEMENTS
+  done
+IFS=$I
+
+[ "$EXIT" = "Cancel" -o "$EXIT" = "abort" ] && exit
+}
+
+while true ; do
+alsaselect_wizard
+Card="$(echo $EXIT | cut -d ":" -f 1 | sed -e 's/\(^.*\)\(.$\)/\2/')"
+Device="$(echo $EXIT | cut -d ":" -f 2 | sed -e 's/\(^.*\)\(.$\)/\2/')"
+
+echo defaults.pcm.card $Card > "$ASOUNDCONF"
+echo defaults.pcm.device $Device >> "$ASOUNDCONF"
+echo defaults.ctl.card $Card >> "$ASOUNDCONF"
+
+echo $EXIT | grep -q HDMI && unmute_hdmi > /dev/null
+
+speaker-test -c 2 -t wav -l 2 &
+yad --title=alsaselect --image=audio-speakers --text=speaker-test --window-icon=audio-card --timeout=4 \
+--timeout-indicator top --width=200 --borders=10 --sticky --fixed --center --on-top --skip-taskbar --no-buttons
+done
