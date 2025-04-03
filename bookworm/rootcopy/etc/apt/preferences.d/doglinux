@@ -3,11 +3,6 @@ Pin: origin github.com
 Pin: release l=DebianDog
 Pin-Priority: -1
 
-Package: yad
-Pin: origin github.com
-Pin: release l=DebianDog
-Pin-Priority: 500
-
 Package: *
 Pin: origin github.com
 Pin: release l=DebianDog
