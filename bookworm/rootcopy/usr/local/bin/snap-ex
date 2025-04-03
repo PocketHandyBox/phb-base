@@ -6,9 +6,7 @@
 
 [ ! -f /mnt/live/tmp/changesx ] && sleep 1
 
-echo -e "\n \e[1;36m-----------------------------------------------------------\e[0m \n"
-echo -e " \e[1;36m        Debian-Porteus is shutting down . . .\e[0m "
-echo -e "\n \e[1;36m-----------------------------------------------------------\e[0m \n"
+echo -e "\n \e[1;36m""Debian-Porteus is shutting down...""\e[0m \n"
 
 changes_ask_fn() {
 echo -e " \e[1;35m""Save Changes?""\e[0m \n"
