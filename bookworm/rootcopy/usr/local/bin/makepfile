@@ -347,7 +347,6 @@ SETUP=`yad --title="Savefile Creator" --center --text="$TEXT" \
 --field="Savefile Size   MB:NUM" "100!100..20000!10" \
 --field="Type name e.g: changes.dat or debsave.dat : " "changes.dat" \
 --field="Directory: (savefile will be created inside) :DIR" "$HDRV" \
---field="Encrypt the savefile:CHK" "FALSE" \
 --button=Cancel\!gtk-cancel:1 --button=OK\!gtk-ok:0`
 ret=$?
 [[ $ret -ne 0 ]] && exit 1
@@ -355,7 +354,7 @@ ret=$?
 export SAVEFILE_SIZE=$(echo $SETUP | cut -d "|" -f 1 | cut -f1 -d".")
 export SAVEFILE_NME=$(echo $SETUP | cut -d "|" -f 2)
 export SAVEFILE_DR=$(echo $SETUP | cut -d "|" -f 3)
-export ENCRYPT=$(echo $SETUP | cut -d "|" -f 4)
+#export ENCRYPT=$(echo $SETUP | cut -d "|" -f 4)
 
 create_save
 
@@ -367,7 +366,6 @@ SETUP=`yad --title="Savefile Creator" --center --text="$TEXT <b>Click 'Skip' to 
 --field="Savefile Size   MB:NUM" "100!100..20000!10" \
 --field="Type name e.g: changes.dat or debsave.dat : " "changes.dat" \
 --field="Directory: (savefile will be created inside) :DIR" "$HDRV" \
---field="Encrypt the savefile:CHK" "FALSE" \
 --button=Skip:2 --button=Cancel\!gtk-cancel:1 --button=OK\!gtk-ok:0`
 
 ret=$?
@@ -375,7 +373,7 @@ ret=$?
 export SAVEFILE_SIZE=$(echo $SETUP | cut -d "|" -f 1 | cut -f1 -d".")
 export SAVEFILE_NME=$(echo $SETUP | cut -d "|" -f 2)
 export SAVEFILE_DR=$(echo $SETUP | cut -d "|" -f 3)
-export ENCRYPT=$(echo $SETUP | cut -d "|" -f 4)
+#export ENCRYPT=$(echo $SETUP | cut -d "|" -f 4)
 
   case $ret in
 0)
