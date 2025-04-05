@@ -35,17 +35,13 @@ if [ -d /etc/profile.d ]; then
 fi
 
 if [ -z "${DISPLAY}" ] && [ $(tty) = /dev/tty1 ]; then
-  if grep -q autorun /proc/cmdline; then
-  echo "`cat /proc/cmdline|sed -e 's/^/ /'`" > /etc/cmdline
-  AUTORUNCMD=`egrep -o " autorun=[^ ]+" /etc/cmdline | cut -d= -f2;`
-    if [ -n "$AUTORUNCMD" ]; then
-    echo -e "\E[32m\033[1mautorun=$AUTORUNCMD"
-    tput sgr0
+AUTORUNCMD="`egrep -o ' autorun=[^ ]+' /proc/cmdline | cut -d= -f2`"
+  if [ -n "$AUTORUNCMD" ]; then
+    echo -e "\n\e[1m""autorun=""\e[1;32m""$AUTORUNCMD""\e[0m"
     "$AUTORUNCMD"
-    fi
   elif ! grep -q text /proc/cmdline; then
-  sleep 3
-  startx
+    sleep 3
+    startx
   fi
 fi
 
