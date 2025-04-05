@@ -69,6 +69,7 @@ rm -rf home/*/.gnupg root/.gnupg
 rm -f home/*/.local/share/recently-used.xbel* root/.local/share/recently-used.xbel*
 rmdir home/*/.local/share root/.local/share
 rmdir home/*/.local root/.local
+rm -rf home/*/.synaptic root/.synaptic
 
 # Remove other config files from home/*/ and root/
 rm -f home/*/.bash_history root/.bash_history
@@ -87,6 +88,8 @@ remove_broken_links usr/share/man
 remove_broken_links usr/bin
 
 # Remove some configs from /etc
+rm -f etc/apt/apt.conf.d/99synaptic
+rmdir etc/apt/apt.conf.d
 rmdir etc/apt
 rmdir etc/alternatives
 rm -f etc/blkid-cache
