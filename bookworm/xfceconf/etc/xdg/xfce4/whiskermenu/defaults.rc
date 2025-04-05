@@ -1,4 +1,4 @@
-favorites=xfce4-terminal-emulator.desktop,xfce4-file-manager.desktop,mc.desktop,xfce4-screenshooter.desktop,htop.desktop,sensors.desktop,io.github.thetumultuousunicornofdarkness.cpu-x.desktop,gparted.desktop,gsmartcontrol.desktop,winpasswd.desktop
+favorites=xfce4-terminal-emulator.desktop,xfce4-file-manager.desktop,mc-runterm.desktop,xfce4-screenshooter.desktop,htop-runterm.desktop,sensors.desktop,io.github.thetumultuousunicornofdarkness.cpu-x.desktop,gparted.desktop,gsmartcontrol.desktop,winpasswd.desktop
 button-title=Menu
 button-icon=org.xfce.panel.whiskermenu
 button-single-row=false
