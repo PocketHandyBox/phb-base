@@ -34,7 +34,7 @@ fi
 
 #if [ -z `which unionfs-fuse` ]; then
 #	msg="You don't have unionfs-fuse installed.\nIt's a dependency of this program.\n Please install it first."
-#echo -e "\e[0;33m$msg\033[0m"
+#echo -e "\e[0;33m$msg\e[0m"
 #	xmessage "`echo -e $msg`"
 #exit 0
 #fi
@@ -95,7 +95,7 @@ cmd="apt-get install -y $INSTALL"
 pdapt="`ps -eo pid,cmd | grep -v grep | grep "$cmd" | awk '{ print $1 }'`"
 kill $pdapt 2> /dev/null
 if [ ! -f /tmp/notrap_ ]; then 
-echo -e "\e[0;31mRestoring now, script was interrupted.\033[0m"
+echo -e "\e[0;31mRestoring now, script was interrupted.\e[0m"
 	if [ "$UNIONCREATED" = "yes" ]; then
    if [ "$RESTOREDONE" != "yes" ]; then
 # Unmount everything
@@ -116,10 +116,10 @@ umount -l "$UNION" 2> /dev/null
 # As last resort use brute force in this (rare) case
 #[ "$?" -ne 0 ] && killall unionfs-fuse && echo "Forced unmounting of $UNION"
 #rmdir "$UNION"
-#[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\033[0m"
+#[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\e[0m"
    else
 rmdir "$UNION" 2> /dev/null
-[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\033[0m"
+[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\e[0m"
    fi
 #rm -rf /.unionfs 2> /dev/null
    fi
@@ -133,7 +133,7 @@ rmdir "$UNION" 2> /dev/null
 	rm -f "$SQFS"
 if [ "$?" -eq 0 ]; then 
 msg="Script was interrupted. \nDirectory $WORK has been removed. \nModule $SFS.squashfs has been removed. "
-echo -e "\e[0;33m$msg\033[0m"
+echo -e "\e[0;33m$msg\e[0m"
 	xmessage "`echo -e $msg`"
 fi
 	fi
@@ -143,7 +143,7 @@ fi
 	rm -rf "$WORK"
 if [ "$?" -eq 0 ]; then 
 msg="Script was interrupted. \nDirectory $WORK has been removed. \nModule $SFS.squashfs not created. "
-echo -e "\e[0;33m$msg\033[0m"
+echo -e "\e[0;33m$msg\e[0m"
 	xmessage "`echo -e $msg`"
 fi
 	fi
@@ -175,10 +175,10 @@ umount -l "$UNION"
 # As last resort use brute force in this (rare) case
 #[ "$?" -ne 0 ] && killall unionfs-fuse && echo "Forced unmounting of $UNION"
 #rmdir "$UNION"
-#[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\033[0m"
+#[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\e[0m"
    else
 rmdir "$UNION" 2> /dev/null
-[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\033[0m"
+[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\e[0m"
    fi
 #rm -rf /.unionfs 2> /dev/null
 
@@ -189,7 +189,7 @@ kill $pd 2> /dev/null
 	if [[ -n "$SFS" && -n "$DRV" ]]; then
 	rm -rf "$WORK"-w
 	rm -rf "$WORK"
-[ "$?" -eq 0 ] && echo -e "\e[0;32mDirectory $WORK has been removed.\033[0m"
+[ "$?" -eq 0 ] && echo -e "\e[0;32mDirectory $WORK has been removed.\e[0m"
 	fi
 read -s -n 1 -p "Press any key to close . . ."
 	exit
@@ -198,49 +198,49 @@ read -s -n 1 -p "Press any key to close . . ."
 export -f restore
 
 check_network() {
-echo -e "\e[0;36mChecking network connection...\033[0m"
+echo -e "\e[0;36mChecking network connection...\e[0m"
 if ping -c1 debian.org 2>&1 | grep unknown; then 
-echo -e "\e[0;33mThere is no network connection. Exiting...\033[0m"
+echo -e "\e[0;33mThere is no network connection. Exiting...\e[0m"
 sleep 3
 touch /tmp/_exit
 else
-echo -e "\e[0;32mOK\033[0m"
+echo -e "\e[0;32mOK\e[0m"
 sleep 1
 fi
 }
 export -f check_network
 
 update_repo() {
-echo -e "\e[0;36mUpdating package lists...\033[0m"
+echo -e "\e[0;36mUpdating package lists...\e[0m"
 apt-get update
 ret=$?
 if [[ $ret -eq 100 ]]; then
-[ "$?" -eq 0 ] && echo -e "\e[0;33m There are one or more errors with updating. \n Check your /etc/apt/sources.list.\033[0m"
+[ "$?" -eq 0 ] && echo -e "\e[0;33m There are one or more errors with updating. \n Check your /etc/apt/sources.list.\e[0m"
 read -p "Still continue? (Y/n)?" choice
 
 case "$choice" in 
   y|Y|"")
-echo -e "\e[0;32mOK, Continue\033[0m"
+echo -e "\e[0;32mOK, Continue\e[0m"
 ;;
   n|N)
 touch /tmp/_exit
 exit 0
 ;;
 *)
-echo -e "\e[0;31mNot a valid choice, exiting....\033[0m"
+echo -e "\e[0;31mNot a valid choice, exiting....\e[0m"
 touch /tmp/_exit
 exit 0
 ;;
 esac
 else
-echo -e "\e[0;32mOK\033[0m"
+echo -e "\e[0;32mOK\e[0m"
 sleep 1
 fi
 }
 export -f update_repo
 
 install_packages() {
-echo -e "\e[0;36mInstalling to working directory: $SFS\033[0m"
+echo -e "\e[0;36mInstalling to working directory: $SFS\e[0m"
 sleep 1
 # Install the packages.
 apt-get install -y $INSTALL | tee /tmp/aptout
@@ -251,7 +251,7 @@ else
 CNT=`wc -l < /tmp/aptout`
 TEXT=`cat /tmp/aptout`
 if [ "$CNT" -lt 8 ]; then
-echo -e "\e[0;33mNothing has been installed or something unexpected occurred, apt-get output: \n $TEXT \n Will restore back to previous state now..\033[0m" 
+echo -e "\e[0;33mNothing has been installed or something unexpected occurred, apt-get output: \n $TEXT \n Will restore back to previous state now..\e[0m" 
 touch /tmp/_exit
 fi
 fi
@@ -329,15 +329,15 @@ echo "Type the number of your choice"
 read n
 number=$(cat -n /tmp/dpkgchoice | wc -l)
 if [ ${n} -gt $number ] || [ ${n} -lt 1 ]; then
-echo -e "\e[0;33mError, please type a number from following choice:\033[0m"
+echo -e "\e[0;33mError, please type a number from following choice:\e[0m"
 cat -n /tmp/dpkgchoice
 read n
 	if [ ${n} -gt $number ] || [ ${n} -lt 1 ]; then
-echo -e "\e[0;33mError, please type a number from following choice:\033[0m"
+echo -e "\e[0;33mError, please type a number from following choice:\e[0m"
 cat -n /tmp/dpkgchoice
 read n
    if [ ${n} -gt $number ] || [ ${n} -lt 1 ]; then
-echo -e "\e[0;33mGiving up now, exiting...\033[0m"
+echo -e "\e[0;33mGiving up now, exiting...\e[0m"
 read -s -n 1 -p "Press any key to close . . ."
 exit 0
    fi
@@ -357,15 +357,15 @@ export UNION=/tmp/unionsfs_$RANDOM; mkdir -p "$UNION"
 WRITE="$WORK"; mkdir -p "$WRITE"
 mkdir -p "$WRITE"-w
 
-echo -e "\e[0;36mMount bind the main module, prepare the chroot.\033[0m"
+echo -e "\e[0;36mMount bind the main module, prepare the chroot.\e[0m"
 # Mount the directories, prepare the chroot
 #unionfs-fuse -o nonempty -o allow_other,suid,dev -o cow $WRITE=RW:"$CHROOTFS" "$UNION" 2> /dev/null
 mount -t overlay -o lowerdir=$LOWLIST,upperdir=$WRITE,workdir=$WRITE-w overlay "$UNION" 2> /dev/null
 if [ $? -eq 0 ]; then 
-echo -e "\e[0;32mOK\033[0m"
+echo -e "\e[0;32mOK\e[0m"
 sleep 1
 else
-echo -e "\e[0;31mSorry, something went wrong, exiting...\033[0m"
+echo -e "\e[0;31mSorry, something went wrong, exiting...\e[0m"
 rmdir "$UNION"
 rmdir "$WRITE"
 rm -rf "$WRITE"-w
@@ -375,42 +375,42 @@ fi
 
 export UNIONCREATED=yes
 
-echo -e "\e[0;36mCopy contents /etc/resolv.conf to provide network connection.\033[0m"
+echo -e "\e[0;36mCopy contents /etc/resolv.conf to provide network connection.\e[0m"
 rm -f $UNION/etc/resolv.conf && touch $UNION/etc/resolv.conf #20160918 saintless - without this the script fails after remaster
 echo -en "`cat /etc/resolv.conf`" > $UNION/etc/resolv.conf
 #cp -a /etc/resolv.conf $UNION/etc/
 cp -a /etc/apt/sources.list $UNION/etc/apt/ 2> /dev/null
 cp -ra /etc/apt/sources.list.d $UNION/etc/apt/ 2> /dev/null
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\033[0m"
+[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m"
 sleep 1
-echo -e "\e[0;36mCopy status and available files.\033[0m"
+echo -e "\e[0;36mCopy status and available files.\e[0m"
 cp -a "$AVAIL" "$UNION"/var/lib/dpkg/available
 cp -a "$STAT" "$UNION"/var/lib/dpkg/status
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\033[0m"
+[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m"
 sleep 1
-echo -e "\e[0;36mDo the required mount binds for chroot.\033[0m"
+echo -e "\e[0;36mDo the required mount binds for chroot.\e[0m"
 # Do the required mount binds for chroot
 mount --bind /proc "$UNION"/proc
 #mount --bind /tmp "$UNION"/tmp
 mount --bind /dev "$UNION"/dev
 mount --bind /sys "$UNION"/sys
 mount -t devpts devpts "$UNION"/dev/pts
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\033[0m"
+[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m"
 sleep 1
 xhost +local:
 chroot "$UNION" /bin/bash -c check_network
-[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\033[0m" && restore 
+[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\e[0m" && restore 
 if [ -f /var/cache/apt/pkgcache.bin ]; then
-	echo -e "\e[0;36mCopy apt/*pkgcache.bin and apt/lists/* files.\033[0m"
+	echo -e "\e[0;36mCopy apt/*pkgcache.bin and apt/lists/* files.\e[0m"
 	cp -a /var/cache/apt/*pkgcache.bin "$UNION"/var/cache/apt/
 	find /var/lib/apt/lists -type f ! -name lock -exec cp {} "$UNION"/var/lib/apt/lists/ \;
-	[ $? -eq 0 ] && echo -e "\e[0;32mOK\033[0m"
+	[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m"
 else
 	chroot "$UNION" /bin/bash -c update_repo
-	[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\033[0m" && restore 
+	[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\e[0m" && restore 
 fi
 chroot "$UNION" /bin/bash -c install_packages
-[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\033[0m" && restore 
+[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\e[0m" && restore 
 
 sleep 2
 
@@ -421,7 +421,7 @@ rm -rf "$WRITE"-w
 
 cd "$WORK"
 
-echo -e "\e[0;36mCleaning... (removing and zerosizing files in working-directory: $SFS)\033[0m"
+echo -e "\e[0;36mCleaning... (removing and zerosizing files in working-directory: $SFS)\e[0m"
 
 if [ "$DISDPKG" = "TRUE" ]; then
 mv -f "$WORK"/var/lib/dpkg/info "$WORK"/var/lib/dpkg/infonew
@@ -437,7 +437,7 @@ cleanup 2> /dev/null
 #    chown -R man:root usr/share/man
 
 echo
-echo -e "\e[0;32mOK\033[0m"
+echo -e "\e[0;32mOK\e[0m"
 
 #cd "/mnt/$DRV"
 
