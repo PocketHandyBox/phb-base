@@ -1,0 +1,3 @@
+# DogLinux repository - uncomment if needed
+#deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/bookworm/raw/master/amd64/ ./
+#deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/bookworm/raw/master/i386/ ./
