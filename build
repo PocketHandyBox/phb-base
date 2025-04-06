@@ -219,8 +219,8 @@ elif [ "$SYSTEMD" = "TRUE" ]; then
 	PL_SYS="$PL_SYSTEMD"
 fi
 
-# Add DogLinux github repo
-echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/bookworm/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
+# DogLinux repository not necessary anymore - disabled at build time
+#echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/bookworm/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
 
 [ "$ARCH" = "amd64" ] && dpkg --add-architecture i386
 
