@@ -460,6 +460,11 @@ update-icon-caches usr/share/icons/*/
 # It is need to do after change .desktop files
 update-desktop-database
 
+# Remove /usr/bin/Xtigervnc and extension
+rm -f usr/bin/Xtigervnc usr/sbin/tigervncsession
+rm -f usr/lib/xorg/modules/extensions/libvnc.so
+remove_broken_links etc/alternatives
+
 # Remove mesa libs from 01-filesystem.squashfs
 # Prefer to make module with mesa and libdrm from backports
 if [ "$ARCH" = "amd64" ]; then
