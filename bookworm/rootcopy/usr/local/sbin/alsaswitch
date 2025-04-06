@@ -6,8 +6,16 @@ if ! lspci | grep -qi audio; then
     exit
 fi
 
-while ! test -c /dev/snd/controlC0; do sleep 1;
+while [ "$T" -le 10 ]; do
+    [ -c /dev/snd/controlC0 ] && break
+    T=$(($T+1))
+    sleep 1
 done
+
+if [ "$T" -gt 10 ]; then
+    echo No soundcard, exit
+    exit
+fi
 
 if amixer get Master 2> /dev/null; then exit
 elif amixer get PCM 2> /dev/null; then exit
@@ -29,3 +37,4 @@ fi
 }
 
 doalsaswitch > /var/log/alsaswitch.log
+exit 0

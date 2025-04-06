@@ -1,5 +1,5 @@
-#!/bin/bash
-sleep 5
+#!/bin/dash
+sleep 3
 ls $HOME/Startup/* | while read J
 do
    "$J" &
