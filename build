@@ -22,7 +22,7 @@ fi
 # This makes sure when the script is interrupted, that all mount 'binds' will unmount 
 exitfn () {
 trap SIGINT              # Resore signal handling for SIGINT
-echo -e "\e[0;36mUnmounting mount binds in chroot\033[0m"
+echo -e "\e[0;36mUnmounting mount binds in chroot\e[0m"
 #umount -l chroot/tmp
 umount -l $LAUNCHDIR/bookworm/chroot/proc 2> /dev/null
 umount -l $LAUNCHDIR/bookworm/chroot/sys 2> /dev/null
@@ -34,8 +34,8 @@ umount -l $LAUNCHDIR/bookworm/chroot/dev 2> /dev/null
 rm -f $LAUNCHDIR/bookworm/apt/archives/lock 2> /dev/null
 
 if mountpoint -q $LAUNCHDIR/bookworm/chroot/dev; then     # just in case check dev
-	echo -e "\e[0;31mSomething went wrong, directory chroot cannot be removed\033[0m"
-	echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\033[0m"
+	echo -e "\e[0;31mSomething went wrong, directory chroot cannot be removed\e[0m"
+	echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\e[0m"
 	exit
 else
 # Don't remove bookworm/chroot in case of error
@@ -50,7 +50,7 @@ trap "exitfn" 1 2 3 15           # Set up SIGINT trap to call function 'exitfn'
 
 # OK or FAILED
 ok_or_failed () {
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\033[0m" || echo -e "\e[0;31mFAILED\033[0m"
+[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m" || echo -e "\e[0;31mFAILED\e[0m"
 }
 export -f ok_or_failed
 
@@ -69,10 +69,10 @@ else exit
 fi
 
 if [ -z "$PL_BASE" ] || [ -z "$INSTALL" ]; then
-	echo -e "\e[0;31mThis config file cannot be used, sorry, exiting...\033[0m"
+	echo -e "\e[0;31mThis config file cannot be used, sorry, exiting...\e[0m"
 	exit
 else
-	echo -e "\e[0;36mRunning with configuration: \e[1;29m$(readlink -f $config)\e[0;29m\033[0m"
+	echo -e "\e[0;36mRunning with configuration: \e[1;29m$(readlink -f $config)\e[0m"
 fi
 
 if [ -z "$GUESTUSER" ]; then export GUESTUSER=guest
@@ -95,28 +95,28 @@ else
 fi
 
 if [ "$(uname -m)" = "i686" ]; then
-	echo -e "\e[0;32mOK, running 32-bit OS, building live system for 32-bit: $(uname -m)\033[0m"
+	echo -e "\e[0;32mOK, running 32-bit OS, building live system for 32-bit: $(uname -m)\e[0m"
 	export ARCH="i386"
 elif [ "$(uname -m)" = "x86_64" ]; then
 	if [ "$BUILD686" = "TRUE" ]; then
-		echo -e "\e[0;32mOK, running 64-bit OS, building live system for 32-bit: i686\033[0m"
+		echo -e "\e[0;32mOK, running 64-bit OS, building live system for 32-bit: i686\e[0m"
 		export ARCH="i386"
 	else
-		echo -e "\e[0;32mOK, running 64-bit OS, building live system for 64-bit: $(uname -m)\033[0m"
+		echo -e "\e[0;32mOK, running 64-bit OS, building live system for 64-bit: $(uname -m)\e[0m"
 		export ARCH="amd64"
 	fi
 fi
 
-echo -e "\e[0;33mBuild Debian Bookworm (Debian 12) base filesystem '01-filesystem.squashfs' for 'PocketHandyBox'\nWith overlay support and porteus-boot style included\n\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4\033[0m"
-echo -e "\e[0;32mBuilding will be done in: $PWD/bookworm\033[0m"
+echo -e "\e[0;33mBuild Debian Bookworm (Debian 12) base filesystem '01-filesystem.squashfs' for 'PocketHandyBox'\nWith overlay support and porteus-boot style included\n\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4\e[0m"
+echo -e "\e[0;32mBuilding will be done in: $PWD/bookworm\e[0m"
 
-#echo -e "\e[0;32mIf you'd like a log from the output, run again e.g:\033[0m"
-#echo -e "\e[0;33m$0 -gui 2>&1 | tee build.log\033[0m"
-echo -e "\e[0;36mFirst setting up debootstrap, this will take a few minutes\033[0m"
+#echo -e "\e[0;32mIf you'd like a log from the output, run again e.g:\e[0m"
+#echo -e "\e[0;33m$0 -gui 2>&1 | tee build.log\e[0m"
+echo -e "\e[0;36mFirst setting up debootstrap, this will take a few minutes\e[0m"
 
 if [ -d "bookworm/chroot" ]; then 
-	echo -e "\e[0;33m Working directory 'bookworm' already exists\n All files in bookworm will be deleted, except the apt cache in chroot\033[0m"
-	echo -e "\e[0;36mUnmount mount binds and remove bookworm/chroot...\033[0m"
+	echo -e "\e[0;33m Working directory 'bookworm' already exists\n All files in bookworm will be deleted, except the apt cache in chroot\e[0m"
+	echo -e "\e[0;36mUnmount mount binds and remove bookworm/chroot...\e[0m"
 	#umount -l chroot/tmp
 	umount -l bookworm/chroot/proc 2> /dev/null
 	umount -l bookworm/chroot/sys 2> /dev/null
@@ -125,8 +125,8 @@ if [ -d "bookworm/chroot" ]; then
 
 	mv bookworm/chroot/var/cache/apt bookworm/ 2> /dev/null
 	if mountpoint -q bookworm/chroot/dev; then      # just in case check dev
-		echo -e "\e[0;31mSomething went wrong, directory bookworm/chroot cannot be removed\033[0m"
-		echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\033[0m"
+		echo -e "\e[0;31mSomething went wrong, directory bookworm/chroot cannot be removed\e[0m"
+		echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\e[0m"
 		exit
 	else
 		rm -rf bookworm/chroot
@@ -135,13 +135,13 @@ if [ -d "bookworm/chroot" ]; then
 	mv bookworm/apt bookworm/chroot/var/cache/ 2> /dev/null
 	rm -f bookworm/*.conf 2> /dev/null
 	#find bookworm -mindepth 1 ! -wholename 'bookworm/chroot/*' -delete 2> /dev/null
-	echo -e "\e[0;32mOK, continue...\033[0m"
+	echo -e "\e[0;32mOK, continue...\e[0m"
 fi
 
 if [ $(command -v apt-get 2>/dev/null) ];then
-	echo -e "\e[0;36mUpdate the package lists...\033[0m"
+	echo -e "\e[0;36mUpdate the package lists...\e[0m"
 	apt-get update
-	echo -e "\e[0;36mInstall some required packages, e.g. xz-utils, wget, squashfs-tools, etc...\033[0m"
+	echo -e "\e[0;36mInstall some required packages, e.g. xz-utils, wget, squashfs-tools, etc...\e[0m"
 	apt-get install debootstrap squashfs-tools wget xz-utils zstd -y
 	ok_or_failed
 fi
@@ -153,15 +153,15 @@ exit 0
 fi
 
 ########## Set up debootstrap ##########
-echo -e "\e[0;36mSetting up debootstrap in bookworm/chroot\033[0m"
-echo -e "\e[0;36mThis may take a while...\033[0m"
+echo -e "\e[0;36mSetting up debootstrap in bookworm/chroot\e[0m"
+echo -e "\e[0;36mThis may take a while...\e[0m"
 mkdir -p bookworm/chroot && cp -a $config bookworm && cd bookworm &&
 debootstrap --arch=$ARCH --variant=minbase --include=apt-transport-https,ca-certificates,initscripts,adduser bookworm chroot "$MIRRORURL"
 ret=$?
 echo $ret
 if [ $ret -ne 0 ]; then
-	echo -e "\e[0;31mFailed to install the base system\033[0m"
-	echo -e "\e[0;32mThis can happen sometimes, please try again, exiting now...\033[0m"
+	echo -e "\e[0;31mFailed to install the base system\e[0m"
+	echo -e "\e[0;32mThis can happen sometimes, please try again, exiting now...\e[0m"
 	exit
 fi
 
@@ -227,26 +227,26 @@ echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux
 apt-get update # required, repositories just added
 [ $? -ne 0 ] && apt-get update # try again if failed
 
-#echo -e "\e[0;36mPlease set the password for 'root'\033[0m"
-#echo -e "\e[0;33mAlso now you may want to add to or edit files in bookworm/chroot\033[0m" 
+#echo -e "\e[0;36mPlease set the password for 'root'\e[0m"
+#echo -e "\e[0;33mAlso now you may want to add to or edit files in bookworm/chroot\e[0m" 
 #passwd root
 #if [ $? -ne 0 ]; then # try again if passwords not match
-#	echo -e "\e[0;36mPlease try again, type password for root\033[0m"
+#	echo -e "\e[0;36mPlease try again, type password for root\e[0m"
 #	#passwd root
 #fi
-#[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\033[0m"; sleep 3
+#[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\e[0m"; sleep 3
 
 # create user guest
-echo -e "\e[0;36mAdd user 'guest'...\033[0m"
+echo -e "\e[0;36mAdd user 'guest'...\e[0m"
 adduser "$GUESTUSER" --gecos ",,," --disabled-password 2> /dev/null
 #echo
-#echo -e "\e[0;36mPlease set the password for user 'guest'\033[0m"
+#echo -e "\e[0;36mPlease set the password for user 'guest'\e[0m"
 #passwd guest
 #if [ $? -ne 0 ]; then # try again if passwords not match
-#	echo -e "\e[0;36mPlease try again, type password for guest\033[0m"
+#	echo -e "\e[0;36mPlease try again, type password for guest\e[0m"
 #	#passwd guest
 #fi
-#[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\033[0m"; sleep 3
+#[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\e[0m"; sleep 3
 #echo
 # add groups fuse and wheel
 #addgroup fuse
@@ -255,13 +255,13 @@ adduser "$GUESTUSER" --gecos ",,," --disabled-password 2> /dev/null
 #usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel guest
 usermod -a -G cdrom,audio,video,plugdev "$GUESTUSER"
 
-echo -e "\e[0;36mInstall sysvinit/systemd required packages\033[0m"
+echo -e "\e[0;36mInstall sysvinit/systemd required packages\e[0m"
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYS
 # try again if failed
 if [ $? -ne 0 ]; then
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYS
 	if [ $? -ne 0 ]; then
-	echo -e "\e[0;31mFAILED\033[0m"
+	echo -e "\e[0;31mFAILED\e[0m"
 	touch /exit_
 	exit
 	fi
@@ -276,7 +276,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confd
 if [ $? -ne 0 ]; then
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_BASE
 	if [ $? -ne 0 ]; then
-	echo -e "\e[0;31mFAILED\033[0m"
+	echo -e "\e[0;31mFAILED\e[0m"
 	touch /exit_
 	exit
 	fi
@@ -297,23 +297,23 @@ update-rc.d snapexit defaults
 [ "$ARCH" = "amd64" ] && INSTALL="$INSTALL $PL_AMD64"
 
 # simulate install first to check for errors, if there are, exit
-echo -e "\e[0;36mChecking packages . . .\033[0m"
+echo -e "\e[0;36mChecking packages . . .\e[0m"
 apt-get install -s -y $INSTALL
 ret=$?
 if [ $ret -eq 100 ]; then
-	echo -e "\e[0;31mSorry, there are one or more errors, see above.\033[0m"
-	echo -e "\e[0;31mCould be a typo in a package name.\033[0m"
-	echo -e "\e[0;36mExiting . . .\033[0m"
+	echo -e "\e[0;31mSorry, there are one or more errors, see above.\e[0m"
+	echo -e "\e[0;31mCould be a typo in a package name.\e[0m"
+	echo -e "\e[0;36mExiting . . .\e[0m"
 	touch /exit_
 	exit
 else
-	echo -e "\e[0;32mAll packages checked OK, continue now to install some basic packages... \033[0m"
+	echo -e "\e[0;32mAll packages checked OK, continue now to install some basic packages... \e[0m"
 fi
 
 ############ Start installing packages ############
 
 ####### Start installing packages, as defined in configuration #######
-echo -e "\e[0;36mInstall packages, as defined in configuration\033[0m"
+echo -e "\e[0;36mInstall packages, as defined in configuration\e[0m"
 
 ### Do the real installing
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
@@ -321,7 +321,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confd
 if [ $? -ne 0 ]; then
 DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
 	if [ $? -ne 0 ]; then
-	echo -e "\e[0;31mFAILED\033[0m"
+	echo -e "\e[0;31mFAILED\e[0m"
 	touch /exit_
 	exit
 	fi
@@ -329,7 +329,7 @@ fi
 
 # ● fredx181, commented out installing kernel 
 ### install the kernel
-#echo -e "\e[0;36mInstall the kernel, download and extract\033[0m"
+#echo -e "\e[0;36mInstall the kernel, download and extract\e[0m"
 #mkdir -p /tmp/tmpapt
 #[ "$ARCH" = "i386" ] && apt-get -o dir::cache::archives="/tmp/tmpapt" install -d linux-image-686-pae -y
 #[ "$ARCH" = "amd64" ] && apt-get -o dir::cache::archives="/tmp/tmpapt" install -d linux-image-amd64 -y
@@ -511,7 +511,7 @@ $CHROOT chroot /bin/bash -c chroot_in
 ############ End running in chroot #############
 ################################################
 
-echo -e "\e[0;36mUnmounting mount binds in chroot\033[0m"
+echo -e "\e[0;36mUnmounting mount binds in chroot\e[0m"
 #umount -l chroot/tmp
 umount -l chroot/proc
 umount -l chroot/dev/pts
@@ -535,22 +535,22 @@ if [ -n "$TEMPMIRROR" ]; then
 fi
 
 if [ "$(cat chroot/etc/X11/default-display-manager 2> /dev/null)" ]; then
-	echo -e "\e[0;36mIt looks like you have a display-manager installed\033[0m"
+	echo -e "\e[0;36mIt looks like you have a display-manager installed\e[0m"
 	cat chroot/etc/X11/default-display-manager
-	echo -e "\e[0;36mThis probably will conflict with the default login method (through /etc/inittab)\033[0m"
+	echo -e "\e[0;36mThis probably will conflict with the default login method (through /etc/inittab)\e[0m"
 	cp -af chroot/etc/inittab-noauto chroot/etc/inittab
 	if [ "$SYSTEMD" = "TRUE" ]; then
 		rm -f chroot/etc/systemd/system/graphical.target.wants/getty@tty1.service
 		rm -f chroot/etc/systemd/system/getty.target.wants/getty@tty1.service
 	fi
-	echo -e "\e[0;32mDisabled autologin, using display-manager for login\033[0m"
+	echo -e "\e[0;32mDisabled autologin, using display-manager for login\e[0m"
 fi
 
 mkdir -p apt/archives
 mv -f chroot/var/cache/apt/archives/*.deb ./apt/archives/
 
 mkdir -p "$ARCH" 2> /dev/null
-echo -e "\e[0;33mNow we will create: filesystem: '01-filesystem.squashfs'"
+echo -e "\e[0;33mNow we will create: filesystem: '01-filesystem.squashfs'\e[0m"
 mksquashfs chroot "$ARCH"/01-filesystem.squashfs -b 512k $MKSFSCMP
 ok_or_failed
 
@@ -558,6 +558,6 @@ ok_or_failed
 mv -f ./apt/archives/*.deb chroot/var/cache/apt/archives/ 2> /dev/null
 rm -rf apt 2> /dev/null
 
-echo -e "\e[0;32mFinished! If all went well, '01-filesystem.squashfs' file are in ""$ARCH"" folder \n\nHave a good day!\033[0m"
+echo -e "\e[0;32mFinished! If all went well, '01-filesystem.squashfs' file are in ""$ARCH"" folder \n\nHave a good day!\e[0m"
 
 exit 0
