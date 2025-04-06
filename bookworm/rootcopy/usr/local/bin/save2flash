@@ -9,10 +9,12 @@
 # Xdialog replaced by yad
 
 if [ "`whoami`" != "root" ]; then
-	which pkexec > /dev/null && exec pkexec ${0} "$@"
+	which pkexec > /dev/null && exec pkexec save2flash
 	echo "This script should be run as root"
 	exit 1
 fi
+
+PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
 sfsunloadfn() {
 if [ -f /mnt/live/tmp/modules ]; then

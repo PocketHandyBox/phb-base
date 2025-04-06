@@ -12,6 +12,8 @@ if [ "`whoami`" != "root" ]; then
 	exit 1
 fi
 
+PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
 save_session_fn() {
 #if [ -f /mnt/live/etc/nochanges ] && [ ! -f /tmp/savefile.txt ]; then
 #yad --title="Create savefile" --window-icon=document-save --center --button=No\!gtk-no:1 --button=Yes\!gtk-yes:0 \
@@ -55,15 +57,18 @@ reboot
 elif [ "$1" = poweroff ]; then
 save_session_fn
 poweroff
+elif [ "$1" = suspend ]; then
+save_session_fn
+pm-suspend
 elif [ -f /mnt/live/etc/nochanges ] && [ ! -f /tmp/savefile.txt ]; then
 yad --title Logout --window-icon=system-shutdown --timeout=30 --borders=10 \
  --sticky --fixed --center --on-top --skip-taskbar --close-on-unfocus --form --columns=2 \
  --field='Create savefile!:BTN' makepfile --field='Do you want to save your changes in a savefile?:LBL' \
  --button=Exit\ X\!system-logout:'pkill X' --button=Restart\!system-reboot:'logout-yad reboot' \
- --button=Shutdown\!system-shutdown:'logout-yad poweroff' --button=Suspend\!system-suspend:pm-suspend
+ --button=Shutdown\!system-shutdown:'logout-yad poweroff' --button=Suspend\!system-suspend:'logout-yad suspend'
 else
 yad --title Logout --window-icon=system-shutdown --timeout=30 --borders=10 \
  --sticky --fixed --center --on-top --skip-taskbar --close-on-unfocus \
  --button=Exit\ X\!system-logout:'pkill X' --button=Restart\!system-reboot:'logout-yad reboot' \
- --button=Shutdown\!system-shutdown:'logout-yad poweroff' --button=Suspend\!system-suspend:pm-suspend
+ --button=Shutdown\!system-shutdown:'logout-yad poweroff' --button=Suspend\!system-suspend:'logout-yad suspend'
 fi
