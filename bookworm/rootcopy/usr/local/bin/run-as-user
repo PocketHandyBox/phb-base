@@ -71,7 +71,6 @@ if [ -s /tmp/."$GUESTUSER"-session-bus ]; then
 	export DBUS_SESSION_BUS_PID
 fi
 
-chpupsocket "$GUESTUSER":"$GUESTUSER" &
 ARGS=""
 while [ "$1" ]; do ARGS="$ARGS \"$1\""; shift; done
 exec su "$GUESTUSER" --session-command /bin/dash -c "cd \"$CWD\"; dbus-launch \"$APP\" $ARGS"

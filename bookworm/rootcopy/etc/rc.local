@@ -20,8 +20,11 @@
 
 [ -x /usr/local/bin/chownguest ] && /usr/local/bin/chownguest 2> /dev/null
 
-( /usr/local/sbin/alsaswitch & )
+[ -x /usr/local/sbin/alsaswitch ] && ( /usr/local/sbin/alsaswitch & )
 
+[ -x /usr/local/sbin/chpupsocket ] && ( /usr/local/sbin/chpupsocket & )
+
+[ -x /opt/nvidia-legacy-optimus/nvidia-legacy-optimus-check.sh ] && \
 /opt/nvidia-legacy-optimus/nvidia-legacy-optimus-check.sh 2> /dev/null
 
 cat /opt/phb/phblogo </dev/console >/dev/console 2>&1

@@ -1,0 +1,12 @@
+#!/bin/dash
+
+which pup-volume-monitor > /dev/null || exit 0
+
+until pgrep -f pup-volume-monitor > /dev/null ; do sleep 1 ; done
+
+until test -S /tmp/pup_volume_monitor_socket ; do sleep 1 ; done
+
+chgrp plugdev /tmp/pup_volume_monitor_socket
+chmod g+w /tmp/pup_volume_monitor_socket
+
+exit 0
