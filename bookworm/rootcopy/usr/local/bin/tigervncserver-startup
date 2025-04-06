@@ -1,0 +1,14 @@
+#!/bin/dash
+
+pgrep -f x0tigervncserver > /dev/null && exit
+
+[ -f ~/.config/tigervnc/passwd ] && exec x0tigervncserver -rfbauth ~/.config/tigervnc/passwd
+
+VNCPASS="`egrep -o ' vnc=[^ ]+' /proc/cmdline | cut -d= -f2`"
+
+if [ -n "$VNCPASS" ]; then
+echo "$VNCPASS" | vncpasswd -f > /tmp/.vncbootpasswd
+exec x0tigervncserver -rfbauth /tmp/.vncbootpasswd
+fi
+
+grep -q vnc /proc/cmdline && exec x0tigervncserver -SecurityTypes None,TLSNone
