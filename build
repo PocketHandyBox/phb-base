@@ -81,7 +81,6 @@ fi
 
 # export final variables defined from custom .conf file
 export SYSTEMD="$SYSTEMD"
-export BUILD686="$BUILD686"
 export PL_BASE="$PL_BASE"
 export PL_SYSV="$PL_SYSV"
 export PL_SYSTEMD="$PL_SYSTEMD"
@@ -169,13 +168,24 @@ fi
 rm -rf chroot/usr/share/doc/*/examples
 find chroot/usr/share/doc -type f ! -name copyright -delete 2> /dev/null
 rm -rf chroot/usr/share/info/*
-rm -rf chroot/usr/share/locale/??
-rm -rf chroot/usr/share/locale/??_*
-rm -rf chroot/usr/share/locale/??@*
-rm -rf chroot/usr/share/locale/???
-rm -rf chroot/usr/share/man/??
-rm -rf chroot/usr/share/man/??.*
-rm -rf chroot/usr/share/man/*_*
+
+if [ -z "$KEEPLOCALES" ]; then
+	rm -rf chroot/usr/share/locale/??
+	rm -rf chroot/usr/share/locale/??_*
+	rm -rf chroot/usr/share/locale/??@*
+	rm -rf chroot/usr/share/locale/???
+	rm -rf chroot/usr/share/man/??
+	rm -rf chroot/usr/share/man/??.*
+	rm -rf chroot/usr/share/man/*_*
+else
+GREPLOCALES="`echo "$KEEPLOCALES" | sed 's/ /|/g'`"
+ls chroot/usr/share/locale | grep -v locale.alias | egrep -ve "$GREPLOCALES" | while read DIR
+do rm -rf chroot/usr/share/locale/"$DIR"
+done
+ls chroot/usr/share/man | grep -v man | egrep -ve "$GREPLOCALES" | while read DIR
+do rm -rf chroot/usr/share/man/"$DIR"
+done
+fi
 
 # Remove debootstrap sources.list. Will use deb822 style /etc/apt/sources.list.d/debian.sources instead
 rm chroot/etc/apt/sources.list
@@ -189,6 +199,30 @@ ok_or_failed
 
 if [ -n "$TEMPMIRROR" ]; then
 	sed -i s/deb.debian.org/"$TEMPMIRROR"/ chroot/etc/apt/sources.list.d/debian.sources
+fi
+
+[ -n "$XKBLAYOUT" ] || XKBLAYOUT="us"
+echo "XKBLAYOUT=\"$XKBLAYOUT\"" >> chroot/etc/default/keyboard
+echo "XKBVARIANT=\"$XKBVARIANT\"" >> chroot/etc/default/keyboard
+
+if [ -n "$KEEPLOCALES" ]; then
+for KEEPLOCALE in $KEEPLOCALES
+do
+	echo "path-include=/usr/share/locale/$KEEPLOCALE/*" >> chroot/etc/dpkg/dpkg.cfg.d/usr_share_locale_man
+	echo "path-include=/usr/share/man/$KEEPLOCALE/*" >> chroot/etc/dpkg/dpkg.cfg.d/usr_share_locale_man
+done
+fi
+
+if [ -n "$KEEPLOCALES" ]; then
+echo "$KEEPLOCALES" | grep -q cs && sed -i 's/# cs_CZ.UTF-8/cs_CZ.UTF-8/' chroot/etc/locale.gen
+echo "$KEEPLOCALES" | grep -q hu && sed -i 's/# hu_HU.UTF-8/hu_HU.UTF-8/' chroot/etc/locale.gen
+echo "$KEEPLOCALES" | grep -q nb && sed -i 's/# nb_NO.UTF-8/nb_NO.UTF-8/' chroot/etc/locale.gen
+echo "$KEEPLOCALES" | grep -q nl && sed -i 's/# nl_NL.UTF-8/nl_NL.UTF-8/' chroot/etc/locale.gen
+echo "$KEEPLOCALES" | grep -q pl && sed -i 's/# pl_PL.UTF-8/pl_PL.UTF-8/' chroot/etc/locale.gen
+echo "$KEEPLOCALES" | grep -q ro && sed -i 's/# ro_RO.UTF-8/ro_RO.UTF-8/' chroot/etc/locale.gen
+echo "$KEEPLOCALES" | grep -q sv && sed -i 's/# sv_SE.UTF-8/sv_SE.UTF-8/' chroot/etc/locale.gen
+echo "$KEEPLOCALES" | grep -q tr && sed -i 's/# tr_TR.UTF-8/tr_TR.UTF-8/' chroot/etc/locale.gen
+echo "$KEEPLOCALES" | grep -q uk && sed -i 's/# uk_UA.UTF-8/uk_UA.UTF-8/' chroot/etc/locale.gen
 fi
 
 # mount bind some required directories from host filesystem
@@ -453,6 +487,9 @@ rmdir usr/share/icons/Numix-Light/* 2> /dev/null
 remove_broken_links usr/share/icons/Numix-Light
 rmdir usr/share/icons/Numix-Light 2> /dev/null
 
+rmdir usr/share/locale/*/* 2> /dev/null
+rmdir usr/share/locale/* 2> /dev/null
+
 # Update /usr/share/icons/hicolor/index.theme
 update-icon-caches usr/share/icons/*/
 
@@ -532,6 +569,10 @@ chown -R 1000:1000 chroot/home/"$GUESTUSER"
 
 if [ -n "$TEMPMIRROR" ]; then
 	sed -i s/"$TEMPMIRROR"/deb.debian.org/ chroot/etc/apt/sources.list.d/debian.sources
+fi
+
+if [ -n "$LOCALE" ]; then
+	echo "LANG=$LOCALE" > chroot/etc/default/locale
 fi
 
 if [ "$(cat chroot/etc/X11/default-display-manager 2> /dev/null)" ]; then
