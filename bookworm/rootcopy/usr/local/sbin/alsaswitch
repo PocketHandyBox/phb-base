@@ -6,6 +6,8 @@ if ! lspci | grep -qi audio; then
     exit
 fi
 
+T=0
+
 while [ "$T" -le 10 ]; do
     [ -c /dev/snd/controlC0 ] && break
     T=$(($T+1))
