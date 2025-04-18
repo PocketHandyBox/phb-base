@@ -3,6 +3,8 @@
 ### modified for Debiandog by fredx181
 # 2024-03-18 fredx181 modified for pseudo-full install
 
+# Modified by gumanzoy https://github.com/PocketHandyBox
+
 export PATH=/bin:/usr/bin:./
 
 # Source functions
@@ -690,7 +692,7 @@ else
     for x in `grep /mnt/ /etc/fstab | cut -d/ -f3`; do mkdir -p /union/mnt/$x; mount -n --move /mnt/$x /union/mnt/$x; rmdir /mnt/$x; done
 fi
 
-sed -i 's/ ntfs / ntfs-3g /g' /etc/fstab
+#sed -i 's/ ntfs / ntfs-3g /g' /etc/fstab
 #cp -f /etc/fstab /union/etc 2>/dev/null
 
 # Add all symlinks of all mount points at /mnt to union

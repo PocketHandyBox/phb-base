@@ -2,6 +2,8 @@
 ## Author brokenman, modified for Debiandog by fredx181
 # 2024-03-18 fredx181 modified for pseudo-full install
 
+# Modified by gumanzoy https://github.com/PocketHandyBox
+
 # Export some color functions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -11,7 +13,8 @@ BOLD='\033[1;37m'
 RST='\033[0m' # Reset Color
 
 # Run fstab for setup
-fstab() { rm -f /tmp/devices
+fstab() {
+rm -f /tmp/devices
 param nocd || for x in /dev/sr*; do blkid $x >>/tmp/devices; done
 param nohd || blkid | egrep -v '/dev/sr|/dev/loop|/dev/mapper' >>/tmp/devices
 dev=`egrep -v 'TYPE="sw|TYPE="LVM|TYPE=".*_raid_member"' /tmp/devices 2>/dev/null | cut -d: -f1 | cut -d/ -f3 | sort | uniq`
@@ -32,22 +35,37 @@ devpts /dev/pts devpts rw,mode=0620,gid=5 0 0
 # Device partitions:
 EOF
 for x in $dev; do
-    fs=`grep -w /dev/$x /tmp/devices | egrep -o ' TYPE=[^ ]+' | cut -d'"' -f2`
-    [ $fs = vfat ] && echo "/dev/$x /mnt/$x vfat $MOPT,umask=0,check=s,utf8 0 0" >>/etc/fstab || echo "/dev/$x /mnt/$x $fs $MOPT 0 0" >>/etc/fstab
-    if [ ! -d /mnt/$x ]; then
+fs=`grep -w /dev/$x /tmp/devices | egrep -o ' TYPE=[^ ]+' | cut -d'"' -f2`
+if [ $fs = vfat ]; then
+	echo "/dev/$x /mnt/$x vfat $MOPT,umask=0,check=s,utf8 0 0" >> /etc/fstab
+elif [ $fs = ntfs ] && grep -q ntfs3 /proc/filesystems ; then
+	echo "/dev/$x /mnt/$x ntfs3 $MOPT,force,sparse 0 0" >> /etc/fstab
+elif [ $fs = ntfs ]; then
+	echo "/dev/$x /mnt/$x ntfs $MOPT,umask=0,nls=utf8 0 0" >> /etc/fstab
+else
+	echo "/dev/$x /mnt/$x $fs $MOPT 0 0" >> /etc/fstab
+fi
+if [ ! -d /mnt/$x ]; then
 	mkdir /mnt/$x
-	if [ $fs = ntfs ]; then
-	    ntfs-3g /dev/$x /mnt/$x -o $MOPT 2>/dev/null || { sed -i "/$x /d" /etc/fstab; rmdir /mnt/$x; }
-	else
-	    mount -n /mnt/$x 2>/dev/null || { modprobe $fs 2>/dev/null && mount -n /mnt/$x 2>/dev/null || { sed -i "/$x /d" /etc/fstab; rmdir /mnt/$x; }; }
-	fi
-    fi
+	mount -n /mnt/$x 2>/dev/null || { modprobe -q $fs && mount -n /mnt/$x 2>/dev/null || { sed -i "/$x /d" /etc/fstab; rmdir /mnt/$x; }; }
+fi
+# Old code for FAT/NTFS
+#    [ $fs = vfat ] && echo "/dev/$x /mnt/$x vfat $MOPT,umask=0,check=s,utf8 0 0" >>/etc/fstab || echo "/dev/$x /mnt/$x $fs $MOPT 0 0" >>/etc/fstab
+#    if [ ! -d /mnt/$x ]; then
+#	mkdir /mnt/$x
+#	if [ $fs = ntfs ]; then
+#	    ntfs-3g /dev/$x /mnt/$x -o $MOPT 2>/dev/null || { sed -i "/$x /d" /etc/fstab; rmdir /mnt/$x; }
+#	else
+#	    mount -n /mnt/$x 2>/dev/null || { modprobe $fs 2>/dev/null && mount -n /mnt/$x 2>/dev/null || { sed -i "/$x /d" /etc/fstab; rmdir /mnt/$x; }; }
+#	fi
+#    fi
 done
 
 if [ -z "`egrep -o " noswap( |\$)" /proc/cmdline`" -a -e /tmp/devices ]; then
 	#echo -e "\n# Swap partitions:" >>/etc/fstab
 	for x in `grep 'TYPE="swap"' /tmp/devices | cut -d: -f1`; do echo "$x none swap sw,pri=1 0 0" >>/etc/fstab; done
-fi }
+fi
+}
 
 # Mount things
 mount_device() {
@@ -56,12 +74,16 @@ if [ "$fs" ]; then
     mkdir /mnt/$1
     if [ $fs = vfat ]; then
 	mount -n /dev/$1 /mnt/$1 -o $MOPT,umask=0,check=s,utf8 2>/dev/null || rmdir /mnt/$1
+    elif [ $fs = ntfs ] && grep -q ntfs3 /proc/filesystems ; then
+	mount -n /dev/$1 /mnt/$1 -t ntfs3 -o $MOPT,force,sparse 2>/dev/null || rmdir /mnt/$1
     elif [ $fs = ntfs ]; then
-	ntfs-3g /dev/$1 /mnt/$1 -o $MOPT 2>/dev/null || rmdir /mnt/$1
+	mount -n /dev/$1 /mnt/$1 -o $MOPT,umask=0,nls=utf8 2>/dev/null || rmdir /mnt/$1
+#	ntfs-3g /dev/$1 /mnt/$1 -o $MOPT 2>/dev/null || rmdir /mnt/$1
     else
-	mount -n /dev/$1 /mnt/$1 -o $MOPT 2>/dev/null || { modprobe $fs 2>/dev/null && mount -n /dev/$1 /mnt/$1 -o $MOPT || rmdir /mnt/$1; }
+	mount -n /dev/$1 /mnt/$1 -o $MOPT 2>/dev/null || { modprobe -q $fs && mount -n /dev/$1 /mnt/$1 -o $MOPT || rmdir /mnt/$1; }
     fi
-fi }
+fi
+}
 
 # Search for boot location
 search() { FND=none; for x in `ls /mnt | tac`; do
