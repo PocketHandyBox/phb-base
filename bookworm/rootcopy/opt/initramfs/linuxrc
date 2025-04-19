@@ -518,11 +518,6 @@ else
     fi
 fi
 
-################################################################################
-mkdir -p /union/dev /union/mnt /union/live /union/proc /union/sys /union/srv /union/media /union/run /union/tmp
-chmod 1777 /union/tmp
-################################################################################
-
 ## Finish:
 # Create 7 free loop devices for truecrypt, etc...
 #x=`losetup | tail -n1 | cut -d: -f1 | sed 's@/dev/loop@@'`
