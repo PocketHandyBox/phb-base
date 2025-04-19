@@ -122,19 +122,6 @@ fail_chn() { mount -nt tmpfs -o size=$RAMSIZE tmpfs /memory/changes; CHANGES=mem
 # Just draw a line
 draw() { echo "[1;33m""---------------------------------------------------------""[0m"; }
 
-# Error checking a save file.
-fsck_dat() { echo $i"checking $1 for errors"
-fs=`blkid $1 | egrep -o ' TYPE=[^ ]+' | cut -b8-10`
-if [ $fs = xfs ]; then
-    echo $i"detected xfs - performing fsck at mount time"
-elif [ $fs = ext ]; then
-    draw; e2fsck -C 0 -p $1; wait; draw
-elif [ $fs = rei ]; then
-    draw; reiserfsck -p $1; wait; draw
-else
-    echo $i"detected unsupported fs - skipping fsck"
-fi }
-
 # Copy modules
 cpmod() { NUM=`grep -c '.' $1`
 modfile=$1
