@@ -35,7 +35,6 @@ echo -e "${BOLD}Starting init script.${RST}"
 # Variables:
 i=`echo "[1;33m""^ ""[0m"`
 m=`echo "[1;33m""->""[0m"`
-arch=`uname -m`; [ $arch = x86_64 ] || arch=i586
 CFG=`value cfgfile`; [ $CFG ] || CFG=initrd1.xz
 FROM=`value from`; ISO=`echo $FROM | egrep ".*\.iso( |\$)"`
 IP=`value ip | cut -d: -f2`
@@ -44,12 +43,16 @@ MOPT=`value mopt`; [ $MOPT ] || MOPT="noatime,nodiratime,suid,dev,exec,async"
 CHANGES=`value changes`
 PFULL=`value pfull`
 RAMSIZE=`value ramsize`; [ $RAMSIZE ] || RAMSIZE=60%
+NVIDIA=`value nvidia`
 LOAD=`value load | sed 's/;/|/g'`; [ $LOAD ] || LOAD=._null
 NOLOAD=`value noload | sed 's/;/|/g'`; [ $NOLOAD ] || NOLOAD=._null
 EXTRAMOD=`value extramod | sed 's/;/ /g'`
 RAMMOD=`value rammod | sed 's/;/|/g'`
 ROOTCOPY=`value rootcopy`
-FOLDER=live
+FOLDER=`value folder`
+if [ -z "$FOLDER" ]; then FOLDER=live
+[ `uname -m` = i686 ] && FOLDER=live32
+fi
 livedbg=/var/log/livedbg
 LOGFILE=/var/log/boot.log
 
@@ -58,6 +61,7 @@ echo $i"loading kernel modules..."
 
 MODPBLST=`value modprobe.blacklist | sed 's/,/|/g'`
 
+# Blacklist kernel modules
 if [ -n "$MODPBLST" ]; then
     sed -E "s/($MODPBLST) //g" -i modlist
     MODPBLST=`value modprobe.blacklist | sed 's/,/ /g;s/[_-]/?/g'`
@@ -104,36 +108,30 @@ if [ $IP ]; then BOOTDEV=network; CFGDEV=/mnt/nfs
 	fi
     fi
     if [ $FROM ]; then
-        FOLDER=$FROM/live
+        FOLDER=$FROM/$FOLDER
     fi
 elif [ $ISO ]; then CFGDEV=/mnt/isoloop
     locate -e $FROM && { BOOTDEV=/mnt/$DEV; mkdir /mnt/isoloop; mount -o loop /mnt/$DEV/$LPTH /mnt/isoloop; ISOSRC=/mnt/$DEV/$LPTH; }
 else
     if [ $FROM ]; then
-	locate -e $FROM/live/$CFG
+	locate -e $FROM/$FOLDER/$CFG
 	if [ $? -eq 0 ]; then
-	    DIR=`echo $LPTH | rev | cut -d/ -f3- | rev`; [ $DIR ] && FOLDER=$DIR/live
+	    DIR=`echo $LPTH | rev | cut -d/ -f3- | rev`; [ $DIR ] && FOLDER=$DIR/$FOLDER
 	else
 	    echo -e "${YELLOW}from= cheatcode is incorrect, press enter to search through all devices${RST}"
-	    read -s; search -e live/$CFG
+	    read -s; search -e $FOLDER/$CFG
 	fi
     else
-	search -e live/$CFG || lazy -e live/$CFG
+	search -e $FOLDER/$CFG || lazy -e $FOLDER/$CFG
     fi
     CFGDEV=/mnt/$DEV
 fi
 
-[ -e $CFGDEV/$FOLDER/$CFG ] && PTH=$CFGDEV/$FOLDER || . fatal
-
-# Set some variables to export as environment variables
-DELAY=`value delay`; [ $DELAY ] && { echo $i"delaying $DELAY sec (waiting for slow devices to settle)"; sleep $DELAY; }
+[ -e $CFGDEV/$FOLDER/$CFG ] && DATADIR=$CFGDEV/$FOLDER || . fatal
 BOOTDEV=$CFGDEV
-MODDIR=$PTH/modules
-BASEDIR=${PTH%/*}
-PORTDIR=$PTH
-PORTCFG=$CFGDEV/$FOLDER/$CFG
-echo $i"using data from $PTH"
-echo  $PTH > /etc/homedrv
+
+echo $i"using data from $DATADIR"
+echo $DATADIR > /etc/homedrv
 
 debug
 pos_fail () {
@@ -411,21 +409,17 @@ fi
 
 debug
 
-# Find modules:
-#find $PTH $PTH/base $PTH/modules -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >/tmp/modules
-#find $PTH/optional -name "*.squashfs" 2>/dev/null | egrep -e "$LOAD" | sort >>/tmp/modules
+# Find base modules
+find $DATADIR -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >/tmp/modules
 
-# Find base modules:
-find $PTH $PTH/base -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >/tmp/modules
+# Find kernel modules squashfs
+find $DATADIR -maxdepth 1 -name "*.kmodsfs" 2>/dev/null | grep `uname -r` | sort >>/tmp/modules
 
-if [ "$EXTRAMOD" ]; then
-	for folder in $EXTRAMOD; do
-		echo $i"searching for additional modules in $folder"
-		locate -d $folder && { find /mnt/$DEV/$LPTH -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules; } || fail $folder
-	done
-fi
+# Find firmware modules
+find $CFGDEV/live/firmware -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
 
-if param nvidia_detect; then
+# Detect nvidia video cards on pcie bus
+if [ "$NVIDIA" = detect ]; then
 	echo $i"detecting nvidia GPU"
 	lspci >/tmp/lspci
 	nvlist=`grep -i "030.: 10de:" /tmp/lspci | cut -d":" -f4`
@@ -435,37 +429,35 @@ if param nvidia_detect; then
 	for nv in $nvlist
 	do
 		echo $i"$nv chip found, checking which nvidia driver supports it"
-		if grep -sqi 10de$nv /usr/share/nvidia/nvidia.ids; then NV=nvidia; break
-		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-390xx.ids; then NV=nv390; break
-		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-340xx.ids; then NV=nv340; break
+		if grep -sqi 10de$nv /usr/share/nvidia/nvidia.ids; then NVIDIA=nvidia; break
+		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-390xx.ids; then NVIDIA=nv390; break
+		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-340xx.ids; then NVIDIA=nv340; break
 		else echo $i"$nv chip is not supported by nvidia driver"
 		fi
 	done
-	if [ $NV ]; then
-		echo $i"$NV driver will be activated"
-		find $PTH/optional -name "$NV*.squashfs" 2>/dev/null >>/tmp/modules
-		NOLOAD="$NOLOAD|mesa-vulkan-drivers"
-	fi
 	else echo $i"could not find any nVidia GPU on this PC"
 	fi
 fi
 
-# Find other modules:
-find $PTH/modules -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
-find $PTH/optional -name "*.squashfs" 2>/dev/null | egrep -e "$LOAD" | sort >>/tmp/modules
+# Find nvidia modules
+if [ $NVIDIA ] && [ "$NVIDIA" != detect ]; then
+	echo $i"$NVIDIA driver will be activated"
+	find $DATADIR/nvidia -name "$NVIDIA*.kmodsfs" 2>/dev/null | grep `uname -r` >>/tmp/modules
+	find $DATADIR/nvidia -name "$NVIDIA*.squashfs" 2>/dev/null >>/tmp/modules
+	NOLOAD="$NOLOAD|mesa-vulkan-drivers"
+fi
 
-#if param base_only; then
-#grep live /tmp/modules | grep -v modules > /tmp/mod
-#    grep base/0 /tmp/modules > /tmp/mod
-#    mv /tmp/mod /tmp/modules
-#else
-#    if [ "$EXTRAMOD" ]; then
-#	for folder in $EXTRAMOD; do
-#	    echo $i"searching for additional modules in $folder"
-#	    locate -d $folder && { find /mnt/$DEV/$LPTH -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules; } || fail $folder
-#	done
-#    fi
-#fi
+# Find modules and optional modules
+find $DATADIR/modules -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+find $DATADIR/optional -name "*.squashfs" 2>/dev/null | egrep -e "$LOAD" | sort >>/tmp/modules
+
+# Find extra modules
+if [ "$EXTRAMOD" ]; then
+for EXTFOLDER in $EXTRAMOD; do
+	echo $i"searching for additional modules in $EXTFOLDER"
+	locate -d $EXTFOLDER && { find /mnt/$DEV/$LPTH -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules; } || fail $EXTFOLDER
+done
+fi
 
 # Copy data to RAM:
 if param copy2ram; then
@@ -504,8 +496,8 @@ else
 	if [ $? -eq 0 ]; then echo $i"copying content of $ROOTCOPY directory"; cp -af /mnt/$DEV/$LPTH/. /union/. 2>/dev/null; else fail $ROOTCOPY; ROOTCOPY=none; fi
     else
 	ROOTCOPY=none
-	echo $i"copying content of $PTH/rootcopy directory"
-	cp -af $PTH/rootcopy/. /union/. 2>/dev/null
+	echo $i"copying content of $DATADIR/rootcopy directory"
+	cp -af $DATADIR/rootcopy/. /union/. 2>/dev/null
     fi
 fi
 
@@ -573,7 +565,7 @@ fi
 [ -e /tmp/devices ] && { echo "# Recognized devices:" >$livedbg; cat /tmp/devices >>$livedbg; }
 [ $BOOTDEV ] && CFGDEV=$BOOTDEV
 echo $CFGDEV > /etc/cfgdev
-echo -e "\n# Booting device:\n$CFGDEV\n\n# data found in:\n$PTH\n\n# Changes are stored in:\n$CHANGES\n\n# Non standard /rootcopy dir:\n$ROOTCOPY\n\n# Modules activated during boot time:" >>$livedbg; cat /tmp/modules >>$livedbg
+echo -e "\n# Booting device:\n$CFGDEV\n\n# data found in:\n$DATADIR\n\n# Changes are stored in:\n$CHANGES\n\n# Non standard /rootcopy dir:\n$ROOTCOPY\n\n# Modules activated during boot time:" >>$livedbg; cat /tmp/modules >>$livedbg
 grep "^/mnt/isoloop" $livedbg && echo "" >> $livedbg && echo "ISO=$ISOSRC" >> $livedbg
 #if [ $ISO ]; then
 #	[ -d /union/mnt/isoloop ] && rmdir /union/mnt/isoloop
