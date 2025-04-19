@@ -135,15 +135,6 @@ PORTCFG=$CFGDEV/$FOLDER/$CFG
 echo $i"using data from $PTH"
 echo  $PTH > /etc/homedrv
 
-# Create symlinks used often by porteus scripts:
-if [ $CFGDEV = /mnt/nfs -o $CFGDEV = /mnt/isoloop ];then
-    ln -sf /mnt/live$PTH/modules  /porteus/modules
-    ln -sf /mnt/live$PTH/optional /porteus/optional
-else
-    ln -sf $PTH/modules  /porteus/modules
-    ln -sf $PTH/optional /porteus/optional
-fi
-
 debug
 pos_fail () {
 		rm -f /memory/changes/._test1 /memory/changes/._test2; umount /memory/changes

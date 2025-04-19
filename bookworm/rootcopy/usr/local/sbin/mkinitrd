@@ -38,7 +38,7 @@ INITRAMFS=/tmp/initramfs-$$
 
 mkdir -p $INITRAMFS/{bin,dev,etc/udhcpc,lib,lib/modules,m,mnt}
 mkdir -p $INITRAMFS/memory/{changes,copy2ram,images}
-mkdir -p $INITRAMFS/{porteus,proc,run,sys,tmp,union,usr,var/log}
+mkdir -p $INITRAMFS/{proc,run,sys,tmp,union,usr,var/log}
 #ln -s bin $INITRAMFS/sbin
 cp -a `which busybox` $INITRAMFS/bin
 cp -a /etc/udhcpc/default.script $INITRAMFS/etc/udhcpc/
