@@ -78,15 +78,6 @@ done
 
 mount -nt devtmpfs none /dev
 
-# Perform filesystem check:
-if param fsck; then
-    echo $i"performing linux filesystem check on all available devices:" 
-    draw
-    for x in `blkid | grep 'TYPE="ext' | cut -d: -f1`; do e2fsck -C 0 -p $x; wait; done
-    for x in `blkid | grep 'TYPE="reiserfs"' | cut -d: -f1`; do reiserfsck -p $x; wait; done
-    draw
-fi
-
 # Create /etc/fstab and mount devices:
 fstab
 
@@ -313,10 +304,8 @@ elif [ $CHANGES ]; then
 		losetup /dev/loop2 /mnt/$DEV/$LPTH
 		echo $i"found encrypted .dat container"
 		cryptsetup luksOpen /dev/loop2 crypt
-		fsck_dat /dev/mapper/crypt
 		mount /dev/mapper/crypt /memory/changes 2>/dev/null && touch /memory/changes/._test1 2>/dev/null
 	    else
-		fsck_dat /mnt/$DEV/$LPTH
 		mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null && touch /memory/changes/._test1 2>/dev/null
 	    fi
 	fi
