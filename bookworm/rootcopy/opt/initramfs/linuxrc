@@ -70,13 +70,21 @@ if param nocd || [ $IP ]; then
 sed 's/pata_[0-9a-z]\{3,\} //g' -i modlist
 fi
 
-for MODULE in $(cat modlist)
-do
-modprobe $MODULE 2> /dev/null
-done
+#for MODULE in $(cat modlist)
+#do
+#modprobe $MODULE 2> /dev/null
+#done
 
+# Load kernel modules
+modprobe -qa `cat modlist`
 
 mount -nt devtmpfs none /dev
+
+# Load network kernel modules in case of PXE boot
+if [ $IP ]; then
+    load_net_modules
+    udhcpc
+fi
 
 # Create /etc/fstab and mount devices:
 fstab
@@ -85,12 +93,8 @@ debug
 # Find *.cfg file:
 echo $i"searching for $CFG file"
 if [ $IP ]; then BOOTDEV=network; CFGDEV=/mnt/nfs
-#   softdep for r8169 https://bugzilla.kernel.org/show_bug.cgi?id=204343
-    lspci | grep 0200: >/tmp/lspci; grep -q 10ec: /tmp/lspci && modprobe realtek 2>/dev/null
-    grep -q 14e4: /tmp/lspci && modprobe broadcom 2>/dev/null
-    for x in `cut -d: -f3-4 /tmp/lspci | sed s/:/.*/g | tr a-z A-Z`; do modprobe `grep $x /lib/modules/$(uname -r)/modules.alias | tail -n1 | rev | cut -d" " -f1 | rev` 2>/dev/null; done
-    ls /sys/class/net | grep -q eth || { for x in `find /lib/modules/$(uname -r)/kernel/drivers/net -name "*.ko" | sed 's/.ko//g'`; do modprobe `basename $x` 2>/dev/null; ls /sys/class/net | grep -q eth && break || modprobe -r `basename $x` 2>/dev/null; done; }
-    mkdir -p /mnt/nfs/storage; udhcpc; modprobe nfsv4; mount -t nfs4 $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null || { modprobe nfsv3; mount -t nfs $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null; }
+    mkdir -p /mnt/nfs/storage
+    modprobe -q nfsv4; mount -t nfs4 $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null || { modprobe -q nfsv3; mount -t nfs $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null; }
     MAC=`ifconfig | grep eth0 | cut -d: -f5-7 | sed s/://g | cut -d" " -f1`
     if [ "$CHANGES" = /srv/pxe/storage ]; then
 	if lsmod | grep -q nfsv3; then
@@ -632,7 +636,7 @@ fi
 #done
 
 for MODULE in `sed 's/ /\n/g' modlist | grep ata_`
-do modprobe -r $MODULE 2>/dev/null
+do rmmod $MODULE 2>/dev/null
 done
 
 debug

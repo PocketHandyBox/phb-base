@@ -12,6 +12,23 @@ YELLOW='\033[1;33m'
 BOLD='\033[1;37m'
 RST='\033[0m' # Reset Color
 
+# Load network kernel modules for PXE boot
+load_net_modules() {
+#softdep for r8169 https://bugzilla.kernel.org/show_bug.cgi?id=204343
+lspci | grep 0200: >/tmp/lspci
+grep -q 10ec: /tmp/lspci && modprobe -q realtek
+grep -q 14e4: /tmp/lspci && modprobe -q broadcom
+for x in `cut -d: -f3-4 /tmp/lspci | sed s/:/.*/g | tr a-z A-Z`; do
+	modprobe -q `grep $x /lib/modules/$(uname -r)/modules.alias | tail -n1 | rev | cut -d" " -f1 | rev`
+done
+if [ -z "`ls /sys/class/net | grep eth`" ]; then
+	for x in `find /lib/modules/$(uname -r)/kernel/drivers/net/ethernet -name "*.ko" | sed 's/.ko//g'`
+	do modprobe -q `basename $x`
+	ls /sys/class/net | grep -q eth && break || rmmod `basename $x` 2>/dev/null
+	done
+fi
+}
+
 # Run fstab for setup
 fstab() {
 rm -f /tmp/devices
@@ -70,18 +87,17 @@ fi
 # Mount things
 mount_device() {
 fs=`blkid /dev/$1 | egrep -o ' TYPE=[^ ]+' | cut -d'"' -f2`
-if [ "$fs" ]; then
-    mkdir /mnt/$1
-    if [ $fs = vfat ]; then
+[ "$fs" ] || return 0
+mkdir /mnt/$1
+if [ $fs = vfat ]; then
 	mount -n /dev/$1 /mnt/$1 -o $MOPT,umask=0,check=s,utf8 2>/dev/null || rmdir /mnt/$1
-    elif [ $fs = ntfs ] && grep -q ntfs3 /proc/filesystems ; then
+elif [ $fs = ntfs ] && grep -q ntfs3 /proc/filesystems ; then
 	mount -n /dev/$1 /mnt/$1 -t ntfs3 -o $MOPT,force,sparse 2>/dev/null || rmdir /mnt/$1
-    elif [ $fs = ntfs ]; then
+elif [ $fs = ntfs ]; then
 	mount -n /dev/$1 /mnt/$1 -o $MOPT,umask=0,nls=utf8 2>/dev/null || rmdir /mnt/$1
 #	ntfs-3g /dev/$1 /mnt/$1 -o $MOPT 2>/dev/null || rmdir /mnt/$1
-    else
+else
 	mount -n /dev/$1 /mnt/$1 -o $MOPT 2>/dev/null || { modprobe -q $fs && mount -n /dev/$1 /mnt/$1 -o $MOPT || rmdir /mnt/$1; }
-    fi
 fi
 }
 
