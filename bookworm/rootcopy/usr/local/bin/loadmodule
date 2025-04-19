@@ -259,7 +259,7 @@ case "$1" in
     BUNDLE="$2"
 	case $BUNDLE in
 
-	*.xzm|*.squashfs|*.sfs|*.sb)
+	*.xzm|*.squashfs|*.kmodsfs|*.sfs|*.sb)
     cd "`dirname "$BUNDLE"`"
     BUNDLE="`basename "$2"`"
     bundle_activate
@@ -275,7 +275,7 @@ case "$1" in
     BUNDLE="$2"
 	case $BUNDLE in
 
-	*.xzm|*.squashfs|*.sfs|*.sb)
+	*.xzm|*.squashfs|*.kmodsfs|*.sfs|*.sb)
     cd "`dirname "$BUNDLE"`"
     BUNDLE=`basename "$2"`
     cd "`dirname "$BUNDLE"`"

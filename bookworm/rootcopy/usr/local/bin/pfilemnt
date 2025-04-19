@@ -66,19 +66,15 @@ if [ "$MNTEDLOOP" = "" ]; then #130223 BK
   done
 
   Ext=`echo "$imgFile" |sed 's/^.*\.//'`	# get file type from extention
-  if [ "$Ext" = 'dat' ]; then
-    Type='ext4'
-  elif [ "$Ext" = 'sfs' ]; then
-    Type='squashfs'
-  elif [ "$Ext" = 'xzm' ]; then
-    Type='squashfs'
-  elif [ "$Ext" = 'iso' ]; then
-    Type='udf,iso9660'
+  if [ "$Ext" = 'dat' ]; then Type='ext4'
+  elif [ "$Ext" = 'xzm' ]; then Type='squashfs'
+  elif [ "$Ext" = 'kmodsfs' ]; then Type='squashfs'
+  elif [ "$Ext" = 'sfs' ]; then Type='squashfs'
+  elif [ "$Ext" = 'sb' ]; then Type='squashfs'
+  elif [ "$Ext" = 'iso' ]; then Type='udf,iso9660'
   # BK
-  elif [ "$Ext" = 'img' ]; then #170215
-    Type='vfat'
-  else #20210525
-    Type="$Ext"
+  elif [ "$Ext" = 'img' ]; then Type='vfat' #170215
+  else Type="$Ext" #20210525
   fi
 
   echo "\n ### Mount: $imgFile\n"

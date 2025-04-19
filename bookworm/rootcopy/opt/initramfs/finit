@@ -148,7 +148,8 @@ while read x; do
 	sed -i s@^.*/$NAME@/memory/copy2ram/$NAME@ /tmp/modules
     else
 	rm /memory/copy2ram/"$NAME"; echo -e $i"[1;36m""Not enough memory to copy $NAME""[0m"; echo -e $i"[1;36m""Other modules will be skipped.""[0m"
-	find /memory/copy2ram -name "*.squashfs" | sort >/tmp/modules
+	find /memory/copy2ram -name "*.kmodsfs" | sort >/tmp/modules
+	find /memory/copy2ram -name "*.squashfs" | sort >>/tmp/modules
 	break
     fi
 done < $modfile

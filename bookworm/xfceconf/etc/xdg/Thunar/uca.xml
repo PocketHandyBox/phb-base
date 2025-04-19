@@ -184,7 +184,7 @@
 	<unique-id>1424354227747596-14</unique-id>
 	<command>pfilemnt %f</command>
 	<description></description>
-	<patterns>*.xzm;*.squashfs;*.sfs</patterns>
+	<patterns>*.xzm;*.squashfs;*.kmodsfs;*.sfs;*.sb</patterns>
 	<other-files/>
 </action>
 <action>
@@ -202,7 +202,7 @@
 	<unique-id>1424354227747595-8</unique-id>
 	<command>loadmodule -a %f</command>
 	<description></description>
-	<patterns>*.xzm;*.squashfs;*.sfs;*.sb</patterns>
+	<patterns>*.xzm;*.squashfs;*.kmodsfs;*.sfs;*.sb</patterns>
 	<other-files/>
 </action>
 <action>
@@ -211,7 +211,7 @@
 	<unique-id>1424354227747631-9</unique-id>
 	<command>loadmodule -ano %f</command>
 	<description>Activates module without overwriting anything</description>
-	<patterns>*.xzm;*.squashfs;*.sfs;*.sb</patterns>
+	<patterns>*.xzm;*.squashfs;*.kmodsfs;*.sfs;*.sb</patterns>
 	<other-files/>
 </action>
 <action>
@@ -220,7 +220,7 @@
 	<unique-id>1424354227747664-10</unique-id>
 	<command>loadmodule -d %f</command>
 	<description></description>
-	<patterns>*.xzm;*.squashfs;*.sfs;*.sb</patterns>
+	<patterns>*.xzm;*.squashfs;*.kmodsfs;*.sfs;*.sb</patterns>
 	<other-files/>
 </action>
 <action>
