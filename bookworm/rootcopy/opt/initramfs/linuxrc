@@ -130,9 +130,6 @@ PORTDIR=$PTH
 PORTCFG=$CFGDEV/$FOLDER/$CFG
 echo $i"using data from $PTH"
 echo  $PTH > /etc/homedrv
-# Make all drivers available:
-#mount -o loop $PTH/base/000-kernel.xzm /opt/000-kernel 2>/dev/null
-#mount -o bind /opt/000-kernel/lib/modules /lib/modules 2>/dev/null
 
 # Create symlinks used often by porteus scripts:
 if [ $CFGDEV = /mnt/nfs -o $CFGDEV = /mnt/isoloop ];then
@@ -418,32 +415,6 @@ mkdir -p /memory/changes/upperdir/mnt/live
 fi
 
 debug
-# Setup aufs:
-#echo $i"creating live filesystem and inserting modules"
-#mount -t aufs -o nowarn_perm,xino=/memory/xino/.aufs.xino,br:/memory/changes=rw aufs /union
-#if [ $? -ne 0 ]; then echo -e "[31m""cant setup union (aufs) - read only filesystem?\nWhen you finish debugging press Ctrl+Alt+Del to reboot.""[0m"; sh; fi
-
-# Check for base modules update
-if [ -d $CFGDEV/$FOLDER/updates ]; then
-	echo $i"[1;36m""Base updates detected ...""[0m"
-	# Check if user has booted over network or from ISO
-	if [ $ISO ]||[ $IP ]||[ "$CFGDEV" = /mnt/isoloop ]; then
-		echo $i"Booting from ISO or network detected. Skipping updates ..."
-	else
-		if is_writable $CFGDEV/$FOLDER/base; then
-			echo $i"Copying base updates ... please wait"
-			basemods=`ls -1 $CFGDEV/$FOLDER/updates | grep "^00[1-3]-[a-z|A-Z]"`
-			for x in $basemods; do
-				echo "Copying: $x ot $CFGDEV/$FOLDER/porteus/"
-				cp $CFGDEV/$FOLDER/updates/$x $CFGDEV/$FOLDER/base/ 2>/dev/null
-				rm $CFGDEV/$FOLDER/updates/$x
-			done
-			rm -rf $CFGDEV/$FOLDER/updates && echo "Removed updates folder" echo "Copying: $x ot $CFGDEV/$FOLDER/porteus/" || echo "COuld not remove updates folder"
-		else
-			echo $i"Non writable media. Skipping updates ..."
-		fi
-	fi
-fi
 
 # Find modules:
 #find $PTH $PTH/base $PTH/modules -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >/tmp/modules
@@ -507,26 +478,10 @@ if param copy2ram; then
     [ $RAMMOD ] && { egrep -e "$RAMMOD" /tmp/modules > /tmp/rammod; cpmod /tmp/rammod; } || cpmod /tmp/modules
 fi
 
-# Populate aufs with modules:
-umount /lib/modules /opt/000-kernel 2>/dev/null
-
-#while read line; do
-#    NAME=`basename "$line"`
-#    mkdir /memory/images/"$NAME"
-#    mount -o loop "$line" /memory/images/"$NAME" 2>/dev/null
-#    if [ $? -eq 0 ]; then
-#	echo "  $m  $NAME"; mount -no remount,add:1:/memory/images/"$NAME"=rr aufs /union
-#    else
-#	echo $i"[1;36m""Cannot read $NAME - corrupted module?""[0m"; rmdir /memory/images/"$NAME"
-#    fi
-#done < /tmp/modules
-
-
-
+#======================================
+# IncludeModules
+#--------------------------------------
 IncludeModules
-
-
-#mount -no bind /union/lib/modules /lib/modules 2>/dev/null
 
 # Add "changes on exit" device/file/folder:
 #if [ -e /tmp/changes-exit ]; then
@@ -564,10 +519,6 @@ mkdir -p /union/dev /union/mnt /union/live /union/proc /union/sys /union/srv /un
 chmod 1777 /union/tmp
 ################################################################################
 
-# Collect boot arguments
-#grep "^[aA0-zZ9]" $PORTCFG > /union/etc/bootcmd.cfg
-#cat /proc/cmdline | tr ' ' '\n' >> /union/etc/bootcmd.cfg
-
 ## Finish:
 # Create 7 free loop devices for truecrypt, etc...
 #x=`losetup | tail -n1 | cut -d: -f1 | sed 's@/dev/loop@@'`
@@ -604,13 +555,6 @@ if param bluetooth; then
 fi
 
 cp -af /dev/console /union/dev
-#cat > /union/etc/mtab << EOF
-#aufs / aufs rw 0 0
-#proc /proc proc rw 0 0
-#sysfs /sys sysfs rw 0 0
-#devtmpfs /dev devtmpfs rw 0 0
-#devpts /dev/pts devpts rw,mode=0620,gid=5 0 0
-#EOF
 
 fstab
 
@@ -646,9 +590,6 @@ grep "^/mnt/isoloop" $livedbg && echo "" >> $livedbg && echo "ISO=$ISOSRC" >> $l
 #	ln -sf /mnt/live/mnt/isoloop /union/mnt/isoloop
 #fi
 cp -af $livedbg /union/var/log/porteus-livedbg
-
-## Check for text mode cheat code
-#chk_bootcfg 3 && export OPTS="3"
 
 cat /proc/cmdline
 
@@ -693,10 +634,6 @@ fi
 for MODULE in `sed 's/ /\n/g' modlist | grep ata_`
 do modprobe -r $MODULE 2>/dev/null
 done
-
-#cp -r /etc/porteus /union/etc 2>/dev/null
-umount -n /lib/modules 2>/dev/null
-rm -r /lib/* /usr/*
 
 debug
 
