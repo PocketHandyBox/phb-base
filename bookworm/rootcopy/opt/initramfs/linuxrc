@@ -630,7 +630,8 @@ fi
 # ln -sf /mnt/live/mnt/$x /union/mnt/$x
 #done
 
-for MODULE in `sed 's/ /\n/g' modlist | grep ata_`
+# Unload unused ata_ kernel modules
+for MODULE in `sed 's/ /\n/g' modlist | grep ata_ ; echo pata_sis`
 do rmmod $MODULE 2>/dev/null
 done
 
