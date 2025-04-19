@@ -36,12 +36,12 @@ fi
 LMK="lib/modules/$kernel"
 INITRAMFS=/tmp/initramfs-$$
 
-mkdir -p $INITRAMFS/{bin,dev,etc,lib,lib/modules,m,mnt,porteus}
+mkdir -p $INITRAMFS/{bin,dev,etc/udhcpc,lib,lib/modules,m,mnt}
 mkdir -p $INITRAMFS/memory/{changes,copy2ram,images}
-mkdir -p $INITRAMFS/{proc,run,sys,tmp,union,usr,var/log}
+mkdir -p $INITRAMFS/{porteus,proc,run,sys,tmp,union,usr,var/log}
 #ln -s bin $INITRAMFS/sbin
 cp `which busybox` $INITRAMFS/bin
-cp -a /opt/initramfs/* $INITRAMFS
+cp -ra /opt/initramfs/* $INITRAMFS
 ln -s linuxrc $INITRAMFS/init
 
 busybox --list | grep -v init | grep -v linuxrc | while read TOOL; do
