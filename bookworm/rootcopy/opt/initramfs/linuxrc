@@ -60,6 +60,10 @@ LOGFILE=/var/log/boot.log
 ## Let's start!
 echo $i"loading kernel modules..."
 
+# List of mmc kernel modules. To unload them in case of unused
+MODLISTMMC="cb710-mmc mmc_block sdhci-acpi sdhci-pci tifm_sd via-sdmmc vub300 wbsd "
+echo "$MODLISTMMC" >> modlist
+
 MODPBLST=`value modprobe.blacklist | sed 's/,/|/g'`
 
 # Blacklist kernel modules
@@ -617,6 +621,11 @@ fi
 
 # Unload unused ata_ kernel modules
 for MODULE in `sed 's/ /\n/g' modlist | grep ata_ ; echo pata_sis`
+do rmmod $MODULE 2>/dev/null
+done
+
+# Unload unused mmc kernel modules
+for MODULE in $MODLISTMMC cb710 tifm_core sdhci cqhci mmc_core
 do rmmod $MODULE 2>/dev/null
 done
 
