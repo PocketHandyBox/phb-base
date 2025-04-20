@@ -21,13 +21,12 @@ mount -nt proc proc /proc
 mount -nt sysfs sysfs /sys
 echo 0 >/proc/sys/kernel/printk
 
-echo "`cat /proc/cmdline|sed -e 's/^/ /'`" > /etc/cmdline
+cat /proc/cmdline | sed -e 's/^/ /' > /etc/cmdline
 param() { egrep -qo " $1( |\$)" /etc/cmdline; }
 value() { egrep -o " $1=[^ ]+" /etc/cmdline | cut -d= -f2; }
-debug() { param debug && { echo -e "\n=====\n: Debugging started. Here is the shell for you.\n: Type your desired commands, hit Ctrl+D to continue booting\n: or press Ctrl+Alt+Del to reboot."; sh; echo -e "\n\n"; }; }
 
 ## Check for debug
-if [ `grep -q debug /proc/cmdline` ]; then DBUG=0; fi
+param debug && DBUG=1
 
 clear
 echo -e "${BOLD}Starting init script.${RST}"
