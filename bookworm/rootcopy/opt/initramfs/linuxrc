@@ -49,6 +49,7 @@ NOLOAD=`value noload | sed 's/;/|/g'`; [ $NOLOAD ] || NOLOAD=._null
 EXTRAMOD=`value extramod | sed 's/;/ /g'`
 RAMMOD=`value rammod | sed 's/;/|/g'`
 ROOTCOPY=`value rootcopy`
+KERNEL=`uname -r`
 FOLDER=`value folder`
 if [ -z "$FOLDER" ]; then FOLDER=live
 [ `uname -m` = i686 ] && FOLDER=live32
@@ -66,7 +67,7 @@ if [ -n "$MODPBLST" ]; then
     sed -E "s/($MODPBLST) //g" -i modlist
     MODPBLST=`value modprobe.blacklist | sed 's/,/ /g;s/[_-]/?/g'`
     for MODULE in $MODPBLST; do
-    find /lib/modules/$(uname -r)/kernel/ -name "$MODULE"'.*' -delete 2>/dev/null
+    find /lib/modules/$KERNEL/kernel/ -name "$MODULE"'.*' -delete 2>/dev/null
     done
 fi
 
@@ -413,10 +414,11 @@ debug
 find $DATADIR -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >/tmp/modules
 
 # Find kernel modules squashfs
-find $DATADIR -maxdepth 1 -name "*.kmodsfs" 2>/dev/null | grep `uname -r` | sort >>/tmp/modules
+find $DATADIR -maxdepth 2 -name "*.kmodsfs" ! -path "*/nvidia/*" ! -path "*/rootcopy/*" 2>/dev/null | egrep -ve "firmware|optional" | grep $KERNEL | sort >>/tmp/modules
+find $DATADIR/optional -name "*.kmodsfs" 2>/dev/null | egrep -e "$LOAD" | grep $KERNEL | sort >>/tmp/modules
 
 # Find firmware modules
-find $CFGDEV/live/firmware -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+find $CFGDEV/live/firmware -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
 
 # Detect nvidia video cards on pcie bus
 if [ "$NVIDIA" = detect ]; then
@@ -442,7 +444,7 @@ fi
 # Find nvidia modules
 if [ $NVIDIA ] && [ "$NVIDIA" != detect ]; then
 	echo $i"$NVIDIA driver will be activated"
-	find $DATADIR/nvidia -name "$NVIDIA*.kmodsfs" 2>/dev/null | grep `uname -r` >>/tmp/modules
+	find $DATADIR/nvidia -name "$NVIDIA*.kmodsfs" 2>/dev/null | grep $KERNEL >>/tmp/modules
 	find $DATADIR/nvidia -name "$NVIDIA*.squashfs" 2>/dev/null >>/tmp/modules
 	NOLOAD="$NOLOAD|mesa-vulkan-drivers"
 fi
