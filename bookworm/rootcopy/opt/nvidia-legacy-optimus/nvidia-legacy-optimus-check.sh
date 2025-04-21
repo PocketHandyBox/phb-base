@@ -1,22 +1,28 @@
 #!/bin/bash
 
-if egrep -qe "nv340|nv390" /mnt/live/tmp/modules; then
-  if grep -q i915 /proc/modules; then
-  echo -e "\033[1;32m""nvidia-legacy-optimus-enabled""\033[0m"
+enable_optimus() {
+echo -e "\e[1;32m""nvidia-legacy-optimus-enabled""\e[0m"
+cp -f /opt/nvidia-legacy-optimus/nvidia-legacy-optimus-outputclass.conf \
+ /etc/X11/xorg.conf.d/ 2> /dev/null
+cp -f /opt/nvidia-legacy-optimus/nvidia-legacy-optimus-xrandr.sh \
+ /var/opt/nvidia-legacy-optimus-xrandr.sh 2> /dev/null
+chmod +x /var/opt/nvidia-legacy-optimus-xrandr.sh
+exit 0
+}
 
-  cp -f /opt/nvidia-legacy-optimus/nvidia-legacy-optimus-outputclass.conf \
-  /etc/X11/xorg.conf.d/ 2> /dev/null
+disable_optimus() {
+rm -f /etc/X11/xorg.conf.d/nvidia-legacy-optimus-outputclass.conf
+rm -f /var/opt/nvidia-legacy-optimus-xrandr.sh
+exit 0
+}
 
-  cp -f /opt/nvidia-legacy-optimus/nvidia-legacy-optimus-xrandr.sh \
-  /var/opt/nvidia-legacy-optimus-xrandr.sh 2> /dev/null
-  chmod +x /var/opt/nvidia-legacy-optimus-xrandr.sh
+egrep -qe "nv340|nv390" /mnt/live/tmp/modules || disable_optimus
 
-  else rm -f /etc/X11/xorg.conf.d/nvidia-legacy-optimus-outputclass.conf \
-    /var/opt/nvidia-legacy-optimus-xrandr.sh
+grep -q i915 /proc/modules || disable_optimus
 
-  fi
+grep -q nv390 /mnt/live/tmp/modules && enable_optimus
 
-else rm -f /etc/X11/xorg.conf.d/nvidia-legacy-optimus-outputclass.conf \
-  /var/opt/nvidia-legacy-optimus-xrandr.sh
-
+if uname -r | grep -q '^5.10'
+then enable_optimus
+else disable_optimus
 fi
