@@ -320,7 +320,6 @@ dbus-uuidgen > /var/lib/dbus/machine-id
 echo "live" > /etc/hostname
 echo "127.0.0.1	 localhost" > /etc/hosts
 echo "127.0.1.1	 live" >> /etc/hosts
-mkdir /live
 mkdir -p /opt/bin
 
 update-rc.d snapexit defaults

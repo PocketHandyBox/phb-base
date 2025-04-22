@@ -1,23 +1,22 @@
 #!/bin/sh
 
-echo && echo
-echo "[1;34m""/$FOLDER/01-filesystem.squashfs not found.
-You are maybe using an unsupported boot device (eg. SCSI or old PCMCIA).
-""[1;31m""Make sure UEFI Secure Boot is disabled!""[1;34m""
-Workaround: Copy the directory /$FOLDER from your boot device to an IDE/SATA
-disk, eg. to /mnt/sda1/$FOLDER or C:\\$FOLDER. Then try to boot again.
+echo -e '\n'
+echo "${BOLD}/$FOLDER/01-filesystem.squashfs not found!${RST}
+You are maybe using an unsupported boot device (eg. RAID SCSI or SAS).
+${RED}Make sure UEFI Secure Boot is disabled!${RST}
+Workaround: Copy the directory /$FOLDER from your boot device to internal SATA
+disk, eg. to ${BOLD}/mnt/sda1/$FOLDER${RST} or ${BOLD}C:\\$FOLDER${RST}. Then try to boot again.
 Make sure that your boot parameters (cheatcodes) are correct.
-In case of booting over network - check if the driver for your NIC
-is included in initrd image.
 
-Press space/enter to unmount all devices and reboot or any other key
-to drop to the debug shell.""[0m"
+${BOLD}Press ${YELLOW}space/enter ${RST}${BOLD}to unmount all devices and reboot
+or ${YELLOW}any other key ${RST}${BOLD}to drop to the debug shell.${RST}"
 read -s -n1 ans
 if [ "$ans" = "" ]; then
     umount /mnt/* 2>/dev/null
     umount -a 2>/dev/null
     reboot -f
 else
-    echo -en "[1;36m""Here is debugging shell for you, unmount all partitions and press Ctrl+Alt+Del\nwhen you finish.\n\nGood luck!\n""[0m"
-    sh
+echo "${CYAN}Here is debugging shell for you, unmount all partitions
+and press Ctrl+Alt+Del when you finish. Good luck!${RST}"
+sh
 fi
