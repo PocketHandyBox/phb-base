@@ -514,6 +514,22 @@ else
     fi
 fi
 
+# Copy /etc/resolv.conf
+if [ $IP ] && [ -f /etc/resolv.conf ]; then
+	[ -L /union/etc/resolv.conf ] && rm -f /union/etc/resolv.conf
+	cat /etc/resolv.conf >> /union/etc/resolv.conf
+fi
+
+# Unload unused ata_ kernel modules
+for MODULE in `sed 's/ /\n/g' modlist | grep ata_ ; echo pata_sis`
+do rmmod $MODULE 2>/dev/null
+done
+
+# Unload unused mmc kernel modules
+for MODULE in $MODLISTMMC cb710 tifm_core sdhci cqhci mmc_core
+do rmmod $MODULE 2>/dev/null
+done
+
 ## Finish:
 # Create 7 free loop devices for truecrypt, etc...
 #x=`losetup | tail -n1 | cut -d: -f1 | sed 's@/dev/loop@@'`
@@ -523,19 +539,13 @@ let y=x+20
 #x=`losetup | tail -n1 | cut -d: -f1 | sed 's@/dev/loop@@'`; let y=x+20
 while [ $x -le $y ]; do [ -b /dev/loop$y ] && break || mknod /dev/loop$y b 7 $y; chmod g+rw-x,o-rwx /dev/loop$y; let y=y-1; done
 
-# Copy /etc/resolv.conf
-if [ $IP ] && [ -f /etc/resolv.conf ]; then
-	[ -L /union/etc/resolv.conf ] && rm -f /union/etc/resolv.conf
-	cat /etc/resolv.conf >> /union/etc/resolv.conf
-fi
-
 cp -af /dev/console /union/dev
 
 #fstab
 
 debug
 
-# Move mountpoints /mnt/XX to /union/mnt/XX
+# Remove /union/mnt/XX dir's
 for x in `ls -1 /union/mnt | grep -v live`; do
 #	echo $x
 	[ -d /union/mnt/$x ] && rmdir /union/mnt/$x # Will fail if dir not empty!
@@ -560,6 +570,7 @@ MNTPOINTS=`grep /mnt/ /etc/fstab | cut -d" " -f2`
 [ -d /mnt/nfs ] && MNTPOINTS="/mnt/nfs $MNTPOINTS"
 [ -d /mnt/isoloop ] && MNTPOINTS="/mnt/isoloop $MNTPOINTS"
 
+# Move mountpoints /mnt/XX to /union/mnt/XX
 for MNTDEV in $MNTPOINTS
 do mkdir -p /union"$MNTDEV"
 if [ "$MNTDEV" = "$CHNDEV" ]; then
@@ -590,16 +601,6 @@ rmdir /mnt/* 2>/dev/null
 # ln -sf /mnt/live/mnt/$x /union/mnt/$x
 #done
 
-# Unload unused ata_ kernel modules
-for MODULE in `sed 's/ /\n/g' modlist | grep ata_ ; echo pata_sis`
-do rmmod $MODULE 2>/dev/null
-done
-
-# Unload unused mmc kernel modules
-for MODULE in $MODLISTMMC cb710 tifm_core sdhci cqhci mmc_core
-do rmmod $MODULE 2>/dev/null
-done
-
 debug
 
 # Create debug file:
@@ -616,62 +617,25 @@ echo -e "\n# Booting device:\n$DATADEV
 \n# Modules activated during boot time:" >>$livedbg
 cat /tmp/modules >>$livedbg
 [ $ISOSRC ] && echo -e "\n# ISO=$ISOSRC" >> $livedbg
-cp -af $livedbg /union/var/log/porteus-livedbg
+cp -af $livedbg /union/var/log/
 
 cat /proc/cmdline
 
 echo "${i}changing root directory" 
-echo "${BOLD}live system is ready now - starting Debian${RST}"
-
-if param init=/bin/systemd; then
-	if [ -f /union/lib/systemd/systemd ]; then
-cp -f /union/lib/systemd/systemd /bin
-		if [ $? -eq 0 ]; then
-	mkdir -p /union/mnt/live
-echo "[1m""using systemd...""[0m"
-    pivot_root /union  /union/mnt/live
-    exec usr/sbin/chroot . /mnt/live/bin/systemd "$@" <dev/console >dev/console 2>&1
-		else
-    echo -e "[31m""!!ERROR!!\nSomething went wrong and I cannot continue.\nPress Ctrl+Alt+Del to reboot.""[0m"
-    sh  
-		fi
-	else
- echo "[1m""systemd not found, trying to use initscripts...""[0m" 
-cp -f /union/sbin/init /bin
-		if [ $? -eq 0 ]; then
-	mkdir -p /union/mnt/live
-    pivot_root /union  /union/mnt/live
-    exec usr/sbin/chroot . /mnt/live/bin/init "$@" <dev/console >dev/console 2>&1
-		else
-    echo -e "[31m""!!ERROR!!\nSomething went wrong and I cannot continue.\nPress Ctrl+Alt+Del to reboot.""[0m"
-    sh
-		fi
-	fi
-else
-    if [ -L /union/sbin/init ]; then
-echo "[1m""/sbin/init appears to be a symlink, assuming systemd-sysv is installed""[0m"
-echo "[1m""trying to switch to systemd now...""[0m"
-cp -f /union/lib/systemd/systemd /bin
-		if [ $? -eq 0 ]; then
-	mkdir -p /union/mnt/live
-echo "[1m""using systemd...""[0m"
-    pivot_root /union  /union/mnt/live
-    exec usr/sbin/chroot . /mnt/live/bin/systemd "$@" <dev/console >dev/console 2>&1
-		else
-    echo -e "[31m""!!ERROR!!\nSomething went wrong and I cannot continue.\nPress Ctrl+Alt+Del to reboot.""[0m"
-    sh  
-		fi
-    else
-cp -f /union/sbin/init /bin
-		if [ $? -eq 0 ]; then
-	mkdir -p /union/mnt/live
-    pivot_root /union  /union/mnt/live
-    exec usr/sbin/chroot . /mnt/live/bin/init "$@" <dev/console >dev/console 2>&1
-		else
-    echo -e "[31m""!!ERROR!!\nSomething went wrong and I cannot continue.\nPress Ctrl+Alt+Del to reboot.""[0m"
-    sh
-		fi
-    fi
+if [ -x /union/usr/sbin/init ]; then
+	cp -f /union/usr/sbin/init /bin
+	INIT=init
+elif [ -x /union/usr/lib/systemd/systemd ]; then
+	cp -f /union/usr/lib/systemd/systemd /bin
+	INIT=systemd
 fi
 
-
+if [ -x /bin/$INIT ]; then
+	mkdir -p /union/mnt/live
+	echo "${BOLD}live system is ready now - starting Debian${RST}"
+	pivot_root /union /union/mnt/live
+	exec /mnt/live/bin/chroot . /mnt/live/bin/$INIT "$@" <dev/console >dev/console 2>&1
+else
+	echo "${RED}ERROR Something went wrong. Press Ctrl+Alt+Del to reboot.${RST}"
+	sh
+fi
