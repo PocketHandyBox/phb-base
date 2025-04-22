@@ -11,14 +11,12 @@
 #
 # By default this script does nothing.
 
-[ -f /mnt/live/tmp/modules ] && /usr/local/bin/mountlink 2> /dev/null
-
 [ -x /etc/console-setup/cached_setup_font.sh ] && [ -f /run/console-setup/font-loaded ] || \
  /etc/console-setup/cached_setup_font.sh 2> /dev/null
 [ -x /etc/console-setup/cached_setup_keyboard.sh ] && [ -f /run/console-setup/keymap_loaded ] || \
  /etc/console-setup/cached_setup_keyboard.sh 2> /dev/null
 
-[ -x /usr/local/bin/chownguest ] && /usr/local/bin/chownguest 2> /dev/null
+[ -x /usr/local/sbin/chownguest ] && /usr/local/sbin/chownguest 2> /dev/null
 
 [ -x /usr/local/sbin/alsaswitch ] && ( /usr/local/sbin/alsaswitch & )
 

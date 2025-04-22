@@ -12,29 +12,23 @@ export PATH=/bin:/usr/bin:./
 
 # Enable pivot_root in initramfs to let it behave like initrd:
 if [ -d /m ]; then
-    mount -nt tmpfs tmpfs -o mode=0755 /m
+    mount -t tmpfs -o mode=0755 tmpfs /m
     cp -a ??* /m 2>/dev/null
     exec switch_root /m linuxrc "$@"
 fi
 
-mount -nt proc proc /proc
-mount -nt sysfs sysfs /sys
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
 echo 0 >/proc/sys/kernel/printk
-
-cat /proc/cmdline | sed -e 's/^/ /' > /etc/cmdline
-param() { egrep -qo " $1( |\$)" /etc/cmdline; }
-value() { egrep -o " $1=[^ ]+" /etc/cmdline | cut -d= -f2; }
 
 ## Check for debug
 param debug && DBUG=1
 
 clear
-echo -e "${BOLD}Starting init script.${RST}"
+echo "${BOLD}Starting init script.${RST}"
 
 # Variables:
-i=`echo "[1;33m""^ ""[0m"`
-m=`echo "[1;33m""->""[0m"`
-CFG=`value cfgfile`; [ $CFG ] || CFG=initrd1.xz
+#CFG=`value cfgfile`; [ $CFG ] || CFG=initrd1.xz
 FROM=`value from`; ISO=`echo $FROM | egrep ".*\.iso( |\$)"`
 IP=`value ip | cut -d: -f2`
 NFSPATH=`value nfspath`; [ $NFSPATH ] || NFSPATH=/srv/pxe
@@ -42,22 +36,24 @@ MOPT=`value mopt`; [ $MOPT ] || MOPT="noatime,nodiratime,suid,dev,exec,async"
 CHANGES=`value changes`
 PFULL=`value pfull`
 RAMSIZE=`value ramsize`; [ $RAMSIZE ] || RAMSIZE=60%
-NVIDIA=`value nvidia`
-LOAD=`value load | sed 's/;/|/g'`; [ $LOAD ] || LOAD=._null
-NOLOAD=`value noload | sed 's/;/|/g'`; [ $NOLOAD ] || NOLOAD=._null
-EXTRAMOD=`value extramod | sed 's/;/ /g'`
-RAMMOD=`value rammod | sed 's/;/|/g'`
+NVIDIA=`value nvidia`; [ "$NVIDIA" = no -o "$NVIDIA" = none ] && NVIDIA=""
+LOAD=`multivalue load | sed 's/;/|/g'`; [ $LOAD ] || LOAD=._null
+NOLOAD=`multivalue noload | sed 's/;/|/g'`; [ $NOLOAD ] || NOLOAD=._null
+EXTRAMOD=`multivalue extramod | sed 's/;/ /g'`
+RAMMOD=`multivalue rammod | sed 's/;/|/g'`
 ROOTCOPY=`value rootcopy`
 KERNEL=`uname -r`
 FOLDER=`value folder`
 if [ -z "$FOLDER" ]; then FOLDER=live
+FWDIR=live
 [ `uname -m` = i686 ] && FOLDER=live32
+else FWDIR=$FOLDER
 fi
 livedbg=/var/log/livedbg
 LOGFILE=/var/log/boot.log
 
 ## Let's start!
-echo $i"loading kernel modules..."
+echo "${i}loading kernel modules..."
 
 # List of mmc kernel modules. To unload them in case of unused
 MODLISTMMC="cb710-mmc mmc_block sdhci-acpi sdhci-pci tifm_sd via-sdmmc vub300 wbsd "
@@ -86,7 +82,7 @@ fi
 # Load kernel modules
 modprobe -qa `cat modlist`
 
-mount -nt devtmpfs none /dev
+mount -t devtmpfs none /dev
 
 # Load network kernel modules in case of PXE boot
 if [ $IP ]; then
@@ -97,10 +93,14 @@ fi
 # Create /etc/fstab and mount devices:
 fstab
 
+#To Do
+#enable_swap
+
 debug
-# Find *.cfg file:
-echo $i"searching for $CFG file"
-if [ $IP ]; then BOOTDEV=network; CFGDEV=/mnt/nfs
+
+# Searching for PHB data
+echo "${i}searching for PHB data: $FOLDER folder"
+if [ $IP ]; then BOOTDEV=network; DATADEV=/mnt/nfs
     mkdir -p /mnt/nfs/storage
     modprobe -q nfsv4; mount -t nfs4 $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null || { modprobe -q nfsv3; mount -t nfs $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null; }
     MAC=`ifconfig | grep eth0 | cut -d: -f5-7 | sed s/://g | cut -d" " -f1`
@@ -114,27 +114,30 @@ if [ $IP ]; then BOOTDEV=network; CFGDEV=/mnt/nfs
     if [ $FROM ]; then
         FOLDER=$FROM/$FOLDER
     fi
-elif [ $ISO ]; then CFGDEV=/mnt/isoloop
+elif [ $ISO ]; then DATADEV=/mnt/isoloop
     locate -e $FROM && { BOOTDEV=/mnt/$DEV; mkdir /mnt/isoloop; mount -o loop /mnt/$DEV/$LPTH /mnt/isoloop; ISOSRC=/mnt/$DEV/$LPTH; }
 else
     if [ $FROM ]; then
-	locate -e $FROM/$FOLDER/$CFG
+	locate -d $FROM/$FOLDER
 	if [ $? -eq 0 ]; then
 	    DIR=`echo $LPTH | rev | cut -d/ -f3- | rev`; [ $DIR ] && FOLDER=$DIR/$FOLDER
 	else
-	    echo -e "${YELLOW}from= cheatcode is incorrect, press enter to search through all devices${RST}"
-	    read -s; search -e $FOLDER/$CFG
+	    echo "${YELLOW}from= cheatcode is incorrect, press enter to search through all devices${RST}"
+	    read -s; search -d $FOLDER
 	fi
     else
-	search -e $FOLDER/$CFG || lazy -e $FOLDER/$CFG
+	search -d $FOLDER || lazy -d $FOLDER
     fi
-    CFGDEV=/mnt/$DEV
+    DATADEV=/mnt/$DEV
 fi
 
-[ -e $CFGDEV/$FOLDER/$CFG ] && DATADIR=$CFGDEV/$FOLDER || . fatal
-BOOTDEV=$CFGDEV
+# DATADEV value example /mnt/sda1
+# DATADIR value example /mnt/sda1/live
+[ -d $DATADEV/$FOLDER ] && DATADIR=$DATADEV/$FOLDER || . fatal
 
-echo $i"using data from $DATADIR"
+echo "${i}using data from $DATADIR"
+# Create file /mnt/live/etc/homedrv for use in
+# scripts 'makepfile' and 'pseudofull-setup'
 echo $DATADIR > /etc/homedrv
 
 debug
@@ -157,33 +160,34 @@ echo && echo -e "[1;33m""A Windows filesystem (FAT, NTFS) or other non-posix co
 
 if [ $PFULL ]; then
 CHANGES=$PFULL
-    echo $i"setting up directory for changes"
+    echo "${i}setting up directory for changes"
     CHNEXIT=`echo $CHANGES | cut -d: -f1`; 
     [ $CHNEXIT = EXIT ] && CHANGES=`echo $CHANGES | cut -d: -f2-`
     [ $CHNEXIT = +EXIT ] && CHANGES=`echo $CHANGES | cut -d: -f2-`   
     
-    [ -r $CFGDEV/$CHANGES ] && { DEV=`echo $CFGDEV | sed s@/mnt/@@`; LPTH=$CHANGES; } || locate -r $CHANGES
+    [ -r $DATADEV/$CHANGES ] && { DEV=`echo $DATADEV | sed s@/mnt/@@`; LPTH=$CHANGES; } || locate -r $CHANGES
     if [ $? -eq 0 ]; then
 	if [ -d /mnt/$DEV/$LPTH/pfull/filesystem/var ] && [ -d /mnt/$DEV/$LPTH/pfull/filesystem/usr ] && [ -d /mnt/$DEV/$LPTH/pfull/filesystem/root ]; then
 #	    mkdir -p /mnt/$DEV/$LPTH/changes 2>/dev/null && \
 	    mount -o bind /mnt/$DEV/$LPTH/pfull /memory/changes && touch /memory/changes/._test1 2>/dev/null
 	else
 echo && echo
-echo "[1;36m""Data not found for pseudo-full install /mnt/$DEV/$LPTH/pfull
+echo "${CYAN}Data not found for pseudo-full install /mnt/$DEV/$LPTH/pfull
 Press space/enter to unmount all devices and reboot or any other key
-to drop to the debug shell.""[0m"
+to drop to the debug shell.${RST}"
 read -s -n1 ans
 if [ "$ans" = "" ]; then
     umount /mnt/* 2>/dev/null
     umount -a 2>/dev/null
     reboot -f
 else
-    echo -en "[1;36m""Here is debugging shell for you, unmount all partitions and press Ctrl+Alt+Del\nwhen you finish.\n\nGood luck!\n""[0m"
-    sh
+echo "${CYAN}Here is debugging shell for you, unmount all partitions
+and press Ctrl+Alt+Del when you finish. Good luck!${RST}"
+sh
 fi
 	fi
 	if [ $? -eq 0 ]; then
-	    echo $i"testing filesystem on "$CHANGES" for posix compatibility"
+	    echo "${i}testing filesystem on $CHANGES for posix compatibility"
 	    ln -s /memory/changes/._test1 /memory/changes/._test2 2>/dev/null && chmod +x /memory/changes/._test1 2>/dev/null && [ -x /memory/changes/._test1 ] && chmod -x /memory/changes/._test1 2>/dev/null && [ ! -x /memory/changes/._test1 ] && rm -f /memory/changes/._test1 /memory/changes/._test2
 ret=$? 
 	    if [ $ret -ne 0 ]; then
@@ -217,39 +221,39 @@ echo && echo -e "[1;33m""A Windows filesystem (FAT, NTFS) or other non-posix co
 		read; rmdir /mnt/$DEV/$LPTH/changes 2>/dev/null; fail_chn
 
 	    else
-		echo $i"filesystem is posix compatible"; CHNDEV=/mnt/$DEV
+		echo "${i}filesystem is posix compatible"; CHNDEV=/mnt/$DEV
 
         	if [ -f /memory/changes/clear-changes-on-reboot ]; then
-                      echo $i"[1;36m""changes content signalled to be cleared""[0m"
+                      echo "${i}${CYAN}changes content signalled to be cleared${RST}"
                       rm -rf /memory/changes/*
 		fi
 	    	    	    
 		if [ "$CHNEXIT" = EXIT -o "`egrep -o " changes-ro( |\$)" /proc/cmdline`" ]; then
 		    CHNEXIT=$CHNDEV/$LPTH; echo $CHNEXIT >/tmp/changes-exit
-		    param changes-ro && echo $i"[1;36m""changes will not be saved for this session""[0m" || echo $i"[1;36m""changes will be saved only during reboot/shutdown""[0m"
+		    param changes-ro && echo "${i}${CYAN}changes will not be saved for this session${RST}" || echo "${i}${CYAN}changes will be saved only during reboot/shutdown${RST}"
 
 			setClean
 			mkdir -p /memory/images/changes-exit
-			mount -n --move /memory/changes /memory/images/changes-exit
+			mount -o move /memory/changes /memory/images/changes-exit
 			umount /memory/changes 2>/dev/null;
-			mount -nt tmpfs -o size=$RAMSIZE tmpfs /memory/changes;
+			mount -t tmpfs -o size=$RAMSIZE tmpfs /memory/changes;
 			CHANGES=memory
 		fi
 
 		 if [ $CHNEXIT = +EXIT ]; then
 		    CHNEXIT=$CHNDEV/$LPTH; echo $CHNEXIT >/tmp/changes-exit
-		    echo $i"[1;36m""changes will be saved only during reboot/shutdown""[0m"
+		    echo "${i}${CYAN}changes will be saved only during reboot/shutdown${RST}"
 
   	      if [ ! -d /mnt/$DEV/$LPTH ]; then
               APTH=$(echo /mnt/$DEV/$LPTH |sed 's|\(.*\)/.*|\1|')
-  	      echo $i"[1;36m""option +EXIT is being used, changes are NOT written in memory""[0m"
-  	      echo $i"[1;36m""temporary changes will be in $APTH/tmp-pfull ""[0m"
+  	      echo "${i}${CYAN}option +EXIT is being used, changes are NOT written in memory${RST}"
+  	      echo "${i}${CYAN}temporary changes will be in $APTH/tmp-pfull ${RST}"
 umount /memory/changes 2>/dev/null; rmdir $APTH/changes 2>/dev/null
 mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null
 			setClean
 
 			mkdir -p /memory/images/changes-exit
-			mount -n --move /memory/changes /memory/images/changes-exit
+			mount -o move /memory/changes /memory/images/changes-exit
 			#umount /memory/changes 2>/dev/null;
 			#mount -nt tmpfs -o size=$RAMSIZE tmpfs /memory/changes;
 			#CHANGES=memory
@@ -257,12 +261,12 @@ mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null
   	      mkdir -p $APTH/tmp-pfull
   	      mount -o bind $APTH/tmp-pfull /memory/changes
   	      else
-  	      echo $i"[1;36m""option +EXIT is being used, changes are NOT written in memory""[0m"
-  	      echo $i"[1;36m""temporary changes will be in /mnt/$DEV/$LPTH/tmp-pfull""[0m"
+  	      echo "${i}${CYAN}option +EXIT is being used, changes are NOT written in memory${RST}"
+  	      echo "${i}${CYAN}temporary changes will be in /mnt/$DEV/$LPTH/tmp-pfull${RST}"
 		    #umount /memory/changes;
 			setClean
 			mkdir -p /memory/images/changes-exit
-			mount -n --move /memory/changes /memory/images/changes-exit
+			mount -o move /memory/changes /memory/images/changes-exit
 			umount /memory/changes 2>/dev/null;
 			#mount -nt tmpfs -o size=$RAMSIZE tmpfs /memory/changes;
 			#CHANGES=memory
@@ -275,19 +279,19 @@ mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null
 		fi
 	    fi
 	else
-	    echo $i"changes not writable, using memory instead"; CHGERR=2; umount /memory/changes 2>/dev/null; fail_chn
+	    echo "${i}changes not writable, using memory instead"; CHGERR=2; umount /memory/changes 2>/dev/null; fail_chn
 	fi
     else
 	fail $CHANGES; fail_chn
     fi
 
 elif [ $CHANGES ]; then
-    echo $i"setting up directory for changes"
+    echo "${i}setting up directory for changes"
     CHNEXIT=`echo $CHANGES | cut -d: -f1`; 
     [ $CHNEXIT = EXIT ] && CHANGES=`echo $CHANGES | cut -d: -f2-`
     [ $CHNEXIT = +EXIT ] && CHANGES=`echo $CHANGES | cut -d: -f2-`   
     
-    [ -r $CFGDEV/$CHANGES ] && { DEV=`echo $CFGDEV | sed s@/mnt/@@`; LPTH=$CHANGES; } || locate -r $CHANGES
+    [ -r $DATADEV/$CHANGES ] && { DEV=`echo $DATADEV | sed s@/mnt/@@`; LPTH=$CHANGES; } || locate -r $CHANGES
     if [ $? -eq 0 ]; then
 	if [ -d /mnt/$DEV/$LPTH ]; then
 	    mkdir -p /mnt/$DEV/$LPTH/changes 2>/dev/null && \
@@ -296,7 +300,7 @@ elif [ $CHANGES ]; then
 	    if blkid /mnt/$DEV/$LPTH 2>/dev/null | cut -d" " -f3- | grep -q _LUKS; then
 		for x in dm_crypt cryptd cbc sha256_generic aes_generic aes_x86_64; do modprobe $x 2>/dev/null; done
 		losetup /dev/loop2 /mnt/$DEV/$LPTH
-		echo $i"found encrypted .dat container"
+		echo "${i}found encrypted .dat container"
 		cryptsetup luksOpen /dev/loop2 crypt
 		mount /dev/mapper/crypt /memory/changes 2>/dev/null && touch /memory/changes/._test1 2>/dev/null
 	    else
@@ -304,7 +308,7 @@ elif [ $CHANGES ]; then
 	    fi
 	fi
 	if [ $? -eq 0 ]; then
-	    echo $i"testing filesystem on "$CHANGES" for posix compatibility"
+	    echo "${i}testing filesystem on $CHANGES for posix compatibility"
 	    ln -s /memory/changes/._test1 /memory/changes/._test2 2>/dev/null && chmod +x /memory/changes/._test1 2>/dev/null && [ -x /memory/changes/._test1 ] && chmod -x /memory/changes/._test1 2>/dev/null && [ ! -x /memory/changes/._test1 ] && rm -f /memory/changes/._test1 /memory/changes/._test2
 ret=$? 
 	    if [ $ret -ne 0 ]; then
@@ -338,39 +342,39 @@ echo && echo -e "[1;33m""A Windows filesystem (FAT, NTFS) or other non-posix co
 		read; rmdir /mnt/$DEV/$LPTH/changes 2>/dev/null; fail_chn
 
 	    else
-		echo $i"filesystem is posix compatible"; CHNDEV=/mnt/$DEV
+		echo "${i}filesystem is posix compatible"; CHNDEV=/mnt/$DEV
 
         	if [ -f /memory/changes/clear-changes-on-reboot ]; then
-                      echo $i"[1;36m""changes content signalled to be cleared""[0m"
+                      echo "${i}${CYAN}changes content signalled to be cleared${RST}"
                       rm -rf /memory/changes/*
 		fi
 	    	    	    
 		if [ "$CHNEXIT" = EXIT -o "`egrep -o " changes-ro( |\$)" /proc/cmdline`" ]; then
 		    CHNEXIT=$CHNDEV/$LPTH; echo $CHNEXIT >/tmp/changes-exit
-		    param changes-ro && echo $i"[1;36m""changes will not be saved for this session""[0m" || echo $i"[1;36m""changes will be saved only during reboot/shutdown""[0m"
+		    param changes-ro && echo "${i}${CYAN}changes will not be saved for this session${RST}" || echo "${i}${CYAN}changes will be saved only during reboot/shutdown${RST}"
 
 			setClean
 			mkdir -p /memory/images/changes-exit
-			mount -n --move /memory/changes /memory/images/changes-exit
+			mount -o move /memory/changes /memory/images/changes-exit
 			umount /memory/changes 2>/dev/null;
-			mount -nt tmpfs -o size=$RAMSIZE tmpfs /memory/changes;
+			mount -t tmpfs -o size=$RAMSIZE tmpfs /memory/changes;
 			CHANGES=memory
 		fi
 
 		 if [ $CHNEXIT = +EXIT ]; then
 		    CHNEXIT=$CHNDEV/$LPTH; echo $CHNEXIT >/tmp/changes-exit
-		    echo $i"[1;36m""changes will be saved only during reboot/shutdown""[0m"
+		    echo "${i}${CYAN}changes will be saved only during reboot/shutdown${RST}"
 
   	      if [ ! -d /mnt/$DEV/$LPTH ]; then
               APTH=$(echo /mnt/$DEV/$LPTH |sed 's|\(.*\)/.*|\1|')
-  	      echo $i"[1;36m""option +EXIT is being used, changes are NOT written in memory""[0m"
-  	      echo $i"[1;36m""temporary changes will be in $APTH/tmp-changes ""[0m"
+  	      echo "${i}${CYAN}option +EXIT is being used, changes are NOT written in memory${RST}"
+  	      echo "${i}${CYAN}temporary changes will be in $APTH/tmp-changes ${RST}"
 umount /memory/changes 2>/dev/null; rmdir $APTH/changes 2>/dev/null
 mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null
 			setClean
 
 			mkdir -p /memory/images/changes-exit
-			mount -n --move /memory/changes /memory/images/changes-exit
+			mount -o move /memory/changes /memory/images/changes-exit
 			#umount /memory/changes 2>/dev/null;
 			#mount -nt tmpfs -o size=$RAMSIZE tmpfs /memory/changes;
 			#CHANGES=memory
@@ -378,12 +382,12 @@ mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null
   	      mkdir -p $APTH/tmp-changes
   	      mount -o bind $APTH/tmp-changes /memory/changes
   	      else
-  	      echo $i"[1;36m""option +EXIT is being used, changes are NOT written in memory""[0m"
-  	      echo $i"[1;36m""temporary changes will be in /mnt/$DEV/$LPTH/tmp-changes""[0m"
+  	      echo "${i}${CYAN}option +EXIT is being used, changes are NOT written in memory${RST}"
+  	      echo "${i}${CYAN}temporary changes will be in /mnt/$DEV/$LPTH/tmp-changes ${RST}"
 		    #umount /memory/changes;
 			setClean
 			mkdir -p /memory/images/changes-exit
-			mount -n --move /memory/changes /memory/images/changes-exit
+			mount -o move /memory/changes /memory/images/changes-exit
 			umount /memory/changes 2>/dev/null;
 			#mount -nt tmpfs -o size=$RAMSIZE tmpfs /memory/changes;
 			#CHANGES=memory
@@ -396,13 +400,13 @@ mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null
 		fi
 	    fi
 	else
-	    echo $i"changes not writable, using memory instead"; CHGERR=2; umount /memory/changes 2>/dev/null; fail_chn
+	    echo "${i}changes not writable, using memory instead"; CHGERR=2; umount /memory/changes 2>/dev/null; fail_chn
 	fi
     else
 	fail $CHANGES; fail_chn
     fi
 else
-     echo $i"changes cheatcode not found, using memory only"; fail_chn
+     echo "${i}changes cheatcode not found, using memory only"; fail_chn
 fi
 
 if [ $PFULL ]; then
@@ -421,32 +425,29 @@ find $DATADIR -maxdepth 2 -name "*.kmodsfs" ! -path "*/nvidia/*" ! -path "*/root
 find $DATADIR/optional -name "*.kmodsfs" 2>/dev/null | egrep -e "$LOAD" | grep $KERNEL | sort >>/tmp/modules
 
 # Find firmware modules
-find $CFGDEV/live/firmware -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+find $DATADEV/$FWDIR/firmware -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
 
 # Detect nvidia video cards on pcie bus
 if [ "$NVIDIA" = detect ]; then
-	echo $i"detecting nvidia GPU"
-	lspci >/tmp/lspci
-	nvlist=`grep -i "030.: 10de:" /tmp/lspci | cut -d":" -f4`
-	if param nonvidia; then
-	echo $i"skipping nvidia GPU detection"
-	elif [ -n "$nvlist" ]; then
+	echo "${i}detecting nvidia GPU"
+	nvlist=`lspci | grep -i "030.: 10de:" | cut -d":" -f4`
+	if [ -n "$nvlist" ]; then
 	for nv in $nvlist
 	do
-		echo $i"$nv chip found, checking which nvidia driver supports it"
+		echo "${i}$nv chip found, checking which nvidia driver supports it"
 		if grep -sqi 10de$nv /usr/share/nvidia/nvidia.ids; then NVIDIA=nvidia; break
 		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-390xx.ids; then NVIDIA=nv390; break
 		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-340xx.ids; then NVIDIA=nv340; break
-		else echo $i"$nv chip is not supported by nvidia driver"
+		else echo "${i}$nv chip is not supported by nvidia driver"
 		fi
 	done
-	else echo $i"could not find any nVidia GPU on this PC"
+	else echo "${i}could not find any nVidia GPU on this PC"
 	fi
 fi
 
 # Find nvidia modules
-if [ $NVIDIA ] && [ "$NVIDIA" != detect ]; then
-	echo $i"$NVIDIA driver will be activated"
+if [ "$NVIDIA" ] && [ "$NVIDIA" != detect ]; then
+	echo "${i}$NVIDIA NVIDIA driver will be activated"
 	find $DATADIR/nvidia -name "$NVIDIA*.kmodsfs" 2>/dev/null | grep $KERNEL >>/tmp/modules
 	find $DATADIR/nvidia -name "$NVIDIA*.squashfs" 2>/dev/null >>/tmp/modules
 	NOLOAD="$NOLOAD|mesa-vulkan-drivers"
@@ -459,15 +460,21 @@ find $DATADIR/optional -name "*.squashfs" 2>/dev/null | egrep -e "$LOAD" | sort 
 # Find extra modules
 if [ "$EXTRAMOD" ]; then
 for EXTFOLDER in $EXTRAMOD; do
-	echo $i"searching for additional modules in $EXTFOLDER"
-	locate -d $EXTFOLDER && { find /mnt/$DEV/$LPTH -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules; } || fail $EXTFOLDER
+	echo "${i}searching for additional modules in $EXTFOLDER"
+	if locate -d "$EXTFOLDER"; then
+	find /mnt/$DEV/$LPTH -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+#	find /mnt/$DEV/$LPTH -name "*.kmodsfs" 2>/dev/null | egrep -ve "$NOLOAD" | grep $KERNEL | sort >>/tmp/modules
+	else fail $EXTFOLDER
+	fi
 done
 fi
 
 # Copy data to RAM:
-if param copy2ram; then
-    echo $i"copying data to RAM, this may take some time..."
-    [ $RAMMOD ] && { egrep -e "$RAMMOD" /tmp/modules > /tmp/rammod; cpmod /tmp/rammod; } || cpmod /tmp/modules
+if param copy2ram; then echo "${i}copying data to RAM, this may take some time..."
+	if [ "$RAMMOD" ]; then
+	egrep -e "$RAMMOD" /tmp/modules > /tmp/rammod; cpmod /tmp/rammod
+	else cpmod /tmp/modules
+	fi
 fi
 
 #======================================
@@ -491,17 +498,18 @@ IncludeModules
 #fi
 
 debug
+
 # Copy /rootcopy folder:
 if param norootcopy; then
     ROOTCOPY=none
-    echo $i"skipping /rootcopy directory"
+    echo "${i}skipping /rootcopy directory"
 else
     if [ $ROOTCOPY ]; then
 	locate -d $ROOTCOPY
-	if [ $? -eq 0 ]; then echo $i"copying content of $ROOTCOPY directory"; cp -af /mnt/$DEV/$LPTH/. /union/. 2>/dev/null; else fail $ROOTCOPY; ROOTCOPY=none; fi
+	if [ $? -eq 0 ]; then echo "${i}copying content of $ROOTCOPY directory"; cp -af /mnt/$DEV/$LPTH/. /union/. 2>/dev/null; else fail $ROOTCOPY; ROOTCOPY=none; fi
     else
 	ROOTCOPY=none
-	echo $i"copying content of $DATADIR/rootcopy directory"
+	echo "${i}copying content of $DATADIR/rootcopy directory"
 	cp -af $DATADIR/rootcopy/. /union/. 2>/dev/null
     fi
 fi
@@ -515,99 +523,63 @@ let y=x+20
 #x=`losetup | tail -n1 | cut -d: -f1 | sed 's@/dev/loop@@'`; let y=x+20
 while [ $x -le $y ]; do [ -b /dev/loop$y ] && break || mknod /dev/loop$y b 7 $y; chmod g+rw-x,o-rwx /dev/loop$y; let y=y-1; done
 
-if param nonetwork; then
-    echo $i"disabling dhcpcd and NetworkManager services"
-    chmod -x /union/etc/rc.d/rc.inet1 /union/etc/rc.d/rc.networkmanager 2>/dev/null
-    nma=/union/etc/xdg/autostart/nm-applet.desktop
-    test -e $nma && ! grep -q "Hidden=true" $nma && echo "Hidden=true" >> $nma
-fi
-
-if [ "$IP" -a -x /union/etc/rc.d/rc.networkmanager ]; then
-    if [ -z "`egrep -o "copy2ram( |\$)" /proc/cmdline`" -o -d /mnt/nfs/storage/client-$MAC ]; then
-#    if [ -z "`egrep -o "^copy2ram" /union/etc/bootcmd.cfg`" -o -d /mnt/nfs/storage/client-$MAC ]; then
-	echo "nameserver $IP" > /union/etc/resolv.conf
-	nmc=/union/etc/NetworkManager/NetworkManager.conf; HW=`ifconfig | grep eth0 | cut -dW -f2 | cut -d" " -f2`
-	! grep -q "unmanaged-devices=mac:$HW" $nmc && sed -i '/\[keyfile\]/ a\unmanaged-devices=mac:'$HW'' $nmc
-    fi
-fi
-
+# Copy /etc/resolv.conf
 if [ $IP ] && [ -f /etc/resolv.conf ]; then
-    cp /etc/resolv.conf /union/etc/resolv.conf
-fi
-
-# Start bluetooth if cheat exists
-if param bluetooth; then
-	echo "Starting bluetooth ..."
-	[ -e /union/etc/rc.d/rc.bluetooth ] && chmod +x /union/etc/rc.d/rc.bluetooth
+	[ -L /union/etc/resolv.conf ] && rm -f /union/etc/resolv.conf
+	cat /etc/resolv.conf >> /union/etc/resolv.conf
 fi
 
 cp -af /dev/console /union/dev
 
-fstab
+#fstab
 
 debug
-#if param copy2ram; then
-if param copy2ram; then
-    [ $CFGDEV = /mnt/isoloop -o $CFGDEV = /mnt/nfs ] && { umount `grep $CFGDEV /etc/mtab | sed -n 1p | cut -d" " -f2` 2>/dev/null; CFGDEV=$BOOTDEV; }
-    CHNDISK=`echo $CHNDEV | cut -b6-8`; CFGDISK=`echo $CFGDEV | cut -b6-8`; REMOVABLE=`cat /sys/block/$CFGDISK*/removable 2>/dev/null`
-    if [ -z "`egrep -o " noeject( |\$)" /etc/cmdline`" -a "$CHNDISK" != "$CFGDISK" ]; then
-	if [ "$REMOVABLE" = 1 ]; then
-	    for rdisk in `ls /mnt | grep $CFGDISK`; do
-		umount -n /mnt/$rdisk 2>/dev/null && rmdir /mnt/$rdisk
-		if [ $? -eq 0 ]; then
-		    ! grep -qw "/dev/$rdisk.*iso9660" /etc/fstab && echo $rdisk >> /tmp/ejected || eject /dev/$rdisk
-		    sed -i "/$rdisk/d" /etc/fstab
-		fi
-	    done
-	    [ `ls /mnt | grep $CFGDISK` ] || echo $i"[1;36m""finished copying to RAM - booting media can be removed safely""[0m"
-	else
-	    if param nohd; then umount $CFGDEV 2>/dev/null; rmdir $CFGDEV 2>/dev/null; fi
-	fi
-    fi
-fi
 
-# Create debug file:
-[ -e /tmp/devices ] && { echo "# Recognized devices:" >$livedbg; cat /tmp/devices >>$livedbg; }
-[ $BOOTDEV ] && CFGDEV=$BOOTDEV
-echo $CFGDEV > /etc/cfgdev
-echo -e "\n# Booting device:\n$CFGDEV\n\n# data found in:\n$DATADIR\n\n# Changes are stored in:\n$CHANGES\n\n# Non standard /rootcopy dir:\n$ROOTCOPY\n\n# Modules activated during boot time:" >>$livedbg; cat /tmp/modules >>$livedbg
-grep "^/mnt/isoloop" $livedbg && echo "" >> $livedbg && echo "ISO=$ISOSRC" >> $livedbg
-#if [ $ISO ]; then
-#	[ -d /union/mnt/isoloop ] && rmdir /union/mnt/isoloop
-#	ln -sf /mnt/live/mnt/isoloop /union/mnt/isoloop
-#fi
-cp -af $livedbg /union/var/log/porteus-livedbg
-
-cat /proc/cmdline
-
-echo $i"changing root directory" 
+# Move mountpoints /mnt/XX to /union/mnt/XX
 for x in `ls -1 /union/mnt | grep -v live`; do
- echo $x
- [ -d /union/mnt/$x ] && rmdir /union/mnt/$x # Will fail if dir not empty!
- [ -L /union/mnt/$x ] && rm -f /union/mnt/$x
+#	echo $x
+	[ -d /union/mnt/$x ] && rmdir /union/mnt/$x # Will fail if dir not empty!
+	[ -L /union/mnt/$x ] && rm -f /union/mnt/$x
 done
-#if chk_bootcfg noauto; then
-if grep -q noauto /proc/cmdline; then
-  FDEV=`echo $CFGDEV | sed s@/mnt/@@`
-  CDEV=`echo $CHNDEV | sed s@/mnt/@@`
-[ $CDEV ] && echo $CDEV > /tmp/cdev
-    for x in `grep /mnt/ /etc/fstab | cut -d/ -f3`; do mkdir -p /union/mnt/$x;
-if grep -q copy2ram /proc/cmdline; then
-  if [ $CFGDEV = $CHNDEV ]; then
-[ "$FDEV" = "$x" ] && continue  # keep $x mounted
-  else
-[ "$CDEV" = "$x" ] && continue  # keep $x mounted
-  fi
+
+# Create /mnt/home symlink
+if [ "$BOOTDEV" ] && [ -d "$BOOTDEV" ]; then
+ln -snf $BOOTDEV /union/mnt/home
+elif [ -d "$DATADEV" ]; then
+ln -snf $DATADEV /union/mnt/home
 fi
-if grep -qv copy2ram /proc/cmdline; then
- [ "$CDEV" = "$x" ] && continue  # keep $x mounted
-fi
- umount -n /mnt/$x 2>/dev/null && rmdir /mnt/$x;
- done
+
+# Create /mnt/saved symlink
+if [ -d /memory/images/changes-exit ]; then
+ln -snf /mnt/live/memory/images/changes-exit /union/mnt/saved
 else
-    #grep /mnt/ /etc/fstab >> /union/etc/mtab
-    for x in `grep /mnt/ /etc/fstab | cut -d/ -f3`; do mkdir -p /union/mnt/$x; mount -n --move /mnt/$x /union/mnt/$x; rmdir /mnt/$x; done
+ln -snf /mnt/live/memory/changes /union/mnt/saved
 fi
+
+MNTPOINTS=`grep /mnt/ /etc/fstab | cut -d" " -f2`
+[ -d /mnt/nfs ] && MNTPOINTS="/mnt/nfs $MNTPOINTS"
+[ -d /mnt/isoloop ] && MNTPOINTS="/mnt/isoloop $MNTPOINTS"
+
+for MNTDEV in $MNTPOINTS
+do mkdir -p /union"$MNTDEV"
+if [ "$MNTDEV" = "$CHNDEV" ]; then
+	if [ "$CHNEXIT" ] && param copy2ram ; then
+	umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
+	continue
+	else continue # keep CHNDEV mounted
+	fi
+elif [ "$MNTDEV" = "$DATADEV" -o "$MNTDEV" = "$BOOTDEV" ]; then
+	param copy2ram && umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
+	continue
+fi
+param noauto && umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
+done
+
+# Remove unused /mnt/XX dir's
+rmdir /mnt/* 2>/dev/null
+
+# TO DO
+#[ `ls /mnt | grep $CFGDISK` ] || echo $i"[1;36m""finished copying to RAM - booting media can be removed safely""[0m"
 
 #sed -i 's/ ntfs / ntfs-3g /g' /etc/fstab
 #cp -f /etc/fstab /union/etc 2>/dev/null
@@ -630,7 +602,26 @@ done
 
 debug
 
-echo "[1m""live system is ready now - starting Debian""[0m"
+# Create debug file:
+if [ -e /tmp/devices ]; then
+echo "# Recognized devices:" >$livedbg
+cat /tmp/devices >>$livedbg
+fi
+[ $BOOTDEV ] && DATADEV=$BOOTDEV
+echo $DATADEV > /etc/cfgdev # used in script 'pseudofull-setup'
+echo -e "\n# Booting device:\n$DATADEV
+\n# data found in:\n$DATADIR
+\n# Changes are stored in:\n$CHANGES
+\n# Non standard /rootcopy dir:\n$ROOTCOPY
+\n# Modules activated during boot time:" >>$livedbg
+cat /tmp/modules >>$livedbg
+[ $ISOSRC ] && echo -e "\n# ISO=$ISOSRC" >> $livedbg
+cp -af $livedbg /union/var/log/porteus-livedbg
+
+cat /proc/cmdline
+
+echo "${i}changing root directory" 
+echo "${BOLD}live system is ready now - starting Debian${RST}"
 
 if param init=/bin/systemd; then
 	if [ -f /union/lib/systemd/systemd ]; then
