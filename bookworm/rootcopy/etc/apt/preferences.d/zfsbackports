@@ -1,0 +1,15 @@
+Package: libnvpair3linux
+Pin: release n=bookworm-backports
+Pin-Priority: 700
+
+Package: libuutil3linux
+Pin: release n=bookworm-backports
+Pin-Priority: 700
+
+Package: zfs-dkms
+Pin: release n=bookworm-backports
+Pin-Priority: 700
+
+Package: zfsutils-linux
+Pin: release n=bookworm-backports
+Pin-Priority: 700
