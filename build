@@ -444,12 +444,12 @@ elif [ "$ARCH" = "i386" ]; then
 fi
 
 # Copy /etc/skel/.config to /root/ and /home/guest/
-cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,netsurf,volumeicon,xfce4,mimeapps.list} root/.config/
-cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,netsurf,volumeicon,xfce4,mimeapps.list} home/"$GUESTUSER"/.config/
+cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,gxkb,netsurf,volumeicon,xfce4,mimeapps.list} root/.config/
+cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,gxkb,netsurf,volumeicon,xfce4,mimeapps.list} home/"$GUESTUSER"/.config/
 
 # Copy /etc/skel/Startup to /root/ and /home/guest/
-cp --preserve=mode,timestamps -f etc/skel/Startup/volumeicon root/Startup/
-cp --preserve=mode,timestamps -f etc/skel/Startup/volumeicon home/"$GUESTUSER"/Startup/
+cp --preserve=mode,timestamps -f etc/skel/Startup/{gxkb,volumeicon} root/Startup/
+cp --preserve=mode,timestamps -f etc/skel/Startup/{gxkb,volumeicon} home/"$GUESTUSER"/Startup/
 
 # Create symlinks for devices icons
 for SIZE in 16x16 22x22 24x24 32x32 48x48; do
