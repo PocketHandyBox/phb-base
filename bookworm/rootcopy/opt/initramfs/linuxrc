@@ -29,26 +29,34 @@ echo "${BOLD}Starting init script.${RST}"
 
 # Variables:
 #CFG=`value cfgfile`; [ $CFG ] || CFG=initrd1.xz
+KERNEL=`uname -r`
+
+FOLDER=`value folder`
+if [ -z "$FOLDER" ]; then FOLDER=live
+CMDIR=live
+[ `uname -m` = i686 ] && FOLDER=live32
+else CMDIR=$FOLDER
+fi
+
 FROM=`value from`; ISO=`echo $FROM | egrep ".*\.iso( |\$)"`
+LANGM=`value lang`; [ "$LANGM" = en_US ] && LANGM=""
+
 IP=`value ip | cut -d: -f2`
 NFSPATH=`value nfspath`; [ $NFSPATH ] || NFSPATH=/srv/pxe
 MOPT=`value mopt`; [ $MOPT ] || MOPT="noatime,nodiratime,suid,dev,exec,async"
 CHANGES=`value changes`
 PFULL=`value pfull`
 RAMSIZE=`value ramsize`; [ $RAMSIZE ] || RAMSIZE=60%
-NVIDIA=`value nvidia`; [ "$NVIDIA" = no -o "$NVIDIA" = none ] && NVIDIA=""
+
 LOAD=`multivalue load | sed 's/;/|/g'`; [ $LOAD ] || LOAD=._null
 NOLOAD=`multivalue noload | sed 's/;/|/g'`; [ $NOLOAD ] || NOLOAD=._null
 EXTRAMOD=`multivalue extramod | sed 's/;/ /g'`
 RAMMOD=`multivalue rammod | sed 's/;/|/g'`
 ROOTCOPY=`value rootcopy`
-KERNEL=`uname -r`
-FOLDER=`value folder`
-if [ -z "$FOLDER" ]; then FOLDER=live
-FWDIR=live
-[ `uname -m` = i686 ] && FOLDER=live32
-else FWDIR=$FOLDER
-fi
+
+NVIDIA=`value nvidia`
+[ "$NVIDIA" = no -o "$NVIDIA" = none ] && NVIDIA=""
+
 livedbg=/var/log/livedbg
 LOGFILE=/var/log/boot.log
 
@@ -180,11 +188,11 @@ debug
 find $DATADIR -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >/tmp/modules
 
 # Find kernel modules squashfs
-find $DATADIR -maxdepth 2 -name "*.kmodsfs" ! -path "*/nvidia/*" ! -path "*/rootcopy/*" 2>/dev/null | egrep -ve "firmware|optional" | grep $KERNEL | sort >>/tmp/modules
+find $DATADIR -maxdepth 2 -name "*.kmodsfs" ! -path "*/nvidia/*" ! -path "*/rootcopy/*" 2>/dev/null | egrep -ve "firmware|lang|optional" | grep $KERNEL | sort >>/tmp/modules
 find $DATADIR/optional -name "*.kmodsfs" 2>/dev/null | egrep -e "$LOAD" | grep $KERNEL | sort >>/tmp/modules
 
 # Find firmware modules
-find $DATADEV/$FWDIR/firmware -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+find $DATADEV/$CMDIR/firmware -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
 
 # Detect nvidia video cards on pcie bus
 if [ "$NVIDIA" = detect ]; then
@@ -211,6 +219,9 @@ if [ "$NVIDIA" ] && [ "$NVIDIA" != detect ]; then
 	find $DATADIR/nvidia -name "$NVIDIA*.squashfs" 2>/dev/null >>/tmp/modules
 	NOLOAD="$NOLOAD|mesa-vulkan-drivers"
 fi
+
+# Find lang modules
+[ "$LANGM" ] && find $DATADEV/$CMDIR/lang -name "*.squashfs" 2>/dev/null | grep -i $LANGM >>/tmp/modules
 
 # Find modules and optional modules
 find $DATADIR/modules -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
@@ -313,7 +324,7 @@ fi
 MNTPOINTS=`grep /mnt/ /etc/fstab | cut -d" " -f2`
 [ -d /mnt/nfs ] && MNTPOINTS="/mnt/nfs $MNTPOINTS"
 [ -d /mnt/isoloop ] && MNTPOINTS="/mnt/isoloop $MNTPOINTS"
-if [ $CHNDEV ] && [ -d $CHNDEV ]; then
+if [ "$CHNDEV" != memory ] && [ -d "$CHNDEV" ]; then
 MNTPOINTS="$CHNDEV $MNTPOINTS"
 fi
 
@@ -366,7 +377,6 @@ echo $DATADEV > /etc/cfgdev # used in script 'pseudofull-setup'
 echo -e "\n# Booting device:\n$DATADEV
 \n# data found in:\n$DATADIR
 \n# Changes are stored in:\n$CHANGES
-# CHNDEV=$CHNDEV
 \n# Non standard /rootcopy dir:\n$ROOTCOPY
 \n# Modules activated during boot time:" >>$livedbg
 cat /tmp/modules >>$livedbg
