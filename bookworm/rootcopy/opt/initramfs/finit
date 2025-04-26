@@ -27,7 +27,7 @@ egrep -o "(^| )$1=[^ ]+" /proc/cmdline | cut -d= -f2 | tail -n1
 
 multivalue() {
 val=""
-val=`egrep -o "(^| )$1=[^ ]+" /proc/cmdline | cut -d= -f2` && echo $val | sed 's/ /;/g'
+val=`egrep -o "(^| )$1=[^ ]+" /proc/cmdline | cut -d= -f2` && echo $val | sed 's/ /,/g'
 }
 
 debug() {
