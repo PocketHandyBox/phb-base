@@ -63,7 +63,7 @@ echo "$kernel" | grep -q '^5.10' && K510=yes
 echo -n "copy nvidia.ids"
 mkdir -p $INITRAMFS/$NVIDIR
 [ "$K510" ] || cp /$NVIDIR/nvidia.ids $INITRAMFS/$NVIDIR/
-[ -f /$NVIDIR/nvidia-legacy-390xx.ids ] cp /$NVIDIR/nvidia-legacy-390xx.ids $INITRAMFS/$NVIDIR/
+[ -f /$NVIDIR/nvidia-legacy-390xx.ids ] && cp /$NVIDIR/nvidia-legacy-390xx.ids $INITRAMFS/$NVIDIR/
 [ "$K510" ] && cp /$NVIDIR/nvidia-legacy-340xx.ids $INITRAMFS/$NVIDIR/
 echo " - done"
 fi
