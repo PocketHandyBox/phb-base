@@ -62,6 +62,7 @@ param nocd || for x in /dev/sr*; do blkid $x >>/tmp/devices; done
 param nohd || blkid | egrep -v '/dev/sr|/dev/loop|/dev/mapper' >>/tmp/devices
 dev=`egrep -v 'TYPE="sw|TYPE="LVM|TYPE=".*_raid_member"' /tmp/devices 2>/dev/null | cut -d: -f1 | cut -d/ -f3 | sort | uniq`
 for x in $dev; do
+[ -d /mnt/$x ] && continue
 fs=`grep -w /dev/$x /tmp/devices | egrep -o ' TYPE=[^ ]+' | cut -d'"' -f2`
 if [ $fs = vfat ]; then
 	echo "/dev/$x /mnt/$x vfat $MOPT,umask=0,check=s,utf8 0 0" >> /etc/fstab
@@ -72,7 +73,6 @@ elif [ $fs = ntfs ]; then
 else
 	echo "/dev/$x /mnt/$x $fs $MOPT 0 0" >> /etc/fstab
 fi
-[ -d /mnt/$x ] && continue
 mkdir /mnt/$x
 mount /mnt/$x 2>/dev/null && continue
 modprobe -q $fs && mount /mnt/$x 2>/dev/null && continue
