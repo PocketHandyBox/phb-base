@@ -57,13 +57,14 @@ mknod $INITRAMFS/dev/tty2 c 4 2
 mknod $INITRAMFS/dev/tty3 c 4 3
 mknod $INITRAMFS/dev/tty4 c 4 4
 
-if [ -f /usr/share/nvidia/nvidia.ids ]; then
-echo -n "copy nvidia.ids"
+if [ "`uname -m`" = "x86_64" ] && [ -n "`ls /usr/share/nvidia/nvidia*.ids 2> /dev/null`" ]; then
+NVIDIR=usr/share/nvidia
 echo "$kernel" | grep -q '^5.10' && K510=yes
-mkdir -p $INITRAMFS/usr/share/nvidia
-[ "$K510" ] || cp /usr/share/nvidia/nvidia.ids $INITRAMFS/usr/share/nvidia/
-cp /usr/share/nvidia/nvidia-legacy-390xx.ids $INITRAMFS/usr/share/nvidia/
-[ "$K510" ] && cp /usr/share/nvidia/nvidia-legacy-340xx.ids $INITRAMFS/usr/share/nvidia/
+echo -n "copy nvidia.ids"
+mkdir -p $INITRAMFS/$NVIDIR
+[ "$K510" ] || cp /$NVIDIR/nvidia.ids $INITRAMFS/$NVIDIR/
+[ -f /$NVIDIR/nvidia-legacy-390xx.ids ] cp /$NVIDIR/nvidia-legacy-390xx.ids $INITRAMFS/$NVIDIR/
+[ "$K510" ] && cp /$NVIDIR/nvidia-legacy-340xx.ids $INITRAMFS/$NVIDIR/
 echo " - done"
 fi
 
