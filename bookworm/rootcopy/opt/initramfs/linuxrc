@@ -48,10 +48,10 @@ CHANGES=`value changes`
 PFULL=`value pfull`
 RAMSIZE=`value ramsize`; [ $RAMSIZE ] || RAMSIZE=60%
 
-LOAD=`multivalue load | sed 's/;/|/g'`; [ $LOAD ] || LOAD=._null
-NOLOAD=`multivalue noload | sed 's/;/|/g'`; [ $NOLOAD ] || NOLOAD=._null
-EXTRAMOD=`multivalue extramod | sed 's/;/ /g'`
-RAMMOD=`multivalue rammod | sed 's/;/|/g'`
+LOAD=`multivalue load | sed 's/[,;]/|/g'`; [ $LOAD ] || LOAD=._null
+NOLOAD=`multivalue noload | sed 's/[,;]/|/g'`; [ $NOLOAD ] || NOLOAD=._null
+EXTRAMOD=`multivalue extramod | sed 's/[,;]/ /g'`
+RAMMOD=`multivalue rammod | sed 's/[,;]/|/g'`
 ROOTCOPY=`value rootcopy`
 
 NVIDIA=`value nvidia`
