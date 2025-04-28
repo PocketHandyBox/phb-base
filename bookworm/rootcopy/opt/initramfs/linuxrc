@@ -269,6 +269,12 @@ else
     fi
 fi
 
+# mkdir for pfull=
+if [ $PFULL ]; then
+mkdir -p /union/{dev,etc,media,mnt,proc,run,srv,sys,tmp,var/log}
+chmod 1777 /union/tmp
+fi
+
 # Copy /etc/resolv.conf
 if [ $IP ] && [ -f /etc/resolv.conf ]; then
 	[ -L /union/etc/resolv.conf ] && rm -f /union/etc/resolv.conf
