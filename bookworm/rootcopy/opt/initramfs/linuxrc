@@ -128,7 +128,7 @@ else
     if [ $FROM ]; then
 	locate -d $FROM/$FOLDER
 	if [ $? -eq 0 ]; then
-	    DIR=`echo $LPTH | rev | cut -d/ -f3- | rev`; [ $DIR ] && FOLDER=$DIR/$FOLDER
+	    DIR=`echo $LPTH | rev | cut -d/ -f2- | rev`; [ $DIR ] && FOLDER=$DIR/$FOLDER
 	else
 	    echo "${YELLOW}from= cheatcode is incorrect, press enter to search through all devices${RST}"
 	    read -s; search -d $FOLDER
