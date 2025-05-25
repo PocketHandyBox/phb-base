@@ -145,7 +145,8 @@ fi
 # DATADIR value example /mnt/sda1/live
 [ -d $DATADEV/$FOLDER ] && DATADIR=$DATADEV/$FOLDER || fatal
 
-echo "${i}using data from $DATADIR"
+echo "${i}using data from $DATADIR          "
+# 10 spaces at the end added to overwrite previous message "device not ready yet? delaying X seconds"
 # Create file /mnt/live/etc/homedrv for use in
 # scripts 'makepfile' and 'pseudofull-setup'
 echo $DATADIR > /etc/homedrv
