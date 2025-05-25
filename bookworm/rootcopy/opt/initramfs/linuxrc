@@ -229,6 +229,17 @@ fi
 find $DATADIR/modules -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
 find $DATADIR/optional -name "*.squashfs" 2>/dev/null | egrep -e "$LOAD" | sort >>/tmp/modules
 
+# Find /phb/modules or /phb/modules32
+if [ `uname -m` = i686 ]; then search -d /phb/modules32 && PHBMOD=modules32
+	echo "${i}searching for additional modules in /phb/modules32"
+elif [ "$FOLDER" != phb ]; then search -d /phb/modules && PHBMOD=modules
+	echo "${i}searching for additional modules in /phb/modules"
+fi
+if [ "$PHBMOD" ]; then
+	find /mnt/$DEV/phb/$PHBMOD -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+	find /mnt/$DEV/phb/$PHBMOD -name "*.kmodsfs" 2>/dev/null | egrep -ve "$NOLOAD" | grep $KERNEL | sort >>/tmp/modules
+fi
+
 # Find extra modules
 if [ "$EXTRAMOD" ]; then
 for EXTFOLDER in $EXTRAMOD; do
