@@ -267,19 +267,24 @@ IncludeModules
 
 debug
 
-# Copy /rootcopy folder:
-if param norootcopy; then
-    ROOTCOPY=none
-    echo "${i}skipping /rootcopy directory"
+# Copy /rootcopy folder
+if param norootcopy ; then
+	ROOTCOPY=none
+	echo "${i}skipping /rootcopy directory"
+elif [ $ROOTCOPY ] && locate -d $ROOTCOPY ; then
+	echo "${i}copying content of $ROOTCOPY directory"
+	cp -af /mnt/$DEV/$LPTH/. /union/. 2>/dev/null
+elif [ $ROOTCOPY ]; then
+	fail $ROOTCOPY
+	ROOTCOPY=none
+elif search -d /phb/rootcopy ; then
+	ROOTCOPY=/phb/rootcopy
+	echo "${i}copying content of /mnt/$DEV/phb/rootcopy directory"
+	cp -af /mnt/$DEV/phb/rootcopy/. /union/. 2>/dev/null
 else
-    if [ $ROOTCOPY ]; then
-	locate -d $ROOTCOPY
-	if [ $? -eq 0 ]; then echo "${i}copying content of $ROOTCOPY directory"; cp -af /mnt/$DEV/$LPTH/. /union/. 2>/dev/null; else fail $ROOTCOPY; ROOTCOPY=none; fi
-    else
 	ROOTCOPY=none
 	echo "${i}copying content of $DATADIR/rootcopy directory"
 	cp -af $DATADIR/rootcopy/. /union/. 2>/dev/null
-    fi
 fi
 
 # mkdir for pfull=
