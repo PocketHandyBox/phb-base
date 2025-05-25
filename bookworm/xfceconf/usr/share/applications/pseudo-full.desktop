@@ -9,3 +9,4 @@ Icon=open-menu
 Terminal=false
 StartupNotify=false
 Categories=System;
+Hidden=true
