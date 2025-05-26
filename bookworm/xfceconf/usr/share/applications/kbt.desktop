@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=kbt
+Comment=Keyboard tester in terminal
+TryExec=kbt
+Exec=env WNAME=kbt WICON=preferences-desktop-keyboard-shortcuts WGEOM=118x28 run-in-terminal kbt
+Icon=preferences-desktop-keyboard-shortcuts
+Terminal=false
+StartupNotify=false
+Categories=Utility;
