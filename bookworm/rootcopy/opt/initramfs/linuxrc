@@ -290,8 +290,9 @@ fi
 
 # mkdir for pfull=
 if [ $PFULL ]; then
-mkdir -p /union/{dev,etc,media,mnt,proc,run,srv,sys,tmp,var/log}
-chmod 1777 /union/tmp
+U=/union
+mkdir -p $U/dev $U/etc $U/media $U/mnt $U/proc $U/run $U/srv $U/sys $U/tmp $U/var/log
+chmod 1777 $U/tmp
 fi
 
 # Copy /etc/resolv.conf
