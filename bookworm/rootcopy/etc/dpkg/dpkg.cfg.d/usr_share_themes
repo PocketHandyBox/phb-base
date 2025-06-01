@@ -1,5 +1,6 @@
 path-exclude=/usr/share/backgrounds/xfce/*.jpg
 path-exclude=/usr/share/backgrounds/xfce/*.png
+path-exclude=/usr/share/backgrounds/xfce/*.svg
 path-exclude=/usr/share/themes/Bright/*
 path-exclude=/usr/share/themes/Daloa/*
 path-exclude=/usr/share/themes/Kokodi/*
