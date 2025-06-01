@@ -1,0 +1,176 @@
+#!/bin/bash
+
+# gpu-switch-launcher
+# by gumanzoy https://github.com/PocketHandyBox
+
+export __GL_SYNC_TO_VBLANK=0
+
+gallium_hud () {
+export GALLIUM_HUD=".x5.y30.w900.h180fps,.w900.h200GPU-load+temperature"
+}
+
+setup_gputest () {
+SETUP=`yad --title='Geeks3D GpuTest' --window-icon=system-run --width=300 --form --fixed \
+ --field=GpuTest::CB 'FurMark!GiMark!PixMark_Piano!PixMark_Volplosion!Plot3D!TessMark_x8!TessMark_x16!TessMark_x32!TessMark_x64!Triangle' \
+ --field='Show gallium HUD (only on AMD GPU)\nGPU-load and temperature:CHK' 'TRUE' \
+ --field="GPU: <b>$GPUUSED</b>:LBL" \
+ $GPUBUTTON --button=Quit\!gtk-quit:1 --button=Start\!gtk-ok:0`
+ret=$? ; [ "$ret" = 1 -o "$ret" = 252 ] && exit
+case `echo $SETUP | cut -d'|' -f1` in
+FurMark) TEST=fur ;;
+GiMark) TEST=gi ;;
+PixMark_Piano) TEST=pixmark_piano ;;
+PixMark_Volplosion) TEST=pixmark_volplosion ;;
+Plot3D) TEST=plot3d ;;
+TessMark_x8) TEST=tess_x8 ;;
+TessMark_x16) TEST=tess_x16 ;;
+TessMark_x32) TEST=tess_x32 ;;
+TessMark_x64) TEST=tess_x64 ;;
+Triangle) TEST=triangle ;;
+esac
+[ "`echo $SETUP | cut -d'|' -f2`" = TRUE ] && gallium_hud
+}
+
+run_gputest () {
+[ -x GpuTest ] || cd /opt/gputest
+exec ./GpuTest /test=$TEST /width=1024 /height=640 "$@"
+}
+
+setup_furmark () {
+SETUP=`yad --title='Geeks3D FurMark2' --window-icon=system-run --width=300 --form --fixed \
+ --field='Graphics Test::CB' 'FurMark_GUI!FurMark_GL!FurMark_VK!FurMark_Knot_GL!FurMark_Knot_VK' \
+ --field="GPU: <b>$GPUUSED</b>:LBL" \
+ $GPUBUTTON --button=Quit\!gtk-quit:1 --button=Start\!gtk-ok:0`
+ret=$? ; [ "$ret" = 1 -o "$ret" = 252 ] && exit
+case `echo $SETUP | cut -d'|' -f1` in
+FurMark_GUI) TEST=GUI ;;
+FurMark_GL) TEST=furmark-gl ;;
+FurMark_VK) TEST=furmark-vk ;;
+FurMark_Knot_GL) TEST=furmark-knot-gl ;;
+FurMark_Knot_VK) TEST=furmark-knot-vk ;;
+esac
+}
+
+run_furmark () {
+[ -x furmark ] || cd /opt/furmark
+[ "$TEST" = GUI ] && exec ./FurMark_GUI
+exec ./furmark --disable-demo-options --gpu-index $GPUN --demo $TEST "$@"
+}
+
+setup_generic_app () {
+SETUP=`yad --title="$APP" --window-icon=system-run --width=300 --form --fixed \
+ --field='Show gallium HUD (only on AMD GPU)\nGPU-load and temperature:CHK' 'TRUE' \
+ --field="GPU: <b>$GPUUSED</b>:LBL" \
+ $GPUBUTTON --button=Quit\!gtk-quit:1 --button=Start\!gtk-ok:0`
+ret=$? ; [ "$ret" = 1 -o "$ret" = 252 ] && exit
+[ "`echo $SETUP | cut -d'|' -f1`" = TRUE ] && gallium_hud
+}
+
+run_unigine_heaven () {
+[ -x bin/heaven_x64 ] && cd bin
+[ -x heaven_x64 ] || cd /opt/unigine-heaven/bin
+exec ./browser_x64 -config ../data/launcher/launcher.xml "$@"
+}
+
+GPUN=0
+driver_name () {
+GPU[$GPUN]=`LANG=C ls /sys/class/drm/$card/device/driver/module/drivers 2>/dev/null | grep pci: | head -n1 | cut -d: -f2`
+GPUN=$(($GPUN+1))
+}
+
+# Look for boot_vga first
+for card in `LANG=C ls -d /sys/class/drm/card? | rev | cut -d/ -f1 | rev` ; do
+if [ -f /sys/class/drm/$card/device/boot_vga ] && [ `cat /sys/class/drm/$card/device/boot_vga` = 1 ]; then
+	driver_name
+	BOOTVGA=$card
+	break
+fi
+done
+
+# Add all other cards
+for card in `LANG=C ls -d /sys/class/drm/card? | rev | cut -d/ -f1 | rev` ; do
+[ "$card" = "$BOOTVGA" ] && continue
+driver_name
+done
+
+# Check for nvidia legacy driver
+if egrep -qe "nv340|nv390" /mnt/live/tmp/modules 2>/dev/null; then
+	NVIDIA=legacy
+	if grep -q i915 /proc/modules && [ "${GPU[1]}" = nvidia ]; then
+		GPUUSED="card1: nvidia-legacy"
+	else
+		GPUUSED="card0: nvidia-legacy"
+	fi
+elif [ "${#GPU[@]}" = 1 ] && [ "${GPU[0]}" = nvidia ]; then
+	GPUUSED="card0: nvidia"
+elif [ "${#GPU[@]}" = 1 ]; then
+	GPUUSED="card0: ${GPU[0]}"
+fi
+
+# Try to auto switch to discrete GPU
+GPUN=0
+if [ "$NVIDIA" != legacy ] && [ "${#GPU[@]}" -ge 2 ]; then
+for card in ${GPU[@]} ; do
+	if [ "${GPU[$GPUN]}" = nvidia ]; then
+		GPUUSED="card${GPUN}: nvidia"
+		break
+	elif [ "$GPUN" -gt 0 ]; then
+		GPUUSED="card${GPUN}: ${GPU[$GPUN]}"
+		break
+	fi
+	GPUN=$(($GPUN+1))
+done
+GPUBUTTON="--button=Switch-GPU:2"
+fi
+
+# App
+if command -v "$1" &>/dev/null; then APP="$1"; shift; setup_generic_app
+else case `basename $0` in
+gputest) APP=gputest ;;
+furmark) APP=furmark ;;
+unigine-heaven) APP=unigine-heaven ;;
+*) if [ -x GpuTest ]; then APP=gputest
+elif [ -x furmark ]; then APP=furmark
+elif [ -x heaven_x64 ] || [ -x bin/heaven_x64 ]; then APP=unigine-heaven
+fi ;;
+esac
+fi
+
+# Run setup for app
+[ "$APP" = gputest ] && setup_gputest
+[ "$APP" = furmark ] && setup_furmark
+[ "$APP" = unigine-heaven ] && setup_generic_app
+
+# Show GPU switch dialog
+if [ "$ret" = 2 ]; then
+GPUX=0
+for card in ${GPU[@]} ; do
+	if [ "$GPUX" = 0 ]; then GPUS="card${GPUX}: ${GPU[$GPUX]}"
+	elif [ "$GPUN" = "$GPUX" ]; then GPUS="$GPUS"'!'"^card${GPUX}: ${GPU[$GPUX]}"
+	else GPUS="$GPUS"'!'"card${GPUX}: ${GPU[$GPUX]}"
+	fi
+	GPUX=$(($GPUX+1))
+done
+SETUP2=`yad --title=Switch-GPU --window-icon=system-run --form --fixed --field=":CB" "$GPUS" \
+ --button=Quit\!gtk-quit:1 --button=Start\!gtk-ok:0`
+[ "$?" != 0 ] && exit
+card=`echo $SETUP2 | cut -d: -f1` && GPUN=${card:4}
+fi
+
+# Switch GPU if GPUN != 0
+if [ "$GPUN" -gt 0 ] && [ "${GPU[$GPUN]}" = nvidia ]; then
+	export __NV_PRIME_RENDER_OFFLOAD=$GPUN
+	export __GLX_VENDOR_LIBRARY_NAME=nvidia
+elif [ "$GPUN" -gt 0 ]; then
+	export DRI_PRIME=$GPUN
+fi
+
+# Run app
+case "$APP" in
+gputest) run_gputest ;;
+furmark) run_furmark ;;
+unigine-heaven) run_unigine_heaven ;;
+*) if [ -x "$APP" ] || [ -x `which "$APP"` ]; then
+exec "$APP" "$@"
+fi ;;
+esac
