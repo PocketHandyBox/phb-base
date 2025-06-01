@@ -574,6 +574,10 @@ if [ -n "$LOCALE" ]; then
 	echo "LANG=$LOCALE" > chroot/etc/default/locale
 fi
 
+if [ -n "$LOGO" ]; then
+	sed -i s/phblogo/"$LOGO"/ chroot/etc/rc.local
+fi
+
 if [ "$(cat chroot/etc/X11/default-display-manager 2> /dev/null)" ]; then
 	echo -e "\e[0;36mIt looks like you have a display-manager installed\e[0m"
 	cat chroot/etc/X11/default-display-manager
