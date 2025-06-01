@@ -576,6 +576,7 @@ fi
 
 if [ -n "$LOGO" ]; then
 	sed -i s/phblogo/"$LOGO"/ chroot/etc/rc.local
+	sed -i s/phblogo/"$LOGO"/g chroot/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
 fi
 
 if [ "$(cat chroot/etc/X11/default-display-manager 2> /dev/null)" ]; then
