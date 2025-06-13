@@ -1,0 +1,74 @@
+#!/bin/dash
+
+# logout-yad choice to save session or not in case of shutdown/reboot
+# by gumanzoy https://github.com/PocketHandyBox
+
+# Use code from wmpoweroff/wmreboot by fredx181
+# https://github.com/doglinux/bookworm/raw/master/amd64/porteusbootscripts_1.2.0_all.deb
+
+if [ "`whoami`" != "root" ]; then
+	which pkexec > /dev/null && exec pkexec logout-yad
+	echo "This script should be run as root"
+	exit 1
+fi
+
+PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+save_session_fn() {
+#if [ -f /mnt/live/etc/nochanges ] && [ ! -f /tmp/savefile.txt ]; then
+#yad --title="Create savefile" --window-icon=document-save --center --button=No\!gtk-no:1 --button=Yes\!gtk-yes:0 \
+# --text="Do you want to save your changes in a savefile?"
+#[ $? -eq 0 ] && makepfile
+#fi
+
+if [ -f /mnt/live/tmp/changes-exit ]; then
+yad --title="Save Session" --window-icon=document-save --timeout=30 --timeout-indicator bottom \
+ --sticky --fixed --center --on-top --skip-taskbar --close-on-unfocus \
+ --text="Do you want to save your changes?\nIf not, click the 'No' button within 30 seconds" \
+ --button=Cancel\!gtk-close:1 --button=No\!gtk-no:2 --button=Yes\!gtk-yes:0
+ret=$?
+case $ret in
+1|252)
+exit
+;;
+2)
+touch /mnt/live/tmp/changesx
+;;
+0|70)
+save2flash
+touch /mnt/live/tmp/changesx
+touch /mnt/live/tmp/sessionsaved
+;;
+esac
+fi
+
+if [ -f /tmp/savefile.txt ] && [ -f /mnt/live/etc/nochanges ]; then
+save2flash
+touch /mnt/live/tmp/changesx
+touch /mnt/live/tmp/sessionsaved
+fi
+
+umount -l /mnt/live/memory/images/changes-exit 2> /dev/null
+}
+
+if [ "$1" = reboot ]; then
+save_session_fn
+reboot
+elif [ "$1" = poweroff ]; then
+save_session_fn
+poweroff
+elif [ "$1" = suspend ]; then
+save_session_fn
+pm-suspend
+elif [ -f /mnt/live/etc/nochanges ] && [ ! -f /tmp/savefile.txt ]; then
+yad --title Logout --window-icon=system-shutdown --timeout=30 --borders=10 \
+ --sticky --fixed --center --on-top --skip-taskbar --close-on-unfocus --form --columns=2 \
+ --field='Create savefile!:BTN' makepfile --field='Do you want to save your changes in a savefile?:LBL' \
+ --button=Exit\ X\!system-logout:'pkill X' --button=Restart\!system-reboot:'logout-yad reboot' \
+ --button=Shutdown\!system-shutdown:'logout-yad poweroff' --button=Suspend\!system-suspend:'logout-yad suspend'
+else
+yad --title Logout --window-icon=system-shutdown --timeout=30 --borders=10 \
+ --sticky --fixed --center --on-top --skip-taskbar --close-on-unfocus \
+ --button=Exit\ X\!system-logout:'pkill X' --button=Restart\!system-reboot:'logout-yad reboot' \
+ --button=Shutdown\!system-shutdown:'logout-yad poweroff' --button=Suspend\!system-suspend:'logout-yad suspend'
+fi

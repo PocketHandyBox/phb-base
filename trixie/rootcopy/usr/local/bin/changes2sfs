@@ -1,0 +1,264 @@
+#!/bin/bash
+
+. /usr/local/lib/cleanup
+
+#set -x
+# RemasterCow, script for creating module from changes for DebianDog by Fred (fredx181) and Toni (saintless)
+# april 11 2015, added /tmp and / to the choices for where to create the module
+# febr 10 2016 delete doc and man files instead of zerosizing them.
+
+# Modified by gumanzoy https://github.com/PocketHandyBox
+# Renamed from remastercow to changes2sfs
+# Add . /usr/local/lib/cleanup
+# Not need to enter module name twice. Extension .squashfs added to WRKDIR instead
+# Fixes for GTK3 version of yad
+
+YADTITLE="Changes2sfs (create module from changes)"
+
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
+fi
+
+dpkg --purge `dpkg --get-selections | grep deinstall | cut -f1` 2> /dev/null
+
+
+	if [ -f /mnt/live/tmp/modules ]; then
+if [ -f /mnt/live/tmp/changes-exit ]; then
+msg="You are running the system with boot option: 'changes=EXIT:/'
+Note that the changes made in this recent session will not be included in the module."
+echo -e "$msg" | yad --title="$YADTITLE" --window-icon=tap-create --width=400 \
+ --height=150 --center --text-info --wrap --button=OK\!gtk-ok
+CHNGS="/mnt/live/memory/images/changes-exit/upperdir"
+else
+CHNGS="/mnt/live/memory/changes/upperdir"
+fi
+	else
+CHNGS=/live/cow
+	fi
+
+info_dpkg_reg() {
+INFODPKGREG="Question 1: What happens if I leave the default Disable dpkg registration box checked?
+Answer 1: The information for the packages included in this module will stay hidden for the system but the module will work any time you decide to load it. It will be safe also to load it on different debian system. The only disadvantage is some dependencies in this module needed for later created modules will be downloaded again and included also in the other module, but this will make possible for every module to work without the need of dependency included in another module. It is recommended to leave it this way.
+
+Question 2: What happens if I uncheck Disable dpkg registration box?
+Answer 2: Dpkg registration information from this module will overwrite the information in the main module. It is not a problem if you load this module every time on boot. You need to be sure it is the last module loaded from the system on boot by naming with higher number (02, 03, 04-my-changes.squashfs for example) and it is best to place it inside /live folder. But if you are going to load the module from time to time and like to share it with others safely, do not uncheck the box.
+
+More general information what Disable dpkg registration do:
+It simply renames '/var/lib/dpkg/info', '/var/lib/dpkg/status', '/var/lib/dpkg/available' adding 'new' at the end."
+
+echo "$INFODPKGREG" | yad --title='Info dpkg registration' --window-icon=tap-create \
+ --width=600 --height=400 --text-info --wrap --button=Close\!gtk-close
+}
+export -f info_dpkg_reg
+
+devs="$(blkid --match-tag TYPE  | grep /dev | grep -E -v "swap|ntfs|vfat"  | sort | cut -d" " -f1 | grep -E -v "/loop|sr0|swap" | sed 's|/dev/||g;s|:||g')"
+echo $devs
+DEVS=`echo $devs | sed 's/ /!/g'`
+SETUP=`yad --title="$YADTITLE" --window-icon=tap-create --width=450 \
+ --text="Create a module from the changes you made to the system.\n\n<u>Note: Manually loaded squashfs modules will be deactivated.</u>\n\nChoose where to create new module, must be on linux filesystem, NTFS or FAT filesytems are excluded.\n\nFor no dpkg registration check the box 'Disable dpkg registration'" \
+ --form \
+ --field="*** Click for info about dpkg registration ***:BTN" "bash -c info_dpkg_reg" \
+ --field="Choose where to create new module::CB" "$DEVS!/tmp" \
+ --field="Type custom name of working directory\n(e.g. mychanges):" "" \
+ --field="Disable dpkg registration:CHK" "TRUE" \
+ --button=Quit\!gtk-quit:1 --button=OK\!gtk-ok:0`
+ret=$?
+[[ $ret -eq 1 ]] && exit
+
+DRV="`echo $SETUP | cut -d "|" -f 2`"
+WRKDIR="`echo $SETUP | cut -d "|" -f 3`"
+DISDPKG="`echo $SETUP | cut -d "|" -f 4`"
+
+SFS="$WRKDIR".squashfs
+
+echo $DRV
+echo $WRKDIR
+echo $SFS
+echo $DISDPKG
+if [ -z "$DRV" ] || [ -z "$WRKDIR" ]; then
+yad --title="$YADTITLE" --window-icon=tap-create --center --text="You probably did not fill in all fields, please run changes2sfs again." --button=Close\!gtk-close
+exit 0
+fi
+
+# Check for choice /tmp, / or drive and set new variable 'WORK' and 'SQFS'
+	if [ "$DRV" = "/tmp" ]; then
+WORK="/tmp/$WRKDIR"
+SQFS="/tmp/$SFS"
+	elif [ "$DRV" = "/" ]; then
+WORK="/$WRKDIR"
+SQFS="/$SFS"
+	else
+WORK="/mnt/$DRV/$WRKDIR"
+SQFS="/mnt/$DRV/$SFS"
+mkdir "/mnt/$DRV" 2> /dev/null
+mount /dev/$DRV /mnt/$DRV 2> /dev/null
+	fi
+
+if [ -d "$WORK" ]; then
+yad --title="$YADTITLE" --window-icon=tap-create --center --text="Directory '$WORK' already exists,\nPlease rename and run again." --button=Close\!gtk-close
+exit 0
+fi
+mkdir -p "$WORK" # Make new directory.
+
+if [ -e "$SQFS" ]; then
+yad --title="$YADTITLE" --window-icon=tap-create --center --text="Module: '$SQFS' already exists,\nPlease rename and run again." --button=Close\!gtk-close
+exit 0
+fi
+
+if [ -f /mnt/live/tmp/modules ]; then
+CHNG=/mnt/live/memory/images/SFS  # porteus-boot
+else
+CHNG=/mnt/SFS  # live-boot
+fi
+
+if [ "$(ls $CHNG 2> /dev/null)" ]; then
+    for BUNDLE in $(ls $CHNG); do
+ FILES=$(find $CHNG/$BUNDLE ! -type d | sed "s|$CHNG/$BUNDLE||")
+umount $CHNG/$BUNDLE-rw && rmdir $CHNG/$BUNDLE-rw
+umount $CHNG/$BUNDLE && rmdir $CHNG/$BUNDLE  # unmount squashfs, now check for broken symlinks to be removed...
+    if [ $? -eq 0 ]; then
+while read line; do
+ if [ ! -e "$line" ]; then
+# rename possibly existing .dpkg-new files
+if [ -f "${line}".dpkg-new ]; then
+mv -f "$line".dpkg-new "${line}"
+continue
+fi
+# send to filelist to be executed with xargs below
+[ -L "$line" ] && echo "$line" >> /tmp/${BUNDLE}.txt
+ fi
+done <<< "$FILES"
+xargs -d '\n' -a /tmp/${BUNDLE}.txt rm   # remove symlinks
+
+# remove leftover (empty) directories
+tac /etc/SFS/${BUNDLE}.txt | while read line; do
+if [ -d "$line" ]; then
+rmdir "$line" 2> /dev/null 
+fi
+done
+
+rm -f /etc/SFS/${BUNDLE}.txt
+rm -f /tmp/${BUNDLE}.txt
+cd $CHNG/$BUNDLE-w/
+find . -type d -exec mkdir -p /"{}" \;
+find . -type f -exec mv -f "{}" /"{}" \;
+cd -
+rm -rf $CHNG/$BUNDLE-w/
+rm -rf $CHNG/$BUNDLE-temp
+echo "Module $BUNDLE deactivated"
+    fi
+    done
+fi
+
+# running(){ ps $1 | grep $1 >/dev/null; }
+
+######### Start progress bar, copying #########
+TOTAL=$(du -cbs --apparent-size "$CHNGS" 2> /dev/null | awk 'END {print $1}')
+echo $TOTAL
+echo "Copying files to $WORK..."
+
+cp -a $CHNGS/* "$WORK" &
+
+CPPID=$(ps -eo pid,cmd | grep -v grep | grep "cp -a $CHNGS" | awk '{ print $1 }')
+trap "kill $CPPID" 1 2 15
+#CPPID=$!
+
+trap "kill $CPPID" 2 15
+
+(
+PERC=0
+   while [ $PERC ]; do    
+      COPY=$(du -cbs --apparent-size "$WORK" 2> /dev/null | awk 'END {print $1}')
+       
+      PERC=$((COPY*100/TOTAL))
+       if [ $PERC -le 100 ]; then
+       echo $PERC >> /tmp/changes2sfs_progress # For checking later if cancelled
+       echo $PERC 2> /dev/null
+       fi
+
+      sleep 1
+# Identify existing process ID of cp and yad progress bar
+CPPID=$(ps -eo pid,cmd | grep -v grep | grep "cp -a $CHNGS" | awk '{ print $1 }')
+YADPID=$(ps -eo pid,cmd | grep -v grep | grep "yad --title=$YADTITLE" | awk '{ print $1 }' | tr '\n' ' ')
+
+   if [ ! "$YADPID" ]; then # Check if progress window cancelled 
+   kill $CPPID 2> /dev/null
+   sleep 2
+   break
+   fi
+	[ -z "$CPPID" ] && break
+
+   done   
+   if [ "$YADPID" ]; then # Do below only if progress window has not been cancelled 
+   echo 99 >> /tmp/changes2sfs_progress
+   echo 99 2> /dev/null
+   sleep 1
+   echo 100 >> /tmp/changes2sfs_progress
+   echo 100 2> /dev/null
+   fi 
+) | yad --title="$YADTITLE" --window-icon=tap-create --width=400 --height=100 --center --progress --auto-close --text="Copying files to $WORK..." --button=Cancel\!gtk-cancel
+
+    if [ "$(tail -n1 /tmp/changes2sfs_progress)" -lt 100 ] ; then # If cancelled
+echo cancelled
+rm -f /tmp/changes2sfs_progress
+yad --title="Creating module Cancelled" --window-icon=tap-create --width=300 --height=200 --center --text="The working directory will be deleted within a minute after closing this window.\n\n$WORK" --button=Close\!gtk-close
+if [ -d "$WORK" ]; then
+echo "Removing $WORK..."
+rm -rf "$WORK"
+fi
+exit
+   fi
+
+rm -f /tmp/changes2sfs_progress
+######### End progress bar, copying #########
+
+echo "Cleaning..."
+
+if [ "$DISDPKG" = "TRUE" ]; then
+mv "$WORK"/var/lib/dpkg/info "$WORK"/var/lib/dpkg/infonew
+mv "$WORK"/var/lib/dpkg/status "$WORK"/var/lib/dpkg/statusnew
+mv "$WORK"/var/lib/dpkg/available "$WORK"/var/lib/dpkg/availablenew
+fi
+
+cd "$WORK"
+cleanup 2> /dev/null
+
+#    chown -R man:root usr/share/man
+
+grep -sq ^MKSFSCMP= /root/*.conf && \
+MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
+
+msg="Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n
+For example: ~/.mozilla
+Open filemanager in $WORK to do so.
+Press OK to finally create: $SQFS"
+
+echo -e "$msg" | yad --title="$YADTITLE" --window-icon=tap-create --width=450 \
+ --height=200 --center --text-info --wrap --button=OK\!gtk-ok
+
+xterm -T "$YADTITLE" -e "mksquashfs "$WORK" "$SQFS" -b 1M ""$MKSFSCMP"
+
+# Remove working directory?
+if [ -f "$SQFS" ]; then
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+ --text="Done creating '$SFS.squashfs'\nDo you want to remove '$WORK'?" \
+ --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
+ret=$?
+[[ $ret -ne 0 ]] && exit 0
+if [[ -n "$SFS" && -n "$DRV" ]]; then
+rm -rf "$WORK"
+fi
+else
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+ --text="Error: '$SQFS' is not created.\nDo you want to remove '$WORK'?" \
+ --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
+ret=$?
+[[ $ret -ne 0 ]] && exit 0
+if [[ -n "$SFS" && -n "$DRV" ]]; then
+rm -rf "$WORK"
+fi
+fi
+exit 0

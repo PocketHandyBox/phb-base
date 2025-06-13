@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Add new user
+Comment=
+TryExec=addnewuser
+Exec=addnewuser
+Icon=address-book-new
+Terminal=false
+StartupNotify=false
+Categories=System;

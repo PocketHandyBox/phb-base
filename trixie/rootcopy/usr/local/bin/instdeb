@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# instdeb: script to install local deb(s) with dependencies from filemanager
+# by gumanzoy https://github.com/PocketHandyBox
+
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
+fi
+
+export DEBS="$@"
+export DEBSNAME="$(for DEB in `basename -a $DEBS`; do echo -n $DEB' '; done)"
+
+apt_install() {
+echo -e "instdeb \E[33m$DEBSNAME"
+echo -e "\E[32m\nInstallation starting . . ."
+tput sgr0
+APT_ERRMSG=`apt-get -s -y --allow-downgrades install $DEBS`
+if [ "$?" = 0 ]; then
+	apt --allow-downgrades --reinstall install $DEBS
+	[ "$?" = 0 ] && echo -en "\nDeb(s): \e[32m$DEBSNAME\n\e[1m\nInstalled. "
+else
+	echo "$APT_ERRMSG"
+	echo -en "\nExit. "
+fi
+read -s -n 1 -p "Press any key to close . . ."
+}
+export -f apt_install
+
+xterm +aw -T instdeb -e /bin/bash -c apt_install

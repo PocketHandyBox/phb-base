@@ -1,0 +1,78 @@
+#!/bin/bash
+
+#HERE="$(dirname "$(readlink -f "$0")")"
+export HERE="$(cat /mnt/live/etc/homedrv)"
+
+run_in_term () {
+	if [ -f /mnt/live/etc/pfull-compat ]; then  # check if initrd support for pseudo-full
+echo -e "\e[0;36mThis will create a pseudo-full directory 'pfull' in:\n $HERE\n and unsquash 01-filesystem.squashfs to pfull/filesystem\033[0m"
+echo -e "\e[0;36mIt will work only when $HERE is on a Linux filesystem, e.g. ext3\033[0m"
+echo
+read -s -n 1 -p "Press any key to continue"
+echo
+  if grep -q pfull= /proc/cmdline; then
+  msg="Booted with the pfull= option\nPlease reboot, but then without the pfull= option,\nto be able to create a new pseudo-full install. Exiting... "
+  echo -e "\e[0;31m"$msg"\033[0m"
+read -s -n 1 -p "Press any key to exit"
+  sleep 1
+  exit 0
+
+  else
+	    echo "Testing filesystem on "$HERE" for posix compatibility..."
+touch "$HERE"/._test1
+	    ln -s "$HERE"/._test1 "$HERE"/._test2 2>/dev/null && chmod +x "$HERE"/._test1 2>/dev/null && [ -x "$HERE"/._test1 ] && chmod -x "$HERE"/._test1 2>/dev/null && [ ! -x "$HERE"/._test1 ] && rm -f "$HERE"/._test1 "$HERE"/._test2
+ret=$? 
+ if [ $ret -ne 0 ]; then
+echo -e "$HERE needs to be on a Linux filesystem\n e.g ext2/ext3/ext4\n Exiting..."
+sleep 3
+exit
+ fi
+echo -e "Filesystem is posix compatible..."
+if [ -n "$(find "$HERE" -maxdepth 1 -type f -size +1000c -name 01-filesystem.squashfs)" ]; then
+	if [ -d "$HERE"/pfull/filesystem/var ] && [ -d "$HERE"/pfull/filesystem/usr ] && [ -d "$HERE"/pfull/filesystem/root ]; then
+echo -e "\e[0;33mDirectory 'pfull' already exists \n It seems that you did setup a pseudo-full install already\033[0m"
+echo -e "\e[0;33mBut you can create a new 'pfull' directory \n To be able to continue, contents need to be removed first\033[0m"
+
+read -p "Are you sure to delete contents of directory pfull? (Enter=yes) (Y/n)?" choice
+
+case "$choice" in 
+  y|Y|"")
+rm -fr "$HERE"/pfull
+mkdir -p "$HERE"/pfull/workdir
+unsquashfs -f -d "$HERE"/pfull/filesystem "$HERE"/01-filesystem.squashfs
+;;
+  n|N)
+echo "Exiting..."
+sleep 3
+exit 0
+;;
+*)
+echo -e "\e[0;31mNot a valid choice, exiting....\033[0m"
+sleep 3
+exit 0
+;;
+esac
+        else
+mkdir -p "$HERE"/pfull/workdir
+unsquashfs -f -d "$HERE"/pfull/filesystem "$HERE"/01-filesystem.squashfs
+        fi
+CFGDEV=$(cat /mnt/live/etc/cfgdev 2> /dev/null)
+NHERE=$(echo "$HERE" | sed "s#$CFGDEV##; s#//#/#g")
+echo -e "\e[0;33mPseudo-full directory 'pfull' created\nNow you can boot with e.g. pfull=$NHERE (instead of changes=...)\nOr with pfull=EXIT:$NHERE (choice to save or not at shutdown)\033[0m"		
+else
+	msg="Sorry, could not find a usable 01-filesystem.squashfs"
+        echo -e "$msg"
+        sleep 3
+	exit 0
+fi
+  fi
+	else
+echo -e "\e[0;33mThe initrd you booted with doesn't support pseudo-full install\nExiting...\033[0m"
+sleep 3
+exit
+	fi
+read -s -n 1 -p "Press any key to exit"
+exit
+}
+export -f run_in_term
+xterm -T "Setup Pseudo-full install" -si -sb -fg white -bg SkyBlue4 -geometry 80x22 -e /bin/bash -c run_in_term

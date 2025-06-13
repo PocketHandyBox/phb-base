@@ -1,0 +1,23 @@
+#!/bin/dash
+
+# howbig: script to show yad dialog with 'du --apparent-size' output from filemanager
+# by gumanzoy https://github.com/PocketHandyBox
+
+print_file() {
+echo "$LINE" | cut -f2
+}
+
+print_to_yad() {
+du -chs -t 1K --apparent-size "$@" | while read LINE; do
+#print size
+		echo -n "$LINE" | cut -sz -f1
+#print space+tab
+		echo -n ' \t'
+#print filename
+#without path
+		basename "$(print_file)"
+done
+}
+
+print_to_yad "$@" | exec yad --title="How Big?" --window-icon=tool-measure \
+ --width=400 --height=350 --mouse --text-info --tail --button=Close\!gtk-close

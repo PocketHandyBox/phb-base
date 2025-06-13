@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Install .deb(s)
+TryExec=instdeb
+Exec=instdeb %F
+Icon=deb
+Terminal=false
+StartupNotify=false
+Categories=System;
+NoDisplay=true
+MimeType=application/x-deb;

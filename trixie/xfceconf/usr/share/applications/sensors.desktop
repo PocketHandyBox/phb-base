@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=watch sensors
+Comment=Hardware Sensors
+TryExec=sensors
+Exec=env WNAME=HardwareSensors WICON=utilities-system-monitor WGEOM=60x40 run-in-terminal watch -t -n1 'sensors \; grep MHz /proc/cpuinfo'
+Icon=utilities-system-monitor
+Terminal=false
+StartupNotify=false
+Categories=HWMon;

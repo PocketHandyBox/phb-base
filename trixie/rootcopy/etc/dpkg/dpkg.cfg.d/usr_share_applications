@@ -1,0 +1,5 @@
+path-exclude=/usr/share/applications/chromium.desktop
+path-exclude=/usr/share/applications/htop.desktop
+path-exclude=/usr/share/applications/mc.desktop
+path-exclude=/usr/share/applications/nvtop.desktop
+path-exclude=/usr/share/applications/xfce4-clipman.desktop

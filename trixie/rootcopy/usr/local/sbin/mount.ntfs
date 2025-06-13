@@ -1,0 +1,10 @@
+#!/bin/dash
+
+mountntfs3 () {
+exec mount -t ntfs3 -o force,sparse "$@"
+}
+
+if grep -q ntfs3 /proc/filesystems; then mountntfs3 "$@"
+elif modprobe -q ntfs3; then mountntfs3 "$@"
+else exec ntfs-3g "$@"
+fi

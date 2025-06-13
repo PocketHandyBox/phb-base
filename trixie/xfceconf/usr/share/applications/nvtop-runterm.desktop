@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=nvtop
+GenericName=GPU Process Monitor
+Terminal=false
+StartupNotify=false
+TryExec=nvtop
+Exec=env WHOLD=1 WNAME=nvtop WICON=nvtop WGEOM=90x28 run-in-terminal nvtop
+Icon=nvtop
+Categories=System;Monitor;HWMon;
+X-AppImage-Integrate=false

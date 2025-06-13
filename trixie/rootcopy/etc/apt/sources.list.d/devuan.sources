@@ -1,0 +1,5 @@
+Types: deb
+URIs: http://pkgmaster.devuan.org/devuan http://devuan.keff.org/devuan
+Suites: excalibur
+Components: main
+Signed-By: /usr/share/keyrings/devuan-archive-keyring.gpg

@@ -1,0 +1,431 @@
+#!/bin/sh
+### linuxrc script by brokenman <http://www.porteus.org>
+### modified for Debiandog by fredx181
+# 2024-03-18 fredx181 modified for pseudo-full install
+
+# Modified by gumanzoy https://github.com/PocketHandyBox
+
+export PATH=/bin:/usr/bin:./
+
+# Source functions
+. ./finit
+
+# Enable pivot_root in initramfs to let it behave like initrd:
+if [ -d /m ]; then
+    mount -t tmpfs -o mode=0755 tmpfs /m
+    cp -a ??* /m 2>/dev/null
+    exec switch_root /m linuxrc "$@"
+fi
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+echo 0 >/proc/sys/kernel/printk
+
+## Check for debug
+param debug && DBUG=1
+
+clear
+echo "${BOLD}Starting init script.${RST}"
+
+# Variables:
+#CFG=`value cfgfile`; [ $CFG ] || CFG=initrd1.xz
+KERNEL=`uname -r`
+
+FOLDER=`value folder`
+if [ -z "$FOLDER" ]; then FOLDER=live
+CMDIR=live
+[ `uname -m` = i686 ] && FOLDER=live32
+else CMDIR=$FOLDER
+fi
+
+FROM=`value from`; ISO=`echo $FROM | egrep ".*\.iso( |\$)"`
+LANGM=`value lang`; [ "$LANGM" = en_US ] && LANGM=""
+
+IP=`value ip | cut -d: -f2`
+NFSPATH=`value nfspath`; [ $NFSPATH ] || NFSPATH=/srv/pxe
+MOPT=`value mopt`; [ $MOPT ] || MOPT="noatime,nodiratime,suid,dev,exec,async"
+CHANGES=`value changes`
+PFULL=`value pfull`
+RAMSIZE=`value ramsize`; [ $RAMSIZE ] || RAMSIZE=60%
+
+LOAD=`multivalue load | sed 's/[,;]/|/g'`; [ $LOAD ] || LOAD=._null
+NOLOAD=`multivalue noload | sed 's/[,;]/|/g'`; [ $NOLOAD ] || NOLOAD=._null
+EXTRAMOD=`multivalue extramod | sed 's/[,;]/ /g'`
+RAMMOD=`multivalue rammod | sed 's/[,;]/|/g'`
+ROOTCOPY=`value rootcopy`
+
+NVIDIA=`value nvidia`
+[ "$NVIDIA" = no -o "$NVIDIA" = none ] && NVIDIA=""
+
+livedbg=/var/log/livedbg
+LOGFILE=/var/log/boot.log
+
+## Let's start!
+echo "${i}loading kernel modules..."
+
+# List of mmc kernel modules. To unload them in case of unused
+MODLISTMMC="cb710-mmc mmc_block sdhci-acpi sdhci-pci tifm_sd via-sdmmc vub300 wbsd "
+echo "$MODLISTMMC" >> modlist
+
+MODPBLST=`value modprobe.blacklist | sed 's/,/|/g'`
+
+# Blacklist kernel modules
+if [ -n "$MODPBLST" ]; then
+    sed -E "s/($MODPBLST) //g" -i modlist
+    MODPBLST=`value modprobe.blacklist | sed 's/,/ /g;s/[_-]/?/g'`
+    for MODULE in $MODPBLST; do
+    find /lib/modules/$KERNEL/kernel/ -name "$MODULE"'.*' -delete 2>/dev/null
+    done
+fi
+
+if param nocd || [ $IP ]; then
+sed 's/pata_[0-9a-z]\{3,\} //g' -i modlist
+fi
+
+#for MODULE in $(cat modlist)
+#do
+#modprobe $MODULE 2> /dev/null
+#done
+
+# Load kernel modules
+modprobe -qa `cat modlist`
+
+mount -t devtmpfs none /dev
+
+# Load network kernel modules in case of PXE boot
+if [ $IP ]; then
+    load_net_modules
+    udhcpc
+fi
+
+# Create /etc/fstab and mount devices:
+fstab
+
+#To Do
+#enable_swap
+
+debug
+
+# Searching for PHB data
+echo "${i}searching for PHB data: $FOLDER folder"
+if [ $IP ]; then BOOTDEV=network; DATADEV=/mnt/nfs
+    mkdir -p /mnt/nfs/storage
+    modprobe -q nfsv4; mount -t nfs4 $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null || { modprobe -q nfsv3; mount -t nfs $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null; }
+    MAC=`ifconfig | grep eth0 | cut -d: -f5-7 | sed s/://g | cut -d" " -f1`
+    if [ "$CHANGES" = /srv/pxe/storage ]; then
+	if lsmod | grep -q nfsv3; then
+	    mount -t nfs $IP:/srv/pxe/storage /mnt/nfs/storage -o rw,nolock 2>/dev/null && { mkdir -p /mnt/nfs/storage/client-$MAC/changes/home; CHANGES="/storage/client-$MAC"; }
+	else
+	    mount -t nfs4 $IP:/srv/pxe/storage /mnt/nfs/storage -o rw,nolock 2>/dev/null && { mkdir -p /mnt/nfs/storage/client-$MAC/changes/home; CHANGES="/storage/client-$MAC"; }
+	fi
+    fi
+    if [ $FROM ]; then
+        FOLDER=$FROM/$FOLDER
+    fi
+elif [ $ISO ]; then DATADEV=/mnt/isoloop
+    locate -e $FROM && { BOOTDEV=/mnt/$DEV; mkdir /mnt/isoloop; mount -o loop /mnt/$DEV/$LPTH /mnt/isoloop; ISOSRC=/mnt/$DEV/$LPTH; }
+else
+    if [ $FROM ]; then
+	locate -d $FROM/$FOLDER
+	if [ $? -eq 0 ]; then
+	    DIR=`echo $LPTH | rev | cut -d/ -f2- | rev`
+	    [ $DIR ] && FOLDER=$DIR/$FOLDER
+	    [ $DIR ] && CMDIR=$DIR/$CMDIR
+	else
+	    echo "${YELLOW}from= cheatcode is incorrect, press enter to search through all devices${RST}"
+	    read -s; search -d $FOLDER
+	fi
+    else
+	search -d $FOLDER || lazy -d $FOLDER
+    fi
+    DATADEV=/mnt/$DEV
+fi
+
+# DATADEV value example /mnt/sda1
+# DATADIR value example /mnt/sda1/live
+[ -d $DATADEV/$FOLDER ] && DATADIR=$DATADEV/$FOLDER || fatal
+
+echo "${i}using data from $DATADIR          "
+# 10 spaces at the end added to overwrite previous message "device not ready yet? delaying X seconds"
+# Create file /mnt/live/etc/homedrv for use in
+# scripts 'makepfile' and 'pseudofull-setup'
+echo $DATADIR > /etc/homedrv
+
+debug
+
+# Setup changes:
+[ $PFULL ] && CHANGES=$PFULL
+
+if [ $CHANGES ]; then
+	echo "${i}setting up directory for changes"
+	CHNEXIT=`echo $CHANGES | cut -d: -f1`
+	[ $CHNEXIT = EXIT ] && CHANGES=`echo $CHANGES | cut -d: -f2-`
+	[ $CHNEXIT = +EXIT ] && CHANGES=`echo $CHANGES | cut -d: -f2-`
+	[ -r $DATADEV/$CHANGES ] && { DEV=`echo $DATADEV | sed s@/mnt/@@`; LPTH=$CHANGES; } || locate -r $CHANGES
+	if [ $? -eq 0 ]; then setup_changes_dir_or_dat #finit setup_changes_dir_or_dat()
+		if [ $? -eq 0 ]; then setup_changes #finit setup_changes()
+		else
+			echo "${i}changes not writable, using memory instead"
+			umount /memory/changes 2>/dev/null
+			fail_chn
+		fi
+	else
+		#Can not locate changes dir
+		fail $CHANGES
+		fail_chn
+	fi
+else
+	echo "${i}changes cheatcode not found, using memory only"
+	fail_chn
+fi
+
+if [ $PFULL ]; then
+mkdir -p /memory/changes/filesystem/mnt/live
+else
+mkdir -p /memory/changes/upperdir/mnt/live
+fi
+
+debug
+
+# Find base modules
+find $DATADIR -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >/tmp/modules
+
+# Find kernel modules squashfs
+find $DATADIR -maxdepth 2 -name "*.kmodsfs" ! -path "*/nvidia/*" ! -path "*/rootcopy/*" 2>/dev/null | egrep -ve "firmware|lang|optional" | grep $KERNEL | sort >>/tmp/modules
+find $DATADIR/optional -name "*.kmodsfs" 2>/dev/null | egrep -e "$LOAD" | grep $KERNEL | sort >>/tmp/modules
+
+# Find firmware modules
+find $DATADEV/$CMDIR/firmware -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+
+# Detect nvidia video cards on pcie bus
+if [ "$NVIDIA" = detect ]; then
+	echo "${i}detecting nvidia GPU"
+	nvlist=`lspci | grep -i "030.: 10de:" | cut -d":" -f4`
+	if [ -n "$nvlist" ]; then
+	for nv in $nvlist
+	do
+		echo "${i}$nv chip found, checking which nvidia driver supports it"
+		if grep -sqi 10de$nv /usr/share/nvidia/nvidia.ids; then NVIDIA=nvidia; break
+		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-390xx.ids; then NVIDIA=nv390; break
+		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-340xx.ids; then NVIDIA=nv340; break
+		else echo "${i}$nv chip is not supported by nvidia driver"
+		fi
+	done
+	else echo "${i}could not find any nVidia GPU on this PC"
+	fi
+fi
+
+# Find nvidia modules
+if [ "$NVIDIA" ] && [ "$NVIDIA" != detect ]; then
+	echo "${i}$NVIDIA NVIDIA driver will be activated"
+	find $DATADIR/nvidia -name "$NVIDIA*.kmodsfs" 2>/dev/null | grep $KERNEL >>/tmp/modules
+	find $DATADIR/nvidia -name "$NVIDIA*.squashfs" 2>/dev/null >>/tmp/modules
+	NOLOAD="$NOLOAD|mesa-vulkan-drivers"
+fi
+
+# Find lang modules
+[ "$LANGM" ] && find $DATADEV/$CMDIR/lang -name "*.squashfs" 2>/dev/null | grep -i $LANGM >>/tmp/modules
+
+# Find modules and optional modules
+find $DATADIR/modules -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+find $DATADIR/optional -name "*.squashfs" 2>/dev/null | egrep -e "$LOAD" | sort >>/tmp/modules
+
+# Find /phb/modules or /phb/modules32
+if [ `uname -m` = i686 ]; then search -d /phb/modules32 && PHBMOD=modules32
+	echo "${i}searching for additional modules in /phb/modules32"
+elif [ "$FOLDER" != phb ]; then search -d /phb/modules && PHBMOD=modules
+	echo "${i}searching for additional modules in /phb/modules"
+fi
+if [ "$PHBMOD" ]; then
+	find /mnt/$DEV/phb/$PHBMOD -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+	find /mnt/$DEV/phb/$PHBMOD -name "*.kmodsfs" 2>/dev/null | egrep -ve "$NOLOAD" | grep $KERNEL | sort >>/tmp/modules
+fi
+
+# Find extra modules
+if [ "$EXTRAMOD" ]; then
+for EXTFOLDER in $EXTRAMOD; do
+	echo "${i}searching for additional modules in $EXTFOLDER"
+	if locate -d "$EXTFOLDER"; then
+	find /mnt/$DEV/$LPTH -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+#	find /mnt/$DEV/$LPTH -name "*.kmodsfs" 2>/dev/null | egrep -ve "$NOLOAD" | grep $KERNEL | sort >>/tmp/modules
+	else fail $EXTFOLDER
+	fi
+done
+fi
+
+# Copy data to RAM:
+if param copy2ram; then echo "${i}copying data to RAM, this may take some time..."
+	if [ "$RAMMOD" ]; then
+	egrep -e "$RAMMOD" /tmp/modules > /tmp/rammod; cpmod /tmp/rammod
+	else cpmod /tmp/modules
+	fi
+fi
+
+#======================================
+# IncludeModules
+#--------------------------------------
+IncludeModules
+
+debug
+
+# Copy /rootcopy folder
+if param norootcopy ; then
+	ROOTCOPY=none
+	echo "${i}skipping /rootcopy directory"
+elif [ $ROOTCOPY ] && locate -d $ROOTCOPY ; then
+	echo "${i}copying content of $ROOTCOPY directory"
+	cp -af /mnt/$DEV/$LPTH/. /union/. 2>/dev/null
+elif [ $ROOTCOPY ]; then
+	fail $ROOTCOPY
+	ROOTCOPY=none
+elif search -d /phb/rootcopy ; then
+	ROOTCOPY=/phb/rootcopy
+	echo "${i}copying content of /mnt/$DEV/phb/rootcopy directory"
+	cp -af /mnt/$DEV/phb/rootcopy/. /union/. 2>/dev/null
+else
+	ROOTCOPY=none
+	echo "${i}copying content of $DATADIR/rootcopy directory"
+	cp -af $DATADIR/rootcopy/. /union/. 2>/dev/null
+fi
+
+# mkdir for pfull=
+if [ $PFULL ]; then
+U=/union
+mkdir -p $U/dev $U/etc $U/media $U/mnt $U/proc $U/run $U/srv $U/sys $U/tmp $U/var/log
+chmod 1777 $U/tmp
+fi
+
+# Copy /etc/resolv.conf
+if [ $IP ] && [ -f /etc/resolv.conf ]; then
+	[ -L /union/etc/resolv.conf ] && rm -f /union/etc/resolv.conf
+	cat /etc/resolv.conf >> /union/etc/resolv.conf
+fi
+
+# Unload unused ata_ kernel modules
+for MODULE in `sed 's/ /\n/g' modlist | grep ata_ ; echo pata_sis`
+do rmmod $MODULE 2>/dev/null
+done
+
+# Unload unused mmc kernel modules
+for MODULE in $MODLISTMMC cb710 tifm_core sdhci cqhci mmc_core
+do rmmod $MODULE 2>/dev/null
+done
+
+## Finish:
+# Create 7 free loop devices for truecrypt, etc...
+#x=`losetup | tail -n1 | cut -d: -f1 | sed 's@/dev/loop@@'`
+x=`grep -oE 'loop[0-9]+$' /proc/partitions  | tail -n1 | tr -d [:alpha:]`
+let y=x+20
+#while [ $x -le $y ]; do [ -b /dev/loop$y ] && break || mknod /dev/loop$y b 7 $y; let y=y-1; done
+#x=`losetup | tail -n1 | cut -d: -f1 | sed 's@/dev/loop@@'`; let y=x+20
+while [ $x -le $y ]; do [ -b /dev/loop$y ] && break || mknod /dev/loop$y b 7 $y; chmod g+rw-x,o-rwx /dev/loop$y; let y=y-1; done
+
+cp -af /dev/console /union/dev
+
+#fstab
+
+debug
+
+# Remove /union/mnt/XX dir's
+for x in `ls -1 /union/mnt | grep -v live`; do
+#	echo $x
+	[ -d /union/mnt/$x ] && rmdir /union/mnt/$x # Will fail if dir not empty!
+	[ -L /union/mnt/$x ] && rm -f /union/mnt/$x
+done
+
+# Create /mnt/home symlink
+if [ "$BOOTDEV" ] && [ -d "$BOOTDEV" ]; then
+ln -snf $BOOTDEV /union/mnt/home
+elif [ -d "$DATADEV" ]; then
+ln -snf $DATADEV /union/mnt/home
+fi
+
+# Create /mnt/saved symlink
+if [ -d /memory/images/changes-exit ]; then
+ln -snf /mnt/live/memory/images/changes-exit /union/mnt/saved
+else
+ln -snf /mnt/live/memory/changes /union/mnt/saved
+fi
+
+MNTPOINTS=`grep /mnt/ /etc/fstab | cut -d" " -f2`
+[ -d /mnt/nfs ] && MNTPOINTS="/mnt/nfs $MNTPOINTS"
+[ -d /mnt/isoloop ] && MNTPOINTS="/mnt/isoloop $MNTPOINTS"
+if [ "$CHNDEV" != memory ] && [ -d "$CHNDEV" ]; then
+MNTPOINTS="$CHNDEV $MNTPOINTS"
+fi
+
+# Move mountpoints /mnt/XX to /union/mnt/XX
+for MNTDEV in $MNTPOINTS
+do mkdir -p /union"$MNTDEV"
+if [ "$MNTDEV" = "$CHNDEV" ]; then
+	if [ "$CHNEXIT" ] && param copy2ram ; then
+		mount -o move "$MNTDEV" /union"$MNTDEV" # && umount /union"$MNTDEV" 2>/dev/null
+		continue
+	else
+		mount -o move "$MNTDEV" /union"$MNTDEV"
+		continue # keep CHNDEV mounted
+	fi
+elif [ "$MNTDEV" = "$DATADEV" -o "$MNTDEV" = "$BOOTDEV" ]; then
+	if param noauto && param copy2ram ; then
+		umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
+	else
+		mount -o move "$MNTDEV" /union"$MNTDEV"
+	fi
+	continue
+fi
+param noauto && umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
+done
+
+# Remove unused /mnt/XX dir's
+rmdir /mnt/* 2>/dev/null
+
+# TO DO
+#[ `ls /mnt | grep $CFGDISK` ] || echo $i"[1;36m""finished copying to RAM - booting media can be removed safely""[0m"
+
+#sed -i 's/ ntfs / ntfs-3g /g' /etc/fstab
+#cp -f /etc/fstab /union/etc 2>/dev/null
+
+# Add all symlinks of all mount points at /mnt to union
+#for x in `ls -1 /mnt`; do
+# [ -d /union/mnt/$x ] && rmdir /union/mnt/$x
+# ln -sf /mnt/live/mnt/$x /union/mnt/$x
+#done
+
+debug
+
+# Create debug file:
+if [ -e /tmp/devices ]; then
+echo "# Recognized devices:" >$livedbg
+cat /tmp/devices >>$livedbg
+fi
+[ $BOOTDEV ] && DATADEV=$BOOTDEV
+echo $DATADEV > /etc/cfgdev # used in script 'pseudofull-setup'
+echo -e "\n# Booting device:\n$DATADEV
+\n# data found in:\n$DATADIR
+\n# Changes are stored in:\n$CHANGES
+\n# Non standard /rootcopy dir:\n$ROOTCOPY
+\n# Modules activated during boot time:" >>$livedbg
+cat /tmp/modules >>$livedbg
+[ $ISOSRC ] && echo -e "\n# ISO=$ISOSRC" >> $livedbg
+cp -af $livedbg /union/var/log/
+
+cat /proc/cmdline
+
+echo "${i}changing root directory" 
+if [ -x /union/usr/sbin/init ]; then
+	cp -f /union/usr/sbin/init /bin
+	INIT=init
+elif [ -x /union/usr/lib/systemd/systemd ]; then
+	cp -f /union/usr/lib/systemd/systemd /bin
+	INIT=systemd
+fi
+
+if [ -x /bin/$INIT ]; then
+	mkdir -p /union/mnt/live
+	echo "${BOLD}live system is ready now - starting Debian${RST}"
+	pivot_root /union /union/mnt/live
+	exec /mnt/live/bin/chroot . /mnt/live/bin/$INIT "$@" <dev/console >dev/console 2>&1
+else
+	echo "${RED}ERROR Something went wrong. Press Ctrl+Alt+Del to reboot.${RST}"
+	sh
+fi

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=radeontop
+Comment=Show Radeon GPU utilization
+TryExec=radeontop
+Exec=env WHOLD=1 WNAME=radeontop WICON=htop run-in-terminal radeontop -T
+Icon=htop
+Terminal=false
+StartupNotify=false
+Categories=HWMon;

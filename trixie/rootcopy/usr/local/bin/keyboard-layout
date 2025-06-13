@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
+fi
+
+export LANG=C
+
+dpkg-reconfigure keyboard-configuration
+udevadm trigger --subsystem-match=input --action=change
+echo "Please wait, querying info..."
+sleep 4
+echo
+echo "Keyboard Layout:"
+setxkbmap -query
+read -s -n 1 -p "Press any key to close . . ."

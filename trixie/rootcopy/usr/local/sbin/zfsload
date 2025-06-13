@@ -1,0 +1,12 @@
+#!/bin/dash
+
+# load zfs kernel modules by 'insmod' instead of 'modprobe'
+# 'insmod' not require updated modules.dep file
+
+grep -q zfs /proc/filesystems && exit 0
+
+[ -f /usr/lib/modules/`uname -r`/updates/dkms/spl.ko ] || exit 1
+[ -f /usr/lib/modules/`uname -r`/updates/dkms/zfs.ko ] || exit 1
+
+insmod /usr/lib/modules/`uname -r`/updates/dkms/spl.ko
+insmod /usr/lib/modules/`uname -r`/updates/dkms/zfs.ko

@@ -1,0 +1,181 @@
+#!/bin/dash
+
+# winpasswd (GUI for chntpw) tool for resetting Windows (2000/XP/Vista/7/8/10/11) users passwords
+# by gumanzoy https://github.com/PocketHandyBox
+
+findsams() {
+find /mnt/*/W*/*32/config/ ! -path "/mnt/home/*" \
+ -ipath "/mnt/*"/'Windows/System32/config/SAM' 2> /dev/null
+find /media/*/*/W*/*32/config/ -ipath "/media/*/*"/'Windows/System32/config/SAM' 2> /dev/null
+}
+
+getsams() {
+[ -z "$SAMS" ] && export SAMS="`findsams`"
+if [ -z "$SAMS" ] && [ -n "$WYAD" ]; then
+yad --text='Error: Can not find SAM registry hive file. Mount Windows partition first.' \
+ --title=winpasswd --window-icon=dialog-error --fixed --button=Close\!gtk-close
+exit
+elif [ -z "$SAMS" ]; then
+echo 'Error: Can not find SAM registry hive file. Mount Windows partition first.'
+exit
+fi
+}
+
+reset_user() {
+for SAM in $SAMS
+do
+cp -n "$SAM" "$SAM".bak
+/usr/sbin/sampasswd -r -u "$USER" "$SAM" > /dev/null
+/usr/sbin/samunlock -U -u "$USER" "$SAM" > /dev/null
+done
+}
+
+reset_all_users() {
+for LINE in `/usr/sbin/sampasswd -l "$SAM"`
+do
+USER='0x'`echo "$LINE" | cut -d ':' -f 1`
+/usr/sbin/sampasswd -r -u "$USER" "$SAM" > /dev/null
+/usr/sbin/samunlock -U -u "$USER" "$SAM" > /dev/null
+done
+}
+
+print_userlist() {
+for SAM in $SAMS
+do
+echo "$SAM"
+/usr/sbin/sampasswd -l -H "$SAM"
+done
+}
+
+show_userlist() {
+if [ -n "$WYAD" ]; then
+yad --title=winpasswd --form --window-icon=user-info --width=520 --height=240 \
+ --field="$TITLE"':TXT' '<tt>'"`print_userlist`"'</tt>' --button=Close\!gtk-close
+else print_userlist
+fi
+}
+
+revert_changes() {
+for SAM in $SAMS
+do cp -f "$SAM".bak "$SAM"
+done
+}
+
+remove_backup() {
+for SAM in $SAMS
+do
+rm "$SAM".bak && echo "$SAM".bak
+done
+}
+
+if [ "$1" = "-gui" ]; then
+export WYAD=1
+getsams
+yad --title=winpasswd --form --columns=2 --align-buttons --window-icon=dialog-password --image=changes-allow \
+ --text='<b>winpasswd</b> tool for resetting Windows\n(2000/XP/Vista/7/8/10/11) users passwords' \
+ --field='Unlock first found admin user:FBTN' "${0} -f" \
+ --field='Unlock built-in admin account:FBTN' "${0} -b" \
+ --field='Unlock all user accounts:FBTN' "${0} -a" \
+ --field='Run <b>chntpw</b> interactive menu:FBTN' "x-terminal-emulator -T winpasswd -e ${0} -i" \
+ --field='Revert changes from backup:FBTN' "${0} -r" \
+ --field='Remove backup file:FBTN' "${0} -rm" \
+ --button='List all user accounts'\!user-info:"${0} -l" \
+ --button=Close\!gtk-close > /dev/null
+exit
+fi
+
+if [ "$1" = "-f" ]; then
+TITLE='Unlock first found admin user:'
+echo "$TITLE"
+getsams
+for SAM in $SAMS
+do
+    cp -n "$SAM" "$SAM".bak
+    /usr/sbin/sampasswd -r -f "$SAM" > /dev/null
+    /usr/sbin/samunlock -U -f "$SAM" > /dev/null
+done
+show_userlist
+exit
+fi
+
+if [ "$1" = "-b" ]; then
+TITLE='Unlock built-in admin account:'
+echo "$TITLE"
+getsams
+USER=0x01f4
+reset_user
+show_userlist
+exit
+fi
+
+if [ "$1" = "-a" ]; then
+TITLE='Unlock all user accounts:'
+echo "$TITLE"
+getsams
+for SAM in $SAMS
+do
+    cp -n "$SAM" "$SAM".bak
+    reset_all_users
+done
+show_userlist
+exit
+fi
+
+if [ "$1" = "-i" ]; then
+getsams
+for SAM in $SAMS
+do
+    cp -n "$SAM" "$SAM".bak
+    /usr/sbin/chntpw -i "$SAM"
+done
+exit
+fi
+
+if [ "$1" = "-l" ]; then
+TITLE='List all user accounts:'
+echo "$TITLE"
+getsams
+show_userlist
+exit
+fi
+
+if [ "$1" = "-r" ]; then
+TITLE='Revert changes from backup:'
+echo "$TITLE"
+getsams
+ERROR="`revert_changes 2>&1`"
+if [ -n "$ERROR" ] && [ -n "$WYAD" ]; then
+    echo "$ERROR" | yad --text='No such file or directory:' --width=520 --height=200 --title=winpasswd \
+    --window-icon=dialog-error --text-info --wrap --button=Close\!gtk-close
+elif [ -n "$ERROR" ]; then
+    echo "$ERROR"
+else
+    show_userlist
+fi
+exit
+fi
+
+if [ "$1" = "-rm" ]; then
+getsams
+if [ -n "$WYAD" ]; then
+    yad --text='Remove backup file?\nSAM.bak' --title=winpasswd --window-icon=dialog-password \
+    --image=dialog-question && remove_backup 2>&1 | yad --text='Remove backup file:' --width=520 --height=200 \
+    --title=winpasswd --window-icon=dialog-information --text-info --wrap --button=Close\!gtk-close
+else
+    echo 'Remove backup file:'
+    remove_backup
+fi
+exit
+fi
+
+echo 'winpasswd tool for resetting Windows (2000/XP/Vista/7/8/10/11) users passwords'
+echo ''
+echo 'Usage:'
+echo ' -gui Show YAD GUI'
+echo ' -f   Unlock first found admin user'
+echo ' -b   Unlock built-in admin account'
+echo ' -a   Unlock all user accounts'
+echo ' -l   List all user accounts'
+echo ' -i   Run chntpw interactive menu'
+echo ' -r   Revert changes from backup'
+echo ' -rm  Remove backup file'

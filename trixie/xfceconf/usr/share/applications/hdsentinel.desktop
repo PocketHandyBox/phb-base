@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=HDSentinel Report
+Comment=Hard Disk Sentinel Linux Edition
+TryExec=hdsentinel
+Exec=sh -c 'hdsentinel -html -r ~/hdsentinel && netsurf ~/hdsentinel.html'
+Icon=hdsentinel
+Terminal=false
+StartupNotify=false
+Categories=HWMon;

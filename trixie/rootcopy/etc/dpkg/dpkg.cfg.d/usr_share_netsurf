@@ -1,0 +1,5 @@
+path-exclude=/usr/share/netsurf/*/*
+path-include=/usr/share/netsurf/icons/*
+path-include=/usr/share/netsurf/throbber/*
+path-include=/usr/share/netsurf/en/*
+path-include=/usr/share/netsurf/*/Messages

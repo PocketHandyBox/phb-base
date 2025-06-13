@@ -1,0 +1,76 @@
+#!/bin/dash
+# generic wrapper to run program as normal user (when currently running as root)
+# (C) James Budiono 2012
+# License: GPL version 3 or later
+# Modified by fredx181 for DebianDog/DevuanDog
+# Modified by gumanzoy https://github.com/PocketHandyBox
+# Re-write by gumanzoy, Xdialog removed
+
+if [ -z `command -v "$1" 2> /dev/null` ]; then
+	echo "# run-as-user wrapper to run program as normal user"
+	echo "# (when currently running as root)"
+	echo "Usage: run-as-user command [arguments]"
+	exit 1
+fi
+
+if grep -sq ^GUESTUSER= /root/*.conf ; then
+	GUESTUSER=`grep ^GUESTUSER= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
+else
+	GUESTUSER=guest
+fi
+
+SPOT_HOME="/home/$GUESTUSER"
+
+CWD=$(pwd)
+APP="$1"; shift
+
+if [ "`whoami`" != "root" ]; then
+	exec "$APP" "$@"
+fi
+
+[ -z "$XAUTHORITY" ] && XAUTHORITY=/root/.Xauthority
+[ -e "$XAUTHORITY" ] && cp $XAUTHORITY $SPOT_HOME/.Xauthority &&
+chown "$GUESTUSER":"$GUESTUSER" $SPOT_HOME/.Xauthority && 
+export XAUTHORITY=$SPOT_HOME/.Xauthority  
+
+# replace all occurences of /root in XDG_* with /home/spot, because we don't
+# run a login shell and source /etc/profile.d/*
+OLD_HOME="$HOME"
+env | while IFS='=' read NAME VAL; do
+	case "$NAME" in
+	XDG_*) export $NAME="`echo "$VAL" | sed -e s~^$OLD_HOME~$SPOT_HOME~ -e s~:$OLD_HOME~:$SPOT_HOME~g`" ;;
+	esac
+done
+
+export XDG_CONFIG_HOME=$SPOT_HOME/.config
+export XDG_CACHE_HOME=$SPOT_HOME/.cache
+export XDG_DATA_HOME=$SPOT_HOME/.local/share
+
+for i in ${XDG_CONFIG_HOME} ${XDG_CACHE_HOME} ${XDG_DATA_HOME} ${XDG_STATE_HOME}
+do
+	if [ ! -d $i ] ; then
+		mkdir -p $i
+		chown "$GUESTUSER" $i
+	fi
+done
+
+#mkdir -p ${XDG_CONFIG_HOME}/pulse; touch ${XDG_CONFIG_HOME}/pulse/cookie; chown "$GUESTUSER":"$GUESTUSER" ${XDG_CONFIG_HOME}/pulse/cookie;
+
+IDU=$(id -u "$GUESTUSER")
+export XDG_RUNTIME_DIR=/run/user/${IDU}
+
+if [ ! -d ${XDG_RUNTIME_DIR} ] ; then
+	mkdir -p ${XDG_RUNTIME_DIR}
+	chmod 0700 ${XDG_RUNTIME_DIR}
+	chown "$GUESTUSER" ${XDG_RUNTIME_DIR}
+fi
+
+if [ -s /tmp/."$GUESTUSER"-session-bus ]; then
+	. /tmp/."$GUESTUSER"-session-bus
+	export DBUS_SESSION_BUS_ADDRESS
+	export DBUS_SESSION_BUS_PID
+fi
+
+ARGS=""
+while [ "$1" ]; do ARGS="$ARGS \"$1\""; shift; done
+exec su "$GUESTUSER" --session-command /bin/dash -c "cd \"$CWD\"; dbus-launch \"$APP\" $ARGS"
