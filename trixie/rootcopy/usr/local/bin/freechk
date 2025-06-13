@@ -1,0 +1,94 @@
+#!/bin/dash
+
+# freechk: Script to check when running out of space, by fredx181
+# 2025 Deprecated gtkdialog-splash replaced by notify-send (libnotify-bin package required) # Re-write by gumanzoy
+
+# When running out of space - shows permanent 'Warning:' notification by notify-send
+# When space left has been increased again - 'Warning:' notification replaced by 'Info:' message (displays for a short time)
+# When space left is low again, it displays again the warning... and so on...
+# Needs to run constantly in the background (best to be started at login e.g. put it in  ~/Startup)
+# 2015-04-08 Changed 'rootfs' to 'overlay' for FREEMB variable to make it compatible for Jessie/Sid (df -m output has been changed)
+# 2025 Changed FREEMB df command params. Add check for overlay or aufs used on / #gumanzoy
+# 2025 Add check free RAM left #gumanzoy
+
+# Set the variable for number of MB space left on rootfs, there'll be warning if it's less (what is a good amount?)
+MBLEFT=50
+# Set the variable for number of MB free RAM left, there'll be warning if it's less (what is a good amount?)
+MEMLEFT=100
+# Set check interval (e.g. if set to 10, there's a check every 10 seconds, which should be fine, however there's a delay up to 10 seconds until the splash message appears)
+# If set to low amount such as 1, the CPU usage of this program will be a bit higher 
+INTERVALCHK=5
+
+notify_send() {
+notify-send --app-name=freechk --replace-id=$$ "$@"
+}
+
+notify_send_mem() {
+notify-send --app-name=freechk --replace-id=1$$ "$@"
+}
+
+check_free_rootfs() {
+FREEMB=$(df -m --type=overlay --type=aufs --output=avail / | tail -n1 | tr -d ' ')
+if [ "$FREEMB" -le $MBLEFT ]; then
+    notify_send --icon=dialog-warning --urgency=critical \
+    "Warning: ${FREEMB}MB free space left on rootfs" \
+    "Strongly recommend to resize your savefile or delete files"
+    WARN=1
+elif [ "$WARN" = 1 ] && [ "$FREEMB" -gt $MBLEFT ]; then
+    notify_send --icon=dialog-information \
+    "Info: Enough space on rootfs now" \
+    "More than ${MBLEFT}MB left (${FREEMB}MB)"
+    WARN=0
+else
+    WARN=0
+fi
+}
+
+check_free_ram() {
+FREEMEM=$(free --mega | grep Mem: | tr -s ' ' | cut -f7 -d ' ')
+if [ "$FREEMEM" -le $MEMLEFT ]; then
+    notify_send_mem --icon=dialog-warning --urgency=critical \
+    "Warning: ${FREEMEM}MB free RAM left" \
+    "Strongly recommend to delete files in tmpfs or close applications"
+    WARNMEM=1
+elif [ "$WARNMEM" = 1 ] && [ "$FREEMEM" -gt $MEMLEFT ]; then
+    notify_send_mem --icon=dialog-information \
+    "Info: Enough free RAM now" \
+    "More than ${MEMLEFT}MB left (${FREEMEM}MB)"
+    WARNMEM=0
+else
+    WARNMEM=0
+fi
+}
+
+# Below commented out lines were some experiments to make it run as a daemon, didn't work out well (keeping it here just in case).
+#export XAUTHORITY=$HOME/.Xauthority
+#env
+#xauth list|grep `uname -n`
+#DISPLAY=:0.0 ; export DISPLAY
+#xhost +localhost
+#su $USER
+
+# Make sure X is started before checking
+sleep $INTERVALCHK
+
+# Changed FREEMB df command params #gumanzoy
+#FREEMB=$(df -m | grep 'overlay ' | tr -s ' ' | cut -f 4 -d ' ')
+FREEMB=$(df -m --type=overlay --type=aufs --output=avail / | tail -n1 | tr -d ' ')
+
+WARN=0
+WARNMEM=0
+
+# Check for overlay or aufs used on /
+if [ "$FREEMB" ]; then
+  while true; do
+    check_free_rootfs
+    check_free_ram
+    sleep $INTERVALCHK
+  done
+else
+  while true; do
+    check_free_ram
+    sleep $INTERVALCHK
+  done
+fi

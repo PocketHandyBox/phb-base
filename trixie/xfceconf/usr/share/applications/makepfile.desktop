@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Create Savefile
+Comment=Make a Save image file
+TryExec=makepfile
+Exec=makepfile
+Icon=document-save
+Terminal=false
+StartupNotify=false
+Categories=X-XFCE;X-Xfce-Toplevel;System;

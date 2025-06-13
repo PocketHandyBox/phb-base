@@ -1,0 +1,6 @@
+#!/bin/dash
+
+which "$1" > /dev/null || exit 1
+
+ERROR=`$@ 2>&1` || exec yad --title="$1" --text="$ERROR" \
+--window-icon=dialog-error --fixed --button=Close\!gtk-close

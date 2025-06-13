@@ -1,16 +1,11 @@
 #!/bin/bash
 
-#####################################################################################
-# build 01-filesystem.squashfs for Debian Bookworm (Debian 12)
-#####################################################################################
-
-# 2024-12-20, fredx181, modified for xfce-gumanzoy as a concept
-
-#####################################################################################
-
-# Modified by gumanzoy
-# https://github.com/PocketHandyBox/phb-base
+# build script for base filesystem '01-filesystem.squashfs' for PocketHandyBox
+# by gumanzoy https://github.com/PocketHandyBox/phb-base
 # https://forum.puppylinux.com/viewtopic.php?t=13647
+
+# Based on DebianDog Bookworm build script mklive-bookworm by fredx181
+# https://forum.puppylinux.com/viewtopic.php?t=5069
 
 export LD_LIBRARY_PATH=
 
@@ -24,23 +19,19 @@ exitfn () {
 trap SIGINT              # Resore signal handling for SIGINT
 echo -e "\e[0;36mUnmounting mount binds in chroot\e[0m"
 #umount -l chroot/tmp
-umount -l $LAUNCHDIR/bookworm/chroot/proc 2> /dev/null
-umount -l $LAUNCHDIR/bookworm/chroot/sys 2> /dev/null
-umount -l $LAUNCHDIR/bookworm/chroot/dev/pts 2> /dev/null
-umount -l $LAUNCHDIR/bookworm/chroot/dev 2> /dev/null
+umount -l $LAUNCHDIR/$DIST/chroot/proc 2> /dev/null
+umount -l $LAUNCHDIR/$DIST/chroot/sys 2> /dev/null
+umount -l $LAUNCHDIR/$DIST/chroot/dev/pts 2> /dev/null
+umount -l $LAUNCHDIR/$DIST/chroot/dev 2> /dev/null
 
-# Don't remove bookworm/chroot in case of error
-#[ ! -d $LAUNCHDIR/bookworm/apt ] && mv -f $LAUNCHDIR/bookworm/chroot/var/cache/apt $LAUNCHDIR/bookworm/
-rm -f $LAUNCHDIR/bookworm/apt/archives/lock 2> /dev/null
+rm -f $LAUNCHDIR/$DIST/apt/archives/lock 2> /dev/null
 
-if mountpoint -q $LAUNCHDIR/bookworm/chroot/dev; then     # just in case check dev
+if mountpoint -q $LAUNCHDIR/$DIST/chroot/dev; then     # just in case check dev
 	echo -e "\e[0;31mSomething went wrong, directory chroot cannot be removed\e[0m"
 	echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\e[0m"
 	exit
 else
-# Don't remove bookworm/chroot in case of error
-#	rm -rf $LAUNCHDIR/bookworm/chroot
-	rm -f $LAUNCHDIR/bookworm/*.conf 2> /dev/null
+	rm -f $LAUNCHDIR/$DIST/*.conf 2> /dev/null
 fi
 exit
 }
@@ -66,6 +57,12 @@ if [ -f "$1" ]; then
 	config="$1"
 	. "$config"
 else exit
+fi
+
+export DIST=`basename "$1" | cut -d- -f1`
+if [ ! -d "$DIST" ]; then
+	echo -e "\e[0;33mDirectory '""$DIST""' not exist, exiting...\e[0m"
+	exit
 fi
 
 if [ -z "$PL_BASE" ] || [ -z "$INSTALL" ]; then
@@ -106,34 +103,33 @@ elif [ "$(uname -m)" = "x86_64" ]; then
 	fi
 fi
 
-echo -e "\e[0;33mBuild Debian Bookworm (Debian 12) base filesystem '01-filesystem.squashfs' for 'PocketHandyBox'\nWith overlay support and porteus-boot style included\n\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4\e[0m"
-echo -e "\e[0;32mBuilding will be done in: $PWD/bookworm\e[0m"
+echo -e "\e[0;33mBuild base filesystem '01-filesystem.squashfs' for 'PocketHandyBox'\e[0m"
+echo -e "\e[0;33m\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4\e[0m"
+echo -e "\e[0;32mBuilding will be done in: $PWD/$DIST\e[0m"
 
 #echo -e "\e[0;32mIf you'd like a log from the output, run again e.g:\e[0m"
 #echo -e "\e[0;33m$0 -gui 2>&1 | tee build.log\e[0m"
 echo -e "\e[0;36mFirst setting up debootstrap, this will take a few minutes\e[0m"
 
-if [ -d "bookworm/chroot" ]; then 
-	echo -e "\e[0;33m Working directory 'bookworm' already exists\n All files in bookworm will be deleted, except the apt cache in chroot\e[0m"
-	echo -e "\e[0;36mUnmount mount binds and remove bookworm/chroot...\e[0m"
+if [ -d "$DIST/chroot" ]; then
+	echo -e "\e[0;36mUnmount mount binds and remove $DIST/chroot...\e[0m"
 	#umount -l chroot/tmp
-	umount -l bookworm/chroot/proc 2> /dev/null
-	umount -l bookworm/chroot/sys 2> /dev/null
-	umount -l bookworm/chroot/dev/pts 2> /dev/null
-	umount -l bookworm/chroot/dev 2> /dev/null
+	umount -l $DIST/chroot/proc 2> /dev/null
+	umount -l $DIST/chroot/sys 2> /dev/null
+	umount -l $DIST/chroot/dev/pts 2> /dev/null
+	umount -l $DIST/chroot/dev 2> /dev/null
 
-	mv bookworm/chroot/var/cache/apt bookworm/ 2> /dev/null
-	if mountpoint -q bookworm/chroot/dev; then      # just in case check dev
-		echo -e "\e[0;31mSomething went wrong, directory bookworm/chroot cannot be removed\e[0m"
+	mv $DIST/chroot/var/cache/apt $DIST/ 2> /dev/null
+	if mountpoint -q $DIST/chroot/dev; then      # just in case check dev
+		echo -e "\e[0;31mSomething went wrong, directory $DIST/chroot cannot be removed\e[0m"
 		echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\e[0m"
 		exit
 	else
-		rm -rf bookworm/chroot
+		rm -rf $DIST/chroot
 	fi
-	mkdir -p bookworm/chroot/var/cache 2> /dev/null
-	mv bookworm/apt bookworm/chroot/var/cache/ 2> /dev/null
-	rm -f bookworm/*.conf 2> /dev/null
-	#find bookworm -mindepth 1 ! -wholename 'bookworm/chroot/*' -delete 2> /dev/null
+	mkdir -p $DIST/chroot/var/cache 2> /dev/null
+	mv $DIST/apt $DIST/chroot/var/cache/ 2> /dev/null
+	rm -f $DIST/*.conf 2> /dev/null
 	echo -e "\e[0;32mOK, continue...\e[0m"
 fi
 
@@ -145,17 +141,17 @@ if [ $(command -v apt-get 2>/dev/null) ];then
 	ok_or_failed
 fi
 
-if [ -z `which debootstrap` ] || [ ! -e /usr/share/debootstrap/scripts/bookworm ]; then
+if [ -z `which debootstrap` ] || [ ! -e /usr/share/debootstrap/scripts/"$DIST" ]; then
 	msg=" You don't have debootstrap installed.\nIt's a dependency of this program.\n Please install it."
 	echo $msg
 exit 0
 fi
 
 ########## Set up debootstrap ##########
-echo -e "\e[0;36mSetting up debootstrap in bookworm/chroot\e[0m"
+echo -e "\e[0;36mSetting up debootstrap in $DIST/chroot\e[0m"
 echo -e "\e[0;36mThis may take a while...\e[0m"
-mkdir -p bookworm/chroot && cp -a $config bookworm && cd bookworm &&
-debootstrap --arch=$ARCH --variant=minbase --include=apt-transport-https,ca-certificates,initscripts,adduser bookworm chroot "$MIRRORURL"
+mkdir -p $DIST/chroot && cp -a $config $DIST && cd $DIST &&
+debootstrap --arch=$ARCH --variant=minbase --include=apt-transport-https,ca-certificates,initscripts,adduser "$DIST" chroot "$MIRRORURL"
 ret=$?
 echo $ret
 if [ $ret -ne 0 ]; then
@@ -253,16 +249,12 @@ elif [ "$SYSTEMD" = "TRUE" ]; then
 	PL_SYS="$PL_SYSTEMD"
 fi
 
-# DogLinux repository not necessary anymore - disabled at build time
-#echo "deb [signed-by=/etc/apt/keyrings/doglinux.gpg] https://github.com/doglinux/bookworm/raw/master/$ARCH/ ./" > etc/apt/sources.list.d/doglinux.list
-
 [ "$ARCH" = "amd64" ] && dpkg --add-architecture i386
 
 apt-get update # required, repositories just added
 [ $? -ne 0 ] && apt-get update # try again if failed
 
 #echo -e "\e[0;36mPlease set the password for 'root'\e[0m"
-#echo -e "\e[0;33mAlso now you may want to add to or edit files in bookworm/chroot\e[0m" 
 #passwd root
 #if [ $? -ne 0 ]; then # try again if passwords not match
 #	echo -e "\e[0;36mPlease try again, type password for root\e[0m"
@@ -324,7 +316,10 @@ mkdir -p /opt/bin
 
 update-rc.d snapexit defaults
 
-#update-rc.d sfsunload defaults
+# For Trixie install sqv-dummy and purge sqv
+if [ "$DIST" = "trixie" ]; then
+apt-get install --yes sqv-dummy && apt-get purge --yes sqv
+fi
 
 # Merge all install variables into one
 [ "$ARCH" = "amd64" ] && INSTALL="$INSTALL $PL_AMD64"
@@ -457,13 +452,6 @@ for SIZE in 16x16 22x22 24x24 32x32 48x48; do
 done
 rm -rf usr/share/icons/devices
 
-# Create symlink for icon harddrive.png
-#for SIZE in 16x16 22x22 24x24 32x32 48x48 64x64; do
-#	mkdir -p usr/share/icons/Adwaita/$SIZE/devices 2> /dev/null
-#	cp -df usr/share/icons/harddrive.png usr/share/icons/Adwaita/$SIZE/devices
-#done
-#rm -f usr/share/icons/harddrive.png
-
 # Create symlink for Thunar panel icon view-dual.svg
 #for SIZE in 22 24 32; do
 #	mkdir -p usr/share/icons/Numix/$SIZE/actions 2> /dev/null
@@ -497,13 +485,16 @@ update-icon-caches usr/share/icons/*/
 update-desktop-database
 
 # Remove /usr/bin/Xtigervnc and extension
+# Needs only in case tigervncserver_1.15.0 package is installed from phb-bookworm repo
+if [ "$DIST" = "bookworm" ]; then
 rm -f usr/bin/Xtigervnc usr/sbin/tigervncsession
 rm -f usr/lib/xorg/modules/extensions/libvnc.so
 remove_broken_links etc/alternatives
+fi
 
 # Remove mesa libs from 01-filesystem.squashfs
-# Prefer to make module with mesa and libdrm from backports
-if [ "$ARCH" = "amd64" ]; then
+# Prefer to make module with mesa and libdrm from bookworm-backports
+if [ "$DIST" = "bookworm" ] && [ "$ARCH" = "amd64" ]; then
 rm -f usr/lib/x86_64-linux-gnu/dri/*_dri.so
 rm -f usr/lib/x86_64-linux-gnu/libdrm_*so.*
 rm -f usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0*
@@ -554,7 +545,7 @@ umount -l chroot/dev/pts
 umount -l chroot/dev
 umount -l chroot/sys
 
-cd "$LAUNCHDIR/bookworm/"
+cd "$LAUNCHDIR/$DIST/"
 
 rm -f "$ARCH"/01-filesystem.squashfs 2> /dev/null # just in case it exists remove first
 
@@ -576,6 +567,9 @@ fi
 
 if [ -n "$LOGO" ]; then
 	sed -i s/phblogo/"$LOGO"/ chroot/etc/rc.local
+fi
+
+if [ -n "$LOGO" ] && [ "$DIST" = "bookworm" ]; then
 	sed -i s/phblogo/"$LOGO"/g chroot/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
 fi
 

@@ -1,0 +1,14 @@
+#!/bin/dash
+
+if grep -sq ^GUESTUSER= /root/*.conf ; then
+	GUESTUSER=`grep ^GUESTUSER= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
+else
+	GUESTUSER=guest
+fi
+
+if [ -d "/home/$GUESTUSER" ]; then
+	STATGUEST=$(stat -c "%U %G" "/home/$GUESTUSER")
+	[ "$STATGUEST" != "$GUESTUSER $GUESTUSER" ] && chown -R "$GUESTUSER":"$GUESTUSER" "/home/$GUESTUSER"
+fi
+
+exit 0

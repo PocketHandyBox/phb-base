@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Extract .deb
+TryExec=redeb
+Exec=redeb %f
+Icon=edit-undo-archive
+Terminal=false
+StartupNotify=false
+Categories=System;
+NoDisplay=true
+MimeType=application/x-deb;

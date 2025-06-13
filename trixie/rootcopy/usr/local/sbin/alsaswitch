@@ -1,0 +1,42 @@
+#!/bin/dash
+
+doalsaswitch() {
+if ! lspci | grep -qi audio; then
+    echo No soundcard, exit
+    exit
+fi
+
+T=0
+
+while [ "$T" -le 10 ]; do
+    [ -c /dev/snd/controlC0 ] && break
+    T=$(($T+1))
+    sleep 1
+done
+
+if [ "$T" -gt 10 ]; then
+    echo No soundcard, exit
+    exit
+fi
+
+if amixer get Master 2> /dev/null; then exit
+elif amixer get PCM 2> /dev/null; then exit
+fi
+
+for card in 1 2 3 4 5 0; do
+    if amixer -c $card get Master 2> /dev/null; then break
+    elif amixer -c $card get PCM 2> /dev/null; then break
+    fi
+done
+
+if [ $card != "0" ]; then
+    echo write /etc/asound.conf
+    echo defaults.pcm.card $card
+    echo defaults.ctl.card $card
+    echo defaults.pcm.card $card > /etc/asound.conf
+    echo defaults.ctl.card $card >> /etc/asound.conf
+fi
+}
+
+doalsaswitch > /var/log/alsaswitch.log
+exit 0

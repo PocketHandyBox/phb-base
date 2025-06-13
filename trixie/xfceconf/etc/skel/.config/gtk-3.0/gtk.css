@@ -1,0 +1,4 @@
+.thunar toolbar.horizontal button image, .thunar .horizontal.inline-toolbar button image {
+  -gtk-icon-transform: scale(1.0);
+  -gtk-icon-style: regular;
+}

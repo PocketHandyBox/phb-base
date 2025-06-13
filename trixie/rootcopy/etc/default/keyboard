@@ -1,0 +1,7 @@
+# KEYBOARD CONFIGURATION FILE
+
+# Consult the keyboard(5) manual page.
+
+BACKSPACE="guess"
+XKBMODEL="pc105"
+XKBOPTIONS="grp:ctrl_shift_toggle,grp_led:scroll"

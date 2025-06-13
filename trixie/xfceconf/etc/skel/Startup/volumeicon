@@ -1,0 +1,11 @@
+#!/bin/dash
+
+T=0
+
+while [ "$T" -le 6 ]; do
+    [ -c /dev/snd/controlC0 ] && [ -f /var/log/alsaswitch.log ] && break
+    T=$(($T+1))
+    sleep 2
+done
+
+[ -c /dev/snd/controlC0 ] && exec volumeicon

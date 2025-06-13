@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Set keyboard layout
+Comment=dpkg-reconfigure keyboard-configuration
+TryExec=keyboard-layout
+Exec=keyboard-layout
+Icon=org.xfce.settings.keyboard
+Terminal=true
+StartupNotify=false
+Categories=System;

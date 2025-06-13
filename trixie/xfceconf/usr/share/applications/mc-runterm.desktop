@@ -1,0 +1,23 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Midnight Commander
+Name[af]=Middernag Kommandeur
+Name[eo]=Meznokta komandanto
+Name[fa]=فرمان‌دار نیمه شب
+Name[ko]=미드나잇 커멘더
+Name[lv]=Pusnakts Komandieris
+Name[nso]=Molaedi wa Bosegogare
+Name[th]=มิดไนท์คอมมานเดอร์
+Name[ve]=Muhulwane wa vhukati ha vhusiku
+Name[xh]=Umyaleli Waphakathi kobusuku
+Name[zu]=Umyaleli waphakathi nobusuku
+Comment=File manager
+Comment[pl]=Menedżer plików
+TryExec=mc
+Exec=env WNAME=MidnightCommander WICON=MidnightCommander WGEOM=90x28 run-in-terminal mc
+Icon=MidnightCommander
+Terminal=false
+StartupNotify=false
+Categories=ConsoleOnly;Utility;FileManager;System;FileTools;
+Keywords=file manager;console;
