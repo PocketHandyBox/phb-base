@@ -567,9 +567,6 @@ fi
 
 if [ -n "$LOGO" ]; then
 	sed -i s/phblogo/"$LOGO"/ chroot/etc/rc.local
-fi
-
-if [ -n "$LOGO" ] && [ "$DIST" = "bookworm" ]; then
 	sed -i s/phblogo/"$LOGO"/g chroot/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
 fi
 
