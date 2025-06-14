@@ -151,7 +151,7 @@ fi
 echo -e "\e[0;36mSetting up debootstrap in $DIST/chroot\e[0m"
 echo -e "\e[0;36mThis may take a while...\e[0m"
 mkdir -p $DIST/chroot && cp -a $config $DIST && cd $DIST &&
-debootstrap --arch=$ARCH --variant=minbase --include=apt-transport-https,ca-certificates,initscripts,adduser "$DIST" chroot "$MIRRORURL"
+debootstrap --arch=$ARCH --variant=minbase --include=apt-transport-https,ca-certificates,adduser "$DIST" chroot "$MIRRORURL"
 ret=$?
 echo $ret
 if [ $ret -ne 0 ]; then
@@ -314,8 +314,6 @@ echo "127.0.0.1	 localhost" > /etc/hosts
 echo "127.0.1.1	 live" >> /etc/hosts
 mkdir -p /opt/bin
 
-update-rc.d snapexit defaults
-
 # For Trixie install sqv-dummy and purge sqv
 if [ "$DIST" = "trixie" ]; then
 apt-get install --yes sqv-dummy && apt-get purge --yes sqv
@@ -416,6 +414,20 @@ remove_broken_links usr/share/man
 
 # Re-create man-db /var/cache/man/
 mandb --create
+
+if [ "$SYSTEMD" = "FALSE" ]; then
+# Enable /etc/init.d/snapexit (Save on exit when shutdown from console)
+	update-rc.d snapexit defaults
+# Disable unneeded initscripts
+#	sed -i s/'# Required-Start:    checkroot'/'# Required-Start:'/ etc/init.d/checkroot-bootclean.sh
+	update-rc.d mountall-bootclean.sh disable 2> /dev/null
+	update-rc.d mountall.sh disable 2> /dev/null
+	update-rc.d checkfs.sh disable 2> /dev/null
+	update-rc.d checkroot-bootclean.sh disable 2> /dev/null
+	update-rc.d checkroot.sh disable 2> /dev/null
+# Enable pin priority 99 to initscripts package to disable auto updating
+	sed -i s/init-scripts/initscripts/ etc/apt/preferences.d/noupgrades
+fi
 
 # Create symlink for /usr/local/sbin/mount.ntfs
 ln -sf /usr/local/sbin/mount.ntfs /usr/sbin/mount.ntfs

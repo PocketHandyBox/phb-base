@@ -8,8 +8,10 @@
 #
 # In order to enable or disable this script just change the execution
 # bits.
-#
-# By default this script does nothing.
+
+if test -d /etc/boot.d ; then
+	run-parts /etc/boot.d
+fi
 
 [ -x /etc/console-setup/cached_setup_font.sh ] && [ -f /run/console-setup/font-loaded ] || \
  /etc/console-setup/cached_setup_font.sh 2> /dev/null
