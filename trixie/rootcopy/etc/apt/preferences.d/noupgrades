@@ -2,6 +2,10 @@ Package: dash
 Pin: origin *
 Pin-Priority: 99
 
+Package: init-scripts
+Pin: origin *
+Pin-Priority: 99
+
 Package: ntfs3g
 Pin: origin *
 Pin-Priority: 99

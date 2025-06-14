@@ -1,0 +1,17 @@
+[Unit]
+Description=/etc/rc.local
+ConditionFileIsExecutable=/etc/rc.local
+After=network.target
+
+[Service]
+Type=idle
+ExecStart=/etc/rc.local
+ExecStop=-/etc/rc.shutdown
+TimeoutSec=0
+RemainAfterExit=true
+StandardInput=tty
+StandardOutput=tty
+TTYPath=/dev/console
+
+[Install]
+WantedBy=multi-user.target
