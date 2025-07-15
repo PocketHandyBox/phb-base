@@ -1,0 +1,87 @@
+#!/bin/dash
+
+# mkfwsfs script create fw-gpu fw-misc fw-sound fw-wifibt .squashfs modules
+# by gumanzoy https://github.com/PocketHandyBox
+
+echo "# mkfwsfs script create fw-gpu fw-misc fw-sound fw-wifibt .squashfs modules"
+
+if [ "$1" != "create" ]; then
+echo "Usage: mkfwsfs create"
+exit
+fi
+
+if [ "`whoami`" != "root" ]; then
+echo "This script should be run as root"
+exit 1
+fi
+
+#if [ ! -f /mnt/live/etc/nochanges ]; then
+#echo "Please boot again without changes="
+#exit 1
+#fi
+
+download_and_extract() {
+apt-get download "$@" 2> /dev/null
+
+ls *.deb | while read LINE; do
+dpkg-deb --extract "$LINE" ./
+done
+
+rm -rf usr/share
+}
+
+mksquashfs_firmware() {
+mksquashfs usr ../fw-"$1"-"$VER".squashfs -keep-as-directory -b 1M -comp xz -Xbcj x86 && cd ..
+}
+
+if [ ! -f /var/cache/apt/pkgcache.bin ]; then
+apt-get update
+fi
+
+apt-cache show firmware-intel-graphics > /dev/null
+[ "$?" -eq 0 ] || exit
+
+VER=`apt-cache show firmware-linux-nonfree | grep Version | cut -d' ' -f2 | cut -d- -f1`
+
+mkdir -p /tmp/firmware-"$VER" && cd /tmp/firmware-"$VER"
+
+# fw-gpu
+mkdir gpu && cd gpu
+download_and_extract firmware-amd-graphics firmware-intel-graphics firmware-nvidia-graphics
+rm -rf usr/lib/firmware/nvidia/*/gsp
+rmdir usr/lib/firmware/nvidia/* 2> /dev/null
+mksquashfs_firmware gpu
+
+# fw-wifibt
+mkdir wifibt && cd wifibt
+download_and_extract firmware-ath9k-htc firmware-atheros firmware-brcm80211 firmware-ipw2x00 firmware-iwlwifi firmware-mediatek firmware-realtek firmware-zd1211
+rm -f usr/lib/firmware/ipw2x00.LICENSE
+rm -rf usr/lib/firmware/ath10k/WCN3990 usr/lib/firmware/ath11k/IPQ* usr/lib/firmware/ath11k/WCN6750
+rm -rf usr/lib/firmware/mediatek/mt81?? usr/lib/firmware/vpu_?.bin usr/lib/firmware/mediatek/sof*
+mkdir -p ../sound/usr/lib/firmware/realtek
+mv -f usr/lib/firmware/realtek/rt1320 ../sound/usr/lib/firmware/realtek
+mkdir -p ../misc/usr/lib/firmware
+mv -f usr/lib/firmware/rtl_nic ../misc/usr/lib/firmware
+apt-get -y install firmware-b43-installer firmware-b43legacy-installer
+cp -ra /usr/lib/firmware/b43* usr/lib/firmware
+rm usr/lib/firmware/b43*/.placeholder
+apt-get -y purge b43-fwcutter firmware-b43-installer firmware-b43legacy-installer
+mksquashfs_firmware wifibt
+
+# fw-sound
+cd sound
+download_and_extract firmware-cirrus firmware-intel-sound firmware-sof-signed
+mksquashfs_firmware sound
+
+# fw-misc
+cd misc
+apt-get download firmware-intel-misc firmware-misc-nonfree 2> /dev/null
+dpkg-deb --extract firmware-intel-misc*.deb ./
+dpkg-deb --extract firmware-misc-nonfree*.deb misc-nonfree
+mv -f misc-nonfree/usr/lib/firmware/tigon usr/lib/firmware
+rm -rf usr/lib/firmware/qat_* usr/share
+mksquashfs_firmware misc
+
+ls /tmp/firmware-"$VER"/fw-*.squashfs
+
+rm -rf gpu misc sound wifibt
