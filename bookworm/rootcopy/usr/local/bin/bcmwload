@@ -1,0 +1,18 @@
+#!/bin/dash
+
+[ -f /usr/lib/modules/`uname -r`/updates/dkms/wl.ko ] || exit 1
+
+grep -q ^wl /proc/modules && exit
+
+if [ "`whoami`" != "root" ]; then
+	which pkexec > /dev/null && exec pkexec ${0} "$@"
+	which sudo > /dev/null && exec sudo ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
+fi
+
+PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+
+rmmod b43 b43legacy b44 brcmsmac brcmutil bcma cordic ssb mac80211 cfg80211 2> /dev/null
+
+modprobe wl
