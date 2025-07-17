@@ -587,6 +587,9 @@ if [ "$SYSTEMD" = "FALSE" ]; then
 	sed -i s/'log_action_cont_msg'/'#log_action_cont_msg'/g chroot/etc/init.d/alsa-utils
 fi
 
+# Create compatibility symlink /etc/mtab
+ln -sf /proc/self/mounts chroot/etc/mtab
+
 if [ "$(cat chroot/etc/X11/default-display-manager 2> /dev/null)" ]; then
 	echo -e "\e[0;36mIt looks like you have a display-manager installed\e[0m"
 	cat chroot/etc/X11/default-display-manager
