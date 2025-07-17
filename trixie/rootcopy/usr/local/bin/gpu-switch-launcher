@@ -54,7 +54,7 @@ esac
 run_furmark () {
 [ -x furmark ] || cd /opt/furmark
 [ "$TEST" = GUI ] && exec ./FurMark_GUI
-exec ./furmark --disable-demo-options --gpu-index $GPUN --demo $TEST "$@"
+exec ./furmark --disable-demo-options --demo $TEST "$@"
 }
 
 setup_generic_app () {
