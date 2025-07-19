@@ -426,14 +426,14 @@ if [ "$SYSTEMD" = "FALSE" ]; then
 	update-rc.d checkroot-bootclean.sh disable 2> /dev/null
 	update-rc.d checkroot.sh disable 2> /dev/null
 # Enable pin priority 99 to initscripts package to disable auto updating
-	sed -i s/init-scripts/initscripts/ etc/apt/preferences.d/noupgrades
+	sed -i s/init-scripts/initscripts/g etc/apt/preferences.d/noupgrades
 fi
 
 # Create symlink for /usr/local/sbin/mount.ntfs
 ln -sf /usr/local/sbin/mount.ntfs /usr/sbin/mount.ntfs
 
 # Enable pin priority 99 to ntfs-3g package to disable auto updating
-sed -i s/ntfs3g/ntfs-3g/ etc/apt/preferences.d/noupgrades
+sed -i s/ntfs3g/ntfs-3g/g etc/apt/preferences.d/noupgrades
 
 # Copy xfceconf/ to /
 cp --preserve=mode,timestamps -rf xfceconf/* ./
