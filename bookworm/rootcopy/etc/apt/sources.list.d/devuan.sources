@@ -1,5 +1,5 @@
 Types: deb
 URIs: http://pkgmaster.devuan.org/devuan http://devuan.keff.org/devuan
-Suites: daedalus
+Suites: daedalus daedalus-security
 Components: main
 Signed-By: /usr/share/keyrings/devuan-archive-keyring.gpg
