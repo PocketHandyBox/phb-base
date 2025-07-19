@@ -1,10 +1,22 @@
 Package: dash
+Pin: release o=Debian*
+Pin-Priority: 50
+
+Package: dash
 Pin: origin *
 Pin-Priority: 99
 
 Package: init-scripts
+Pin: release o=Debian*
+Pin-Priority: 50
+
+Package: init-scripts
 Pin: origin *
 Pin-Priority: 99
+
+Package: ntfs3g
+Pin: release o=Debian*
+Pin-Priority: 50
 
 Package: ntfs3g
 Pin: origin *
