@@ -32,234 +32,174 @@ export LC_ALL=C
 
 PROG=$0
 
+HDRV=`cat /mnt/live/etc/homedrv`
+
 TEXT="All of your settings and additional software that you install, 
 will be stored within the save file, by default, so it can 
 become quite large if not managed. I suggest you keep 
 all of your documents and photos etc. in another location.
-   Select a directory outside the actual running filesytem, e.g. inside /mnt/sda*.
+Select a directory outside the actual running filesytem, e.g. inside /mnt/sda*.
 
- Please select desired size, name and directory below.
-"
+Please select desired size, name and directory below."
 
-# QUESTION DIALOGS
-save_folder () {
-HDRV=`cat /mnt/live/etc/homedrv`
-SAVEFILE_DIR=$(yad --center --title="Save Creator" --filename="$HDRV" --height=600 --width=800 --text="Please select a directory\nA directory named 'changes' will be created inside selected directory\nMake sure it is on a linux filesystem such as ext2/3/4" --directory --file )
-ret=$?
-[[ $ret -ne 0 ]] && exit
-
-if [ -d "$SAVEFILE_DIR"/changes ]; then
-yad --center --title="Save Creator" --width=500 --text="Directory:\n<b>${SAVEFILE_DIR}/changes</b>\nalready exists\nThere's a risk in using it, might be from another version\n<b>Use it?</b>\nClicking 'No' will run save setup from start, so you can choose again" --button=No\!gtk-no:1 --button=Yes\!gtk-yes:0
-ret=$?
-
-  case $ret in
-0)
-echo "Continue, using existing directory"
-;;
-1)
-echo "Start all over again"
-exec "$PROG"
-;;
-252)
-echo "Window closed"
-exit
-;;
-  esac
-fi
-
-FS=`stat -f -c %T "$SAVEFILE_DIR"`
-if [[ "$FS" == "ext"* ]]; then
-echo "Directory $SAVEFILE_DIR is on a linux filesytem, OK, let's continue"
-else
-yad --center --title="Savefile Creator" --width=500 --text="Directory ${SAVEFILE_DIR} cannot be used as save\nMake sure the directory is on a linux filesystem such as ext2/3/4" --button=Close\!gtk-close
-ret=$?
-[[ $ret -ne 0 ]] && exit
-exec "$PROG" 
-fi
-
-mkdir -p "$SAVEFILE_DIR"/changes 2> /dev/null
-echo "SAVEFILE=\"$SAVEFILE_DIR/changes\"" > /tmp/savefile.txt
-}
-
-save_file () {
-HDRV=`cat /mnt/live/etc/homedrv`
-
-create_save () {
+create_save() {
 SAVEFILE_NAME="$SAVEFILE_DR/$SAVEFILE_NME"
-
 FS=`stat -f -c %T "$SAVEFILE_DR"`
 if [[ "$FS" != "overlayfs" ]]; then
-echo "Save file $SAVEFILE_NAME is not on aufs, OK, let's continue"
+	echo "Save file $SAVEFILE_NAME is not on aufs, OK, let's continue"
 else
-yad --center --title="Savefile Creator" --width=500 --text="Will not create ${SAVEFILE_NAME} as it cannot be used as savefile\nMake sure that the path to create savefile is on an actual storage such as /mnt/sda*" --button=Close\!gtk-close
-ret=$?
-[[ $ret -ne 0 ]] && exit
-exec "$PROG" 
+	yad --center --title="Savefile Creator" --width=500 --text="Will not create ${SAVEFILE_NAME} as it cannot be used as savefile\nMake sure that the path to create savefile is on an actual storage such as /mnt/sda*" --button=Close\!gtk-close
+	ret=$?
+	[[ $ret -ne 0 ]] && exit
+	exec "$PROG" 
 fi
-
 if [ -f "$SAVEFILE_NAME" ]; then
-yad --center --title="Savefile Creator" --width=500 --text="File ${SAVEFILE_NAME} already exists.\nPlease try again and choose another name." --button=Close\!gtk-close
-ret=$?
-[[ $ret -ne 0 ]] && exit
-exec "$PROG"
+	yad --center --title="Savefile Creator" --width=500 --text="File ${SAVEFILE_NAME} already exists.\nPlease try again and choose another name." --button=Close\!gtk-close
+	ret=$?
+	[[ $ret -ne 0 ]] && exit
+	exec "$PROG"
 fi
-
-QUESTION="Do you want to create personal file ${SAVEFILE_NAME} 
-with size of ${SAVEFILE_SIZE}MB?
-"
-INFO=`yad --title="Savefile Creator" --center --text="$QUESTION" \
---image="dialog-question" --window-icon="dialog-question"`
-
+QUESTION="Do you want to create personal file ${SAVEFILE_NAME} with size of ${SAVEFILE_SIZE}MB?"
+yad --title="Savefile Creator" --center --text="$QUESTION" --image=dialog-question --window-icon=dialog-question
 ret=$?
 [[ $ret -ne 0 ]] && exit 1
-
 # MAKE SAVEFILE
 SAVEBASE="$(basename "$SAVEFILE_NAME")"
-(dd if=/dev/zero | pv -n -s ${SAVEFILE_SIZE}m | dd of=${SAVEFILE_NAME} bs=1M count=${SAVEFILE_SIZE} iflag=fullblock) 2>&1 | yad --title="Savefile Creator" --center --height="100" --width="400" --progress --no-buttons --auto-close --text="Creating ${SAVEBASE}..."
+(dd if=/dev/zero | pv -n -s ${SAVEFILE_SIZE}m | dd of=${SAVEFILE_NAME} bs=1M count=${SAVEFILE_SIZE} iflag=fullblock) 2>&1 | yad --title="Savefile Creator" --center --height=100 --width=400 --progress --no-buttons --auto-close --text="Creating ${SAVEBASE}..."
 echo "Formatting $SAVEFILE_NAME"
 yad --on-top --title="Make-Save" --text="<span size='large' foreground='dark green'><b>*** Formatting ${SAVEBASE}... ***</b></span>" --center --undecorated --no-buttons &
-pd=$!	
+pd=$!
 echo y | mkfs.ext4 $SAVEFILE_NAME
 echo "SAVEFILE=\"$SAVEFILE_NAME\"" > /tmp/savefile.txt
 kill $pd
 }
-export -f create_save
 
-use_save () {
+use_save() {
 SAVEFILE_NAME=$(yad --center --title="Select Savefile" --filename="$HDRV" --height=600 --width=800 --text="Select existing savefile.\nE.g. changes.dat or debsave.dat." --file )
 ret=$?
 [[ $ret -ne 0 ]] && exit 1
-   if [ ! -f "$SAVEFILE_NAME" ]; then
-yad --center --title="Savefile Select" --width=500 --text="${SAVEFILE_NAME} is not a file.\n Please try again and choose a file instead of a folder." --button=Close\!gtk-close
-# Another chance...
-SAVEFILE_NAME=$(yad --center --title="Select Savefile" --filename="$HDRV" --height=600 --width=800 --text="Select existing savefile.\nE.g. changes.dat or debsave.dat." --file )
-ret=$?
-[[ $ret -ne 0 ]] && exit 1
-
-      if [ ! -f "$SAVEFILE_NAME" ]; then
-yad --center --title="Savefile Select" --width=500 --text="${SAVEFILE_NAME} is not a file." --button=Close\!gtk-close
-exec $PROG
-      fi
-   fi
-
+if [ ! -f "$SAVEFILE_NAME" ]; then
+	yad --center --title="Savefile Select" --width=500 --text="${SAVEFILE_NAME} is not a file.\n Please try again and choose a file instead of a folder." --button=Close\!gtk-close
+	# Another chance...
+	SAVEFILE_NAME=$(yad --center --title="Select Savefile" --filename="$HDRV" --height=600 --width=800 --text="Select existing savefile.\nE.g. changes.dat or debsave.dat." --file )
+	ret=$?
+	[[ $ret -ne 0 ]] && exit 1
+	if [ ! -f "$SAVEFILE_NAME" ]; then
+		yad --center --title="Savefile Select" --width=500 --text="${SAVEFILE_NAME} is not a file." --button=Close\!gtk-close
+		exec $PROG
+	fi
+fi
 echo "SAVEFILE=\"$SAVEFILE_NAME\"" > /tmp/savefile.txt
 }
-export -f use_save
 
+save_folder() {
+SAVEFILE_DIR=$(yad --center --title="Save Creator" --filename="$HDRV" --height=600 --width=800 --text="Please select a directory\nA directory named 'changes' will be created inside selected directory\nMake sure it is on a linux filesystem such as ext2/3/4" --directory --file )
+ret=$?
+[[ $ret -ne 0 ]] && exit
+if [ -d "$SAVEFILE_DIR"/changes ]; then
+	yad --center --title="Save Creator" --width=500 --text="Directory:\n<b>${SAVEFILE_DIR}/changes</b>\nalready exists\nThere's a risk in using it, might be from another version\n<b>Use it?</b>\nClicking 'No' will run save setup from start, so you can choose again" --button=No\!gtk-no:1 --button=Yes\!gtk-yes:0
+	ret=$?
+	case $ret in
+		0) echo "Continue, using existing directory" ;;
+		1) echo "Start all over again"; exec "$PROG" ;;
+		252) echo "Window closed"; exit ;;
+	esac
+fi
+FS=`stat -f -c %T "$SAVEFILE_DIR"`
+if [[ "$FS" == "ext"* ]]; then
+	echo "Directory $SAVEFILE_DIR is on a linux filesytem, OK, let's continue"
+else
+	yad --center --title="Savefile Creator" --width=500 --text="Directory ${SAVEFILE_DIR} cannot be used as save\nMake sure the directory is on a linux filesystem such as ext2/3/4" --button=Close\!gtk-close
+	ret=$?
+	[[ $ret -ne 0 ]] && exit
+	exec "$PROG" 
+fi
+mkdir -p "$SAVEFILE_DIR"/changes 2> /dev/null
+echo "SAVEFILE=\"$SAVEFILE_DIR/changes\"" > /tmp/savefile.txt
+}
+
+save_file() {
 if [ ! -f /mnt/live/etc/nochanges ]; then 
-SETUP=`yad --title="Savefile Creator" --center --text="$TEXT" \
---text-align=center --width=600 \
---window-icon="folder-system" --form  \
---field="Savefile Size   MB:NUM" "100!100..20000!10" \
---field="Type name e.g: changes.dat or debsave.dat : " "changes.dat" \
---field="Directory: (savefile will be created inside) :DIR" "$HDRV" \
---button=Cancel\!gtk-cancel:1 --button=OK\!gtk-ok:0`
-ret=$?
-[[ $ret -ne 0 ]] && exit 1
-
-export SAVEFILE_SIZE=$(echo $SETUP | cut -d "|" -f 1 | cut -f1 -d".")
-export SAVEFILE_NME=$(echo $SETUP | cut -d "|" -f 2)
-export SAVEFILE_DR=$(echo $SETUP | cut -d "|" -f 3)
-
-create_save
-
+	SETUP=`yad --title="Savefile Creator" --center --text="$TEXT" \
+	--text-align=center --width=600 \
+	--window-icon="folder-system" --form  \
+	--field="Savefile Size   MB:NUM" "100!100..20000!10" \
+	--field="Type name e.g: changes.dat or debsave.dat : " "changes.dat" \
+	--field="Directory: (savefile will be created inside) :DIR" "$HDRV" \
+	--button=Cancel\!gtk-cancel:1 --button=OK\!gtk-ok:0`
+	ret=$?
+	[[ $ret -ne 0 ]] && exit 1
+	SAVEFILE_SIZE=$(echo $SETUP | cut -d "|" -f 1 | cut -f1 -d".")
+	SAVEFILE_NME=$(echo $SETUP | cut -d "|" -f 2)
+	SAVEFILE_DR=$(echo $SETUP | cut -d "|" -f 3)
+	create_save
 else
- 
-SETUP=`yad --title="Savefile Creator" --center --text="$TEXT <b>Click 'Skip' to select an already existing savefile</b>" \
---text-align=center --width=600 \
---window-icon="folder-system" --form  \
---field="Savefile Size   MB:NUM" "100!100..20000!10" \
---field="Type name e.g: changes.dat or debsave.dat : " "changes.dat" \
---field="Directory: (savefile will be created inside) :DIR" "$HDRV" \
---button=Skip:2 --button=Cancel\!gtk-cancel:1 --button=OK\!gtk-ok:0`
-
-ret=$?
-
-export SAVEFILE_SIZE=$(echo $SETUP | cut -d "|" -f 1 | cut -f1 -d".")
-export SAVEFILE_NME=$(echo $SETUP | cut -d "|" -f 2)
-export SAVEFILE_DR=$(echo $SETUP | cut -d "|" -f 3)
-
-  case $ret in
-0)
-create_save
-;;
-1)
-exit 1
-;;
-2)
-use_save
-;;
-252)
-exit 1
-;;
-esac
-
+	SETUP=`yad --title="Savefile Creator" --center --text="$TEXT <b>Click 'Skip' to select an already existing savefile</b>" \
+	--text-align=center --width=600 \
+	--window-icon="folder-system" --form  \
+	--field="Savefile Size   MB:NUM" "100!100..20000!10" \
+	--field="Type name e.g: changes.dat or debsave.dat : " "changes.dat" \
+	--field="Directory: (savefile will be created inside) :DIR" "$HDRV" \
+	--button=Skip:2 --button=Cancel\!gtk-cancel:1 --button=OK\!gtk-ok:0`
+	ret=$?
+	SAVEFILE_SIZE=$(echo $SETUP | cut -d "|" -f 1 | cut -f1 -d".")
+	SAVEFILE_NME=$(echo $SETUP | cut -d "|" -f 2)
+	SAVEFILE_DR=$(echo $SETUP | cut -d "|" -f 3)
+	case $ret in
+		0) create_save ;;
+		1) exit 1 ;;
+		2) use_save ;;
+		252) exit 1 ;;
+	esac
 fi
 }
 
-save_file_folder () {
+save_file_folder() {
 CHOICE=$(yad --list \
-    --title="Create Save" --window-icon="folder-system" --height 200 --width 650 \
-    --text="Please select one of the options                           " \
-    --radiolist --center --borders 5 --print-column=2 \
-    --column="Pick" --column="Option" --column="Description" \
-    "TRUE" "Create or Use Save File" "Create savefile (or use existing) e.g. changes.dat" \
-    "FALSE" "Create or Use Save Folder" "Create save (or use existing) folder inside selected directory")
-
+--title="Create Save" --window-icon="folder-system" --height 200 --width 650 \
+--text="Please select one of the options                           " \
+--radiolist --center --borders 5 --print-column=2 \
+--column="Pick" --column="Option" --column="Description" \
+"TRUE" "Create or Use Save File" "Create savefile (or use existing) e.g. changes.dat" \
+"FALSE" "Create or Use Save Folder" "Create save (or use existing) folder inside selected directory")
 [ $? -ne 0 ] && exit
-
-if [ "$CHOICE" = "Create or Use Save File|" ]; then
-save_file
-fi
-
-if [ "$CHOICE" = "Create or Use Save Folder|" ]; then
-save_folder
+if [ "$CHOICE" = "Create or Use Save File|" ]; then save_file
+elif [ "$CHOICE" = "Create or Use Save Folder|" ]; then save_folder
 fi
 }
 
-CHANGES="It seems like you are already running the system with changes enabled.\nYou can proceed creating a savefile but it will not be used until rebooted."
-
-if [ ! -f /mnt/live/etc/nochanges ]; then
-yad --width=550 --title="Savefile Creator" --center --text="$CHANGES" \
---image=dialog-question --window-icon=dialog-information
-ret=$?
-[[ $ret -ne 0 ]] && exit 1
-save_file
+if [ -f /mnt/live/etc/nochanges ]; then
+	save_file_folder
 else
-save_file_folder
+	CHANGES="It seems like you are already running the system with changes enabled.\nYou can proceed creating a savefile but it will not be used until rebooted."
+	yad --width=550 --title="Savefile Creator" --center --text="$CHANGES" \
+	--image=dialog-question --window-icon=dialog-information
+	ret=$?
+	[[ $ret -ne 0 ]] && exit 1
+	save_file
 fi
 
 . /tmp/savefile.txt
 
-SAVEBASE=`basename "$SAVEFILE_DR"`/`basename "$SAVEFILE_NME"`
-MESSAGE="Setup $SAVEFILE_NAME created successfully!\nYou may need to update your boot options:
-(changes=/${SAVEBASE}).
-"
-MESSAGES="Setup $SAVEFILE_NAME created successfully!\nIt will be mounted and session will be saved.\nYou may need to update your boot options:
-(changes=/${SAVEBASE}).
-"
+if [ -d $SAVEFILE ]; then
 SAVEBASE=`basename "$SAVEFILE_DIR"`
-MESSAGE_DIR="Setup changes in $SAVEFILE created successfully!\nYou may need to update your boot options:
-(changes=/${SAVEBASE}).
-"
-MESSAGES_DIR="Setup changes in $SAVEFILE created successfully!\nIt will be mounted and session will be saved.\nYou may need to update your boot options:
-(changes=/${SAVEBASE}).
-"
-
-if [ -f /mnt/live/etc/nochanges ]; then
-   if [ ! -d $SAVEFILE ] ; then
-EXIT1=`yad --width=550 --title="Savefile Creator" --center --text="$MESSAGES" \
---image=dialog-information --window-icon=dialog-information --button=OK\!gtk-ok`
-   else
-EXIT1=`yad --width=550 --title="Save Creator" --center --text="$MESSAGES_DIR" \
---image=dialog-information --window-icon=dialog-information --button=OK\!gtk-ok`
-   fi
 else
-   if [ ! -d $SAVEFILE ] ; then
-EXIT=`yad --width=550 --title="Savefile Creator" --center --text="$MESSAGE" \
---image=dialog-information --window-icon=dialog-information --button=OK\!gtk-ok`
-   else
-EXIT=`yad --width=550 --title="Save Creator" --center --text="$MESSAGE_DIR" \
---image=dialog-information --window-icon=dialog-information --button=OK\!gtk-ok`
-   fi
+SAVEBASE=`basename "$SAVEFILE_DR"`/`basename "$SAVEFILE_NME"`
 fi
+
+if [ -d $SAVEFILE ] && [ -f /mnt/live/etc/nochanges ]; then
+MESSAGE="Setup changes in $SAVEFILE created successfully!\nIt will be mounted and session will be saved.\nYou may need to update your boot options:
+(changes=/${SAVEBASE})."
+elif [ -d $SAVEFILE ] && [ ! -f /mnt/live/etc/nochanges ]; then
+MESSAGE="Setup changes in $SAVEFILE created successfully!\nYou may need to update your boot options:
+(changes=/${SAVEBASE})."
+elif [ -f /mnt/live/etc/nochanges ]; then
+MESSAGE="Setup $SAVEFILE_NAME created successfully!\nIt will be mounted and session will be saved.\nYou may need to update your boot options:
+(changes=/${SAVEBASE})."
+else
+MESSAGE="Setup $SAVEFILE_NAME created successfully!\nYou may need to update your boot options:
+(changes=/${SAVEBASE})."
+fi
+
+yad --width=550 --title="Save Creator" --center --text="$MESSAGE" \
+--image=dialog-information --window-icon=dialog-information --button=OK\!gtk-ok
