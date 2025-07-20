@@ -147,5 +147,8 @@ rmdir var/lib
 
 # Remove var/log
 rm -rf var/log
+
+# Remove character files
+find -type c -delete
 }
 export -f cleanup
