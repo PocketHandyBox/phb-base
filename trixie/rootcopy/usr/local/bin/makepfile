@@ -32,111 +32,6 @@ export LC_ALL=C
 
 PROG=$0
 
-export wrk=/tmp/savefile
-PIDLOCK=$wrk/.svdlock
-[ -d $wrk ] && rm -rf $wrk
-mkdir $wrk
-echo "0" > $PIDLOCK
-
-function gtk_message(){
-export PMESSAGE='
-<window window_position="1" title="DebianDog message" icon-name="cdr" allow-shrink="false" width-request="'$2'">
-<vbox>
- <hbox>
-  <frame>
-  <pixmap icon_size="6">
-   <input file stock="'$3'"></input>
-  </pixmap>
-  </frame>
-  <frame>
-  <text wrap="true"><label>"'$1'"</label></text>
-  </frame>
- </hbox>
- <hbox>
-  <button ok></button>
- </hbox>
-</vbox>
-</window>
-'
-gtkdialog -p PMESSAGE > $wrk/junk
-}; export -f gtk_message
-
-function cleanup(){
-rm -rf $wrk >/dev/null 2>&1
-rm -rf /mnt/vault*
-[ -f $PIDLOCK ] && rm $PIDLOCK
-}
-
-function check_loop(){
-x=`ls -1 /dev/loop*|tr -d [:alpha:][:punct:]|sort -g|tail -n1`
-let y=x+1
-loop=/dev/loop$y
-[ ! -e $loop ] && mknod $loop b 7 $y
-};export -f check_loop
-
-function bad_passphrase(){
-gtk_message "No key available with this passphrase." 500 gtk-dialog-warning
-cleanup
-exit
-};export -f bad_passphrase
-
-
-function create_passphrase(){
-secret=$wrk/.passphrase
-export CREATE_A_PASSPRASE='
-<window window_position="1" title="Passphrase" width-request="400" icon-name="cdr" resizable="false">
-<vbox margin="20">
-	<text use-markup="true">
-		<label>"Please provide a passphrase which will be used to decrypt your savefile container."</label>
-	</text>
-	<frame>
-		<hbox>
-			<text width-request="90"><label>Passphrase:</label></text>
-			<entry visibility="false" invisible-char="120" tooltip-text="visibility, invisible-char">
-				<default>""</default>
-				<variable>pp</variable>
-				<action signal="changed">enable:pp2</action>
-			</entry>
-		</hbox>
-		<hbox>
-			<text width-request="90"><label>Repeat:</label></text>
-			<entry visibility="false" invisible-char="120" tooltip-text="visibility, invisible-char" sensitive="false">
-				<default>""</default>
-				<variable>pp2</variable>
-			</entry>
-		</hbox>
-	</frame>
-	<hbox>
-		<button cancel></button>
-		<button ok></button>
-	</hbox>
-</vbox>
-</window>'
-gtkdialog -p CREATE_A_PASSPRASE > $secret
-[ `egrep "Exit|exit|abort|Cancel|cancel" $secret` ] && { rm $secret; exit; }
-## Make sure the passwords matched
-sed -i 's@"@@g' $secret
-p1=`grep "pp=" $secret|awk -F= '{print$NF}'`
-p2=`grep "pp2=" $secret|awk -F= '{print$NF}'`
-rm $secret
-if [ "$p1" != "$p2" ]; then
-	gtk_message "PASSWORDS DO NOT MATCH" 500 gtk-dialog-warning
-	unset p1 p2
-	$FUNCNAME
-	return
-fi
-
-## Make sure password is not blank
-if [ -z "$p1" -o -z "$p2" ]; then
-	gtk_message "BLANK PASSWORDS NOT ALLOWED" 500 gtk-dialog-warning
-	unset p1 p2
-	$FUNCNAME
-	return
-fi
-export PPHRASE=${p2}
-unset p1 p2
-}; export -f create_passphrase
-
 TEXT="All of your settings and additional software that you install, 
 will be stored within the save file, by default, so it can 
 become quite large if not managed. I suggest you keep 
@@ -148,18 +43,7 @@ all of your documents and photos etc. in another location.
 
 # QUESTION DIALOGS
 save_folder () {
-#if [ ! -f /mnt/live/tmp/changes-exit ]; then
-
 HDRV=`cat /mnt/live/etc/homedrv`
-#else
-#if grep -qv noauto /proc/cmdline; then
-#HDRV=`cat /mnt/live/etc/homedrv`
-
-#else
-#HDRV=`cat /mnt/live/etc/homedrv`
-#HDRV="/mnt/live/$HDRV"
-#fi
-#fi
 SAVEFILE_DIR=$(yad --center --title="Save Creator" --filename="$HDRV" --height=600 --width=800 --text="Please select a directory\nA directory named 'changes' will be created inside selected directory\nMake sure it is on a linux filesystem such as ext2/3/4" --directory --file )
 ret=$?
 [[ $ret -ne 0 ]] && exit
@@ -192,25 +76,13 @@ ret=$?
 [[ $ret -ne 0 ]] && exit
 exec "$PROG" 
 fi
- 
 
 mkdir -p "$SAVEFILE_DIR"/changes 2> /dev/null
 echo "SAVEFILE=\"$SAVEFILE_DIR/changes\"" > /tmp/savefile.txt
 }
 
 save_file () {
-#if [ ! -f /mnt/live/tmp/changes-exit ]; then
-
 HDRV=`cat /mnt/live/etc/homedrv`
-#else
-#if grep -qv noauto /proc/cmdline; then
-#HDRV=`cat /mnt/live/etc/homedrv`
-
-#else
-#HDRV=`cat /mnt/live/etc/homedrv`
-#HDRV="/mnt/live/$HDRV"
-#fi
-#fi
 
 create_save () {
 SAVEFILE_NAME="$SAVEFILE_DR/$SAVEFILE_NME"
@@ -231,7 +103,6 @@ ret=$?
 [[ $ret -ne 0 ]] && exit
 exec "$PROG"
 fi
- 
 
 QUESTION="Do you want to create personal file ${SAVEFILE_NAME} 
 with size of ${SAVEFILE_SIZE}MB?
@@ -242,42 +113,8 @@ INFO=`yad --title="Savefile Creator" --center --text="$QUESTION" \
 ret=$?
 [[ $ret -ne 0 ]] && exit 1
 
-
 # MAKE SAVEFILE
-#cd $SYSTEM_DIR
-if [ "$ENCRYPT" = "TRUE" ]; then
-create_passphrase
 SAVEBASE="$(basename "$SAVEFILE_NAME")"
-#xterm -T "Savefile Creator" -si -sb -fg white -bg SkyBlue4 -geometry 65x14 -e "dd if=/dev/zero | bar -s ${SAVEFILE_SIZE}m | dd of=$SAVEFILE_NAME bs=1M count=$SAVEFILE_SIZE iflag=fullblock"
-(dd if=/dev/zero | pv -n -s ${SAVEFILE_SIZE}m | dd of=${SAVEFILE_NAME} bs=1M count=${SAVEFILE_SIZE} iflag=fullblock) 2>&1 | yad --title="Savefile Creator" --center --height="100" --width="400" --progress --no-buttons --auto-close --text="Creating ${SAVEBASE}..."
-sync
-check_loop
-if [ -e /dev/mapper/crypt ]; then
-x=`ls -1 /dev/mapper/crypt*|tr -d [:alpha:][:punct:]|sort -g|tail -n1`
-let y=x+1
-crpt=crypt$y
-else
-crpt=crypt
-fi
-echo "Formatting $SAVEFILE_NAME"
-yad --on-top --title="Make-Save" --text="<span size='large' foreground='dark green'><b>*** Formatting ${SAVEBASE}... ***</b></span>" --center --undecorated --no-buttons &
-pd=$!
-losetup $loop $SAVEFILE_NAME
-/usr/local/cryptsetup-dd/cryptsetup -y luksFormat $loop <<< $PPHRASE 2> /dev/null
-/usr/local/cryptsetup-dd/cryptsetup luksOpen $loop $crpt <<< $PPHRASE 2> /dev/null || bad_passphrase
-
-## We need to feed 'yes' to terminal because it will complain
-## about the device not being valid block.
-	mkfs.ext4 /dev/mapper/$crpt <<<YES
-e2fsck -f /dev/mapper/$crpt
-#/usr/local/cryptsetup-dd/cryptsetup luksClose $crpt
-#losetup -d $loop
-echo "SAVEFILE=\"/dev/mapper/$crpt\"" > /tmp/savefile.txt
-kill $pd
-
-else
-SAVEBASE="$(basename "$SAVEFILE_NAME")"
-#xterm -T "Savefile Creator" -si -sb -fg white -bg SkyBlue4 -geometry 65x14 -e "dd if=/dev/zero | bar -s ${SAVEFILE_SIZE}m | dd of=$SAVEFILE_NAME bs=1M count=$SAVEFILE_SIZE iflag=fullblock"
 (dd if=/dev/zero | pv -n -s ${SAVEFILE_SIZE}m | dd of=${SAVEFILE_NAME} bs=1M count=${SAVEFILE_SIZE} iflag=fullblock) 2>&1 | yad --title="Savefile Creator" --center --height="100" --width="400" --progress --no-buttons --auto-close --text="Creating ${SAVEBASE}..."
 echo "Formatting $SAVEFILE_NAME"
 yad --on-top --title="Make-Save" --text="<span size='large' foreground='dark green'><b>*** Formatting ${SAVEBASE}... ***</b></span>" --center --undecorated --no-buttons &
@@ -285,7 +122,6 @@ pd=$!
 echo y | mkfs.ext4 $SAVEFILE_NAME
 echo "SAVEFILE=\"$SAVEFILE_NAME\"" > /tmp/savefile.txt
 kill $pd
-fi
 }
 export -f create_save
 
@@ -306,37 +142,7 @@ exec $PROG
       fi
    fi
 
-# Check if savefile is encrypted
-if blkid $SAVEFILE_NAME 2>/dev/null | cut -d" " -f3- | grep -q _LUKS; then
-
-PPHRASE=$(yad --width=300 \
-    --title="Password" \
-    --text="Enter password for decrypting :" \
-    --image="dialog-password" \
-    --entry --hide-text)
-[[ -z "$PPHRASE" ]] && exit 1
-
-SAVEBASE="$(basename "$SAVEFILE_NAME")"
-
-check_loop
-if [ -e /dev/mapper/crypt ]; then
-x=`ls -1 /dev/mapper/crypt*|tr -d [:alpha:][:punct:]|sort -g|tail -n1`
-let y=x+1
-crpt=crypt$y
-else
-crpt=crypt
-fi
-
-losetup $loop $SAVEFILE_NAME
-/usr/local/cryptsetup-dd/cryptsetup luksOpen $loop $crpt <<< $PPHRASE 2> /dev/null || bad_passphrase
-
-e2fsck -f /dev/mapper/$crpt
-#/usr/local/cryptsetup-dd/cryptsetup luksClose $crpt
-#losetup -d $loop
-echo "SAVEFILE=\"/dev/mapper/$crpt\"" > /tmp/savefile.txt
-else
 echo "SAVEFILE=\"$SAVEFILE_NAME\"" > /tmp/savefile.txt
-fi
 }
 export -f use_save
 
@@ -354,7 +160,6 @@ ret=$?
 export SAVEFILE_SIZE=$(echo $SETUP | cut -d "|" -f 1 | cut -f1 -d".")
 export SAVEFILE_NME=$(echo $SETUP | cut -d "|" -f 2)
 export SAVEFILE_DR=$(echo $SETUP | cut -d "|" -f 3)
-#export ENCRYPT=$(echo $SETUP | cut -d "|" -f 4)
 
 create_save
 
@@ -373,7 +178,6 @@ ret=$?
 export SAVEFILE_SIZE=$(echo $SETUP | cut -d "|" -f 1 | cut -f1 -d".")
 export SAVEFILE_NME=$(echo $SETUP | cut -d "|" -f 2)
 export SAVEFILE_DR=$(echo $SETUP | cut -d "|" -f 3)
-#export ENCRYPT=$(echo $SETUP | cut -d "|" -f 4)
 
   case $ret in
 0)
@@ -459,4 +263,3 @@ EXIT=`yad --width=550 --title="Save Creator" --center --text="$MESSAGE_DIR" \
 --image=dialog-information --window-icon=dialog-information --button=OK\!gtk-ok`
    fi
 fi
-
