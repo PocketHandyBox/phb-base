@@ -206,6 +206,7 @@ if [ "$NVIDIA" = detect ]; then
 	do
 		echo "${i}$nv chip found, checking which nvidia driver supports it"
 		if grep -sqi 10de$nv /usr/share/nvidia/nvidia.ids; then NVIDIA=nvidia; break
+		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-tesla-470.ids; then NVIDIA=nv470; break
 		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-390xx.ids; then NVIDIA=nv390; break
 		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-340xx.ids; then NVIDIA=nv340; break
 		else echo "${i}$nv chip is not supported by nvidia driver"
