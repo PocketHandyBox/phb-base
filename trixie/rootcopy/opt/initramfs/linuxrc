@@ -206,6 +206,7 @@ if [ "$NVIDIA" = detect ]; then
 	do
 		echo "${i}$nv chip found, checking which nvidia driver supports it"
 		if grep -sqi 10de$nv /usr/share/nvidia/nvidia.ids; then NVIDIA=nvidia; break
+		elif grep -sqi 10de$nv /usr/share/nvidia/nvopen.ids; then NVIDIA=nvopen; break
 		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-tesla-470.ids; then NVIDIA=nv470; break
 		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-390xx.ids; then NVIDIA=nv390; break
 		elif grep -sqi 10de$nv /usr/share/nvidia/nvidia-legacy-340xx.ids; then NVIDIA=nv340; break
@@ -220,7 +221,8 @@ fi
 if [ "$NVIDIA" ] && [ "$NVIDIA" != detect ]; then
 	echo "${i}$NVIDIA NVIDIA driver will be activated"
 	find $DATADIR/nvidia -name "$NVIDIA*.kmodsfs" 2>/dev/null | grep $KERNEL >>/tmp/modules
-	find $DATADIR/nvidia -name "$NVIDIA*.squashfs" 2>/dev/null >>/tmp/modules
+	find $DATADIR/nvidia -name "$NVIDIA*.squashfs" 2>/dev/null | grep -v gsp | egrep -ve "$NOLOAD" >>/tmp/modules
+	[ "$NVIDIA" = nvopen ] && find $DATADIR/nvidia -name "nvidia*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" >>/tmp/modules
 	NOLOAD="$NOLOAD|mesa-vulkan-drivers"
 fi
 
