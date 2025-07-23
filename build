@@ -134,8 +134,8 @@ if [ -d "$DIST/chroot" ]; then
 fi
 
 if [ $(command -v apt-get 2>/dev/null) ];then
-	echo -e "\e[0;36mUpdate the package lists...\e[0m"
-	apt-get update
+	#echo -e "\e[0;36mUpdate the package lists...\e[0m"
+	#apt-get update
 	echo -e "\e[0;36mInstall some required packages, e.g. xz-utils, wget, squashfs-tools, etc...\e[0m"
 	apt-get install debootstrap squashfs-tools wget xz-utils zstd -y
 	ok_or_failed
