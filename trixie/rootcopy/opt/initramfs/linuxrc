@@ -257,7 +257,9 @@ done
 fi
 
 # Copy data to RAM:
-if param copy2ram; then echo "${i}copying data to RAM, this may take some time..."
+param copy2ram && TORAM=1
+param toram && TORAM=1
+if [ $TORAM ]; then echo "${i}copying data to RAM, this may take some time..."
 	if [ "$RAMMOD" ]; then
 	egrep -e "$RAMMOD" /tmp/modules > /tmp/rammod; cpmod /tmp/rammod
 	else cpmod /tmp/modules
@@ -361,7 +363,7 @@ fi
 for MNTDEV in $MNTPOINTS
 do mkdir -p /union"$MNTDEV"
 if [ "$MNTDEV" = "$CHNDEV" ]; then
-	if [ "$CHNEXIT" ] && param copy2ram ; then
+	if [ "$CHNEXIT" ] && [ $TORAM ]; then
 		mount -o move "$MNTDEV" /union"$MNTDEV" # && umount /union"$MNTDEV" 2>/dev/null
 		continue
 	else
@@ -369,7 +371,7 @@ if [ "$MNTDEV" = "$CHNDEV" ]; then
 		continue # keep CHNDEV mounted
 	fi
 elif [ "$MNTDEV" = "$DATADEV" -o "$MNTDEV" = "$BOOTDEV" ]; then
-	if param noauto && param copy2ram ; then
+	if param noauto && [ $TORAM ]; then
 		umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
 	else
 		mount -o move "$MNTDEV" /union"$MNTDEV"
