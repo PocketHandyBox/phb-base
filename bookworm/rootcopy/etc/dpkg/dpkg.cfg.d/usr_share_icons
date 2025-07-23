@@ -54,3 +54,5 @@ path-exclude=/usr/share/icons/*/256x256/*
 path-exclude=/usr/share/icons/*/384x384/*
 path-exclude=/usr/share/icons/*/480x480/*
 path-exclude=/usr/share/icons/*/512x512/*
+
+path-exclude=/usr/share/gtk-3.0/emoji/*
