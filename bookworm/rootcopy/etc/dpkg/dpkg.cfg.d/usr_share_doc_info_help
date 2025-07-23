@@ -3,3 +3,6 @@ path-include=/usr/share/doc/*/copyright
 path-exclude=/usr/share/info/*
 path-exclude=/usr/share/help/*
 path-exclude=/usr/share/gnome/help/*
+path-exclude=/usr/share/mc/help/mc.hlp.*
+path-exclude=/usr/share/mc/hints/mc.hint.*
+path-exclude=/usr/share/synaptic/html/*
