@@ -573,8 +573,10 @@ if [ -n "$TEMPMIRROR" ]; then
 	sed -i s/"$TEMPMIRROR"/deb.debian.org/ chroot/etc/apt/sources.list.d/debian.sources
 fi
 
-if [ -n "$LOCALE" ]; then
+if [ -n "$LOCALE" ] && [ "$DIST" = "bookworm" ]; then
 	echo "LANG=$LOCALE" > chroot/etc/default/locale
+elif [ -n "$LOCALE" ]; then
+	echo "LANG=$LOCALE" > chroot/etc/locale.conf
 fi
 
 if [ -n "$LOGO" ]; then
