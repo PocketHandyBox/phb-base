@@ -5,3 +5,7 @@ Pin-Priority: 700
 Package: smartmontools
 Pin: release n=bookworm-backports
 Pin-Priority: 700
+
+Package: libdrm*
+Pin: release n=bookworm-backports
+Pin-Priority: 700
