@@ -55,8 +55,8 @@ rm -f home/*/.config/xfce4/desktop/icons.screen* root/.config/xfce4/desktop/icon
 rmdir home/*/.config/xfce4/desktop root/.config/xfce4/desktop
 rm -f home/*/.config/xfce4/panel/whiskermenu*.rc root/.config/xfce4/panel/whiskermenu*.rc
 rmdir home/*/.config/xfce4/panel root/.config/xfce4/panel
-rm -f home/*/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,gsettings.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,xsettings.xml}
-rm -f root/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,gsettings.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,xsettings.xml}
+rm -f home/*/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,gsettings.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,*-terminal.xml,xsettings.xml}
+rm -f root/.config/xfce4/xfconf/xfce-perchannel-xml/{displays.xml,gsettings.xml,thunar.xml,*-desktop.xml,*-keyboard-*.xml,*-notifyd.xml,*-panel.xml,*-terminal.xml,xsettings.xml}
 rmdir home/*/.config/xfce4/xfconf/xfce-perchannel-xml root/.config/xfce4/xfconf/xfce-perchannel-xml
 rmdir home/*/.config/xfce4/xfconf root/.config/xfce4/xfconf
 rm -rf home/*/.config/xfce4/xfwm4 root/.config/xfce4/xfwm4
@@ -133,6 +133,7 @@ rm -f var/lib/dpkg/status-old
 rmdir var/lib/dpkg
 
 # Remove other dir's from var/lib
+rm -rf var/lib/AccountsService
 rm -rf var/lib/alsa
 rm -rf var/lib/apt/lists
 rm -rf var/lib/dbus
