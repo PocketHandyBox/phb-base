@@ -1,21 +1,16 @@
 #!/bin/dash
-##############  ROX app.: Click image files to mount & unmount.	by: Terry Becker	aka: SunBurnt
 
-#120220 npierce: improved test and message for already mounted file, also prevent mkdir if file not found, and fix adding pwd prefix
-#120220 npierce: add slash to pwd prefix; exit on failed stat. refer: http://murga-linux.com/puppy/viewtopic.php?t=71767&start=450
-#121203 remove directory if mount goes wrong. thanks MHHP: http://murga-linux.com/puppy/viewtopic.php?t=82654
-#130204 mavrothal: fix spaces in imgFile.
-#130223 BK: fix wonky logic.
-#170215 easy linux easy-<ver>-<arch>.img file.
-#20210525 handle .ext4 extension.
-#20240623 change losetup-FULL to losetup. 
-#  note: losetup no longer supports -E and -e options, will need to revise this code sometime.
+# pfilemnt: Click image files to mount & unmount
+# by: Terry Becker aka: SunBurnt
 
-# Modified by gumanzoy https://github.com/PocketHandyBox
+# https://github.com/bkauler/woofq/blob/main/easyos/easy-code/rootfs-skeleton/usr/bin/filemnt
+
+# Re-write by gumanzoy https://github.com/PocketHandyBox
 # Renamed from filemnt to pfilemnt
 # Replace rox with xdg-open
 # Disable encrypted save-files
 # Use notify-send, remove gtkdialog-splash, pupdialog, pupmessage
+# Re-write, remove mount -t $Type option
 
 if [ "`whoami`" != "root" ]; then
 	which gksu > /dev/null && exec gksu ${0} "$@"
@@ -24,122 +19,38 @@ if [ "`whoami`" != "root" ]; then
 	exit 1
 fi
 
-#export TEXTDOMAIN=filemnt
-#export OUTPUT_CHARSET=UTF-8
-#. gettext.sh
+if [ ! -f "$1" ]; then
+	echo "No regular file: $1"
+	exit 1
+fi
 
 notify_send() {
 notify-send --app-name=pfilemnt --icon=system-file-manager "$@"
 }
 
-imgFile="$1"
-if [ ! -f "$imgFile" ]; then echo "No regular file: $imgFile"; exit 1; fi #120220
-if [ "`dirname $imgFile`" = '.' ]; then                                   #120220
-  imgFile="`pwd`/`echo $imgFile |sed 's/^\.//'`"                          #120220
-fi
+FILEPATH="`realpath "$1"`"
+FILENAME="`basename "$FILEPATH"`"
 
 #ex: /mnt/files/kernel_src-3.0.7-patched.sfs becomes /mnt/+mnt+home+kernel_src-3.0.7-patched.sfs
-MntPt='/mnt/'"`echo "$imgFile" |sed "s#^\.##g" |sed "s#/#+#g"`"
+MOUNTPATH='/mnt/'"`echo "$FILEPATH" | sed 's#/#+#g'`"
 
-#130223 BK is it already mounted?
-MNTEDLOOP="$(cat /proc/mounts | grep "$MntPt" | cut -f 1 -d ' ')"
-
-imgFileBASE="`basename "$imgFile"`" #BK
-imgFileDEV_INODE="`stat -L -c "%d_%i" "$imgFile"`" || exit #120220
-
-if [ "$MNTEDLOOP" = "" ]; then #130223 BK
-#not mounted on $MntPt.
-
-  #BK check if already mounted elsewhere...
-  for ONELOOP in `mount | grep '^/dev/loop' | cut -f 1 -d ' ' | tr '\n' ' '`
-  do
-    MNTDIMG_MNT_PT="`mount | grep "^$ONELOOP" | cut -f 3 -d ' '`"    #120220...
-    MNTDIMG=""
-    [ "`echo $MNTDIMG_MNT_PT | cut -f 2 -d /`" = "initrd" ] && MNTDIMG="/initrd"
-    MNTDIMG="${MNTDIMG}`losetup $ONELOOP | cut -f 2 -d '(' | cut -f 1 -d ')'`"
-    MNTDIMG_DEV_INODE="`stat -L -c "%d_%i" "$MNTDIMG"`"              #120220
-    #not perfect, but paths may be symlinks...
-    if [ "$MNTDIMG_DEV_INODE" = "$imgFileDEV_INODE" ]; then          #120220...
-      notify_send "$imgFile" "Sorry file is already mounted and in-use on $MNTDIMG_MNT_PT from $MNTDIMG"
-      exit
-    fi
-  done
-
-  Ext=`echo "$imgFile" |sed 's/^.*\.//'`	# get file type from extention
-  if [ "$Ext" = 'dat' ]; then Type='ext4'
-  elif [ "$Ext" = 'xzm' ]; then Type='squashfs'
-  elif [ "$Ext" = 'kmodsfs' ]; then Type='squashfs'
-  elif [ "$Ext" = 'sfs' ]; then Type='squashfs'
-  elif [ "$Ext" = 'sb' ]; then Type='squashfs'
-  elif [ "$Ext" = 'iso' ]; then Type='udf,iso9660'
-  # BK
-  elif [ "$Ext" = 'img' ]; then Type='vfat' #170215
-  else Type="$Ext" #20210525
-  fi
-
-  echo "\n ### Mount: $imgFile\n"
-  mkdir -p "$MntPt"
-
-  #111110 handle encrypted save-files...
-  CRYPTO=""; Err=0
-  DEVLOOP="`losetup -f`" #next free loop device.
-  case $Type in
-#  ext2|ext3|ext4)
-#   case $imgFileBASE in
-#    *_cryptx*) #light encryption.
-#     CRYPTO='light'
-#     modprobe cryptoloop
-#     rxvt -geometry 25x3 -title "$(gettext 'Enter password')" -bg orange -e losetup -E 1 $DEVLOOP $imgFile
-#     #losetup -E 1 $DEVLOOP $imgFile
-#     Err=$?
-#    ;;
-#    *_crypt*) #heavy encryption.
-#     CRYPTO='heavy'
-#     modprobe cryptoloop
-#     modprobe aes_generic 2>/dev/null #v407 aes name change.
-#     modprobe aes 2>/dev/null #for older kernel <2.6.25
-#     modprobe crypto_blkcipher 2>/dev/null #v407 blkcipher name change.
-#     modprobe blkcipher 2>/dev/null #old kernel.
-#     modprobe cbc
-#     MYPASS="`pupdialog --title "$(gettext 'Password required')" --stdout --inputbox "$(gettext 'Password required to open') ${imgFileBASE}:" 0 0`"
-#     Err=$?
-#     if [ $Err -eq 0 ];then
-#      echo "$MYPASS" | losetup -p 0 -e aes $DEVLOOP $imgFile
-#      Err=$?
-#     fi
-#    ;;
-#   esac
-#  ;;
-    vfat) #170215  
-    #easy linux disk image, has one fat32 partition, start sector=2048, = 2048x512 bytes
-    OFFSET=',offset=1048576'
-    ;;
-  esac
-  if [ "$CRYPTO" ]; then
-    [ $Err -eq 0 ] && mount -t $Type $DEVLOOP "$MntPt"
-    Err=$?
-  else #normal, no encryption... 130204 mavrothal: fix spaces in imgFile...
-    mount -t $Type -o loop${OFFSET} "$imgFile" "$MntPt"
-    Err=$?
-  fi
-
-  if [ $Err -eq 0 ]; then
-    xdg-open "$MntPt" # mount good, run xdg-open
-    notify_send -t 6000 "Mount succes" "Click \'$imgFileBASE\' icon again to unmount it"
-  else
-    rmdir "$MntPt" #121203
-  fi
-
-else			### file's mounted, unmount it
-  sync && umount "$MntPt" #111112
+if mount | grep -q "$MOUNTPATH"; then # file mounted, unmount it
+  sync && umount "$MOUNTPATH"
   Err=$?
-  sync && rmdir "$MntPt"  #111112
-  echo "\n ### UnMount: $imgFile\n"
-  notify_send -t 3000 "Unmounting" "\'$imgFileBASE\'"
+  sync && rmdir "$MOUNTPATH"
+  notify_send -t 3000 "Unmounting" "\'$FILENAME\'"
+else # file not mounted
+  mkdir -p "$MOUNTPATH"
+  mount -o loop "$FILEPATH" "$MOUNTPATH"
+  Err=$?
+  if [ $Err -eq 0 ]; then
+    xdg-open "$MOUNTPATH" # mount good, run xdg-open
+    notify_send -t 6000 "Mount succes" "Click \'$FILENAME\' icon again to unmount it"
+  else
+    rmdir "$MOUNTPATH"
+  fi
 fi
 
 if [ $Err -ne 0 ]; then	# ERROR: mount/unmount
-  notify_send "Failed mounting or unmounting" "\'$imgFile\'"
+  notify_send "Failed mounting or unmounting" "\'$FILEPATH\'"
 fi
-
-###END###
