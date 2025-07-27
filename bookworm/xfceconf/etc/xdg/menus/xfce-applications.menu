@@ -14,7 +14,6 @@
     <Layout>
         <Filename>changes2sfs.desktop</Filename>
         <Filename>makepfile.desktop</Filename>
-        <Filename>audio-setup.desktop</Filename>
         <Filename>xfce4-run.desktop</Filename>
         <Separator/>
         <Filename>xfce4-terminal-emulator.desktop</Filename>
@@ -29,16 +28,6 @@
         <Filename>xfce4-about.desktop</Filename>
         <Filename>logout-yad.desktop</Filename>
     </Layout>
-
-    <Menu>
-        <Name>HWMon Tools</Name>
-        <Directory>HWMon.directory</Directory>
-        <Include>
-            <Category>HWMon</Category>
-            <Filename>gsmartcontrol.desktop</Filename>
-            <Filename>nvtop.desktop</Filename>
-        </Include>
-    </Menu>
 
     <Menu>
         <Name>Settings</Name>

@@ -7,6 +7,8 @@
     <Directory>HWMon.directory</Directory>
     <Include>
         <Category>HWMon</Category>
+        <Filename>gsmartcontrol.desktop</Filename>
+        <Filename>nvtop.desktop</Filename>
     </Include>
   </Menu>
 </Menu>
