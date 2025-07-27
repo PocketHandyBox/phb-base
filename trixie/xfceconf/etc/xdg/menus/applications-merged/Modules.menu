@@ -1,0 +1,18 @@
+<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"
+ "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd">
+<Menu>
+  <Name>Applications</Name>
+  <Menu>
+    <Name>Modules</Name>
+    <Directory>Modules.directory</Directory>
+    <Include>
+        <Category>Modules</Category>
+        <Filename>dmde.desktop</Filename>
+        <Filename>furmark2.desktop</Filename>
+        <Filename>gputest.desktop</Filename>
+        <Filename>rtt-rstudio.desktop</Filename>
+        <Filename>rtt-rlinux.desktop</Filename>
+        <Filename>unigine-heaven.desktop</Filename>
+    </Include>
+  </Menu>
+</Menu>
