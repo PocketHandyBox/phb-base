@@ -8,4 +8,4 @@ Exec=sh -c 'hdsentinel -html -r ~/hdsentinel && netsurf ~/hdsentinel.html'
 Icon=hdsentinel
 Terminal=false
 StartupNotify=false
-Categories=HWMon;
+Categories=HWMon;Modules;
