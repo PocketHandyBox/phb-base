@@ -102,7 +102,7 @@ fi
 mksquashfs ${APPNAME}-${VER} "$TARGETDIR"/${APPNAME}-${VER}.squashfs -b 1M $MKSFSCMP || fail
 
 if [ "$GUI" ]; then
-  yad --title=mod-get --window-icon=emblem-package --image=dialog-question \
+  yad --title=mod-get --window-icon=emblem-package --image=dialog-question --fixed \
    --text="Copy installed <b>${APPNAME}-${VER}</b> files to current session?\nPossible to run it without reboot." \
    --button=Skip\!gtk-clear:1 --button=OK\!gtk-ok:0
   ret=$?

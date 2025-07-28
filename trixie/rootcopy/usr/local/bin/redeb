@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z "$1" ]; then
-echo "usage: redeb <package>.deb to extract  or: redeb <packagedirectory> to build"
+echo "usage: redeb <package>.deb to extract or: redeb <packagedirectory> to build"
 exit 0
 fi
 
@@ -23,14 +23,14 @@ if [ "$ifdeb" = "deb" ]; then
   dpkg-deb --control $FILE $newdir/DEBIAN
 elif [[ $ifdeb != "deb" ]] && [ ! -d $FILE ]; then
   echo "The file you chose is not a .deb file."
-  yad --title="Extract deb" --window-icon=deb --center --text="The file you chose is not a .deb file." --button=Close\!gtk-close
+  yad --title="Extract deb" --window-icon=deb --center --fixed --text="The file you chose is not a .deb file." --button=Close\!gtk-close
   exit
 else
   if [ -d $FILE ]; then
     lsdeb=`ls $FILE/DEBIAN/control`
     if [ -z $lsdeb ]; then
       echo "No file DEBIAN/control found, cannot continue."
-      yad --title="Build deb" --window-icon=deb --center --text="No file DEBIAN/control found, cannot build package." --button=Close\!gtk-close
+      yad --title="Build deb" --window-icon=deb --center --fixed --text="No file DEBIAN/control found, cannot build package." --button=Close\!gtk-close
       exit
     else
       mkdir "$FILE"_newbuild

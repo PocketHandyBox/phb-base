@@ -79,7 +79,7 @@ echo $WRKDIR
 echo $SFS
 echo $DISDPKG
 if [ -z "$DRV" ] || [ -z "$WRKDIR" ]; then
-yad --title="$YADTITLE" --window-icon=tap-create --center --text="You probably did not fill in all fields, please run changes2sfs again." --button=Close\!gtk-close
+yad --title="$YADTITLE" --window-icon=tap-create --center --fixed --text="You probably did not fill in all fields, please run changes2sfs again." --button=Close\!gtk-close
 exit 0
 fi
 
@@ -98,13 +98,13 @@ mount /dev/$DRV /mnt/$DRV 2> /dev/null
 	fi
 
 if [ -d "$WORK" ]; then
-yad --title="$YADTITLE" --window-icon=tap-create --center --text="Directory '$WORK' already exists,\nPlease rename and run again." --button=Close\!gtk-close
+yad --title="$YADTITLE" --window-icon=tap-create --center --fixed --text="Directory '$WORK' already exists,\nPlease rename and run again." --button=Close\!gtk-close
 exit 0
 fi
 mkdir -p "$WORK" # Make new directory.
 
 if [ -e "$SQFS" ]; then
-yad --title="$YADTITLE" --window-icon=tap-create --center --text="Module: '$SQFS' already exists,\nPlease rename and run again." --button=Close\!gtk-close
+yad --title="$YADTITLE" --window-icon=tap-create --center --fixed --text="Module: '$SQFS' already exists,\nPlease rename and run again." --button=Close\!gtk-close
 exit 0
 fi
 
@@ -199,12 +199,12 @@ YADPID=$(ps -eo pid,cmd | grep -v grep | grep "yad --title=$YADTITLE" | awk '{ p
    echo 100 >> /tmp/changes2sfs_progress
    echo 100 2> /dev/null
    fi 
-) | yad --title="$YADTITLE" --window-icon=tap-create --width=400 --height=100 --center --progress --auto-close --text="Copying files to $WORK..." --button=Cancel\!gtk-cancel
+) | yad --title="$YADTITLE" --window-icon=tap-create --width=400 --height=100 --center --fixed --progress --auto-close --text="Copying files to $WORK..." --button=Cancel\!gtk-cancel
 
     if [ "$(tail -n1 /tmp/changes2sfs_progress)" -lt 100 ] ; then # If cancelled
 echo cancelled
 rm -f /tmp/changes2sfs_progress
-yad --title="Creating module Cancelled" --window-icon=tap-create --width=300 --height=200 --center --text="The working directory will be deleted within a minute after closing this window.\n\n$WORK" --button=Close\!gtk-close
+yad --title="Creating module Cancelled" --window-icon=tap-create --width=300 --height=200 --center --fixed --text="The working directory will be deleted within a minute after closing this window.\n\n$WORK" --button=Close\!gtk-close
 if [ -d "$WORK" ]; then
 echo "Removing $WORK..."
 rm -rf "$WORK"
@@ -229,7 +229,7 @@ cleanup 2> /dev/null
 #    chown -R man:root usr/share/man
 
 grep -sq ^MKSFSCMP= /root/*.conf && \
-MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
+MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d= -f2 | sed s/\"//g`
 
 msg="Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n
 For example: ~/.mozilla
@@ -243,7 +243,7 @@ xterm -T "$YADTITLE" -e "mksquashfs "$WORK" "$SQFS" -b 1M ""$MKSFSCMP"
 
 # Remove working directory?
 if [ -f "$SQFS" ]; then
-yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center --fixed \
  --text="Done creating '$SFS.squashfs'\nDo you want to remove '$WORK'?" \
  --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
 ret=$?
@@ -252,7 +252,7 @@ if [[ -n "$SFS" && -n "$DRV" ]]; then
 rm -rf "$WORK"
 fi
 else
-yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center --fixed \
  --text="Error: '$SQFS' is not created.\nDo you want to remove '$WORK'?" \
  --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
 ret=$?
