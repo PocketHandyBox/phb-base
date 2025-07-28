@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=mod-get (Download apps)
+Comment=Download apps and create modules
+TryExec=mod-get
+Exec=mod-get -gui
+Icon=emblem-downloads
+Terminal=false
+StartupNotify=false
+Categories=System;Modules;

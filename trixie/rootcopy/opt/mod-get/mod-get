@@ -1,0 +1,139 @@
+#!/bin/bash
+
+# mod-get Download applications and create .squashfs modules
+# by gumanzoy https://github.com/PocketHandyBox
+
+if [ "`whoami`" != "root" ]; then
+	which gksu > /dev/null && exec gksu ${0} "$@"
+	which gsu > /dev/null && exec gsu ${0} "$@"
+	echo "This script should be run as root"
+	exit 1
+fi
+
+export WORKDIR=/tmp/mod-get-$$
+export MKSFSCMP="-comp xz -Xbcj x86"
+APPCONFDIR=/opt/mod-get/`uname -m`
+
+[ `nmcli -g STATE g` = connected ] && export CONNECT=1
+
+fail() {
+cd ~ && rm -rf ${WORKDIR}
+[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+exit 1
+}
+export -f fail
+
+fail_summ() {
+echo "$FILENAME md5sum don't match"
+echo "$MD5SUM"
+[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+exit 1
+}
+export -f fail_summ
+
+geticon_chk() {
+if [ "$CONNECT" ]; then echo "Download icon for $APPNAME"
+else echo "Unable to download icon for $APPNAME"
+  return 1
+fi
+}
+export -f geticon_chk
+
+applist() {
+ls "$APPCONFDIR"/*.conf | while read APPCONF; do
+[ "$FALSE" ] && echo FALSE || echo TRUE ; local FALSE=1
+basename $APPCONF .conf
+grep ^VER= $APPCONF | cut -d= -f2 | sed s/\"//g
+grep ^SIZE= $APPCONF | cut -d= -f2 | sed s/\"//g
+grep ^DESCRIPTION= $APPCONF | cut -d= -f2 | sed s/\"//g
+grep ^LICENSE= $APPCONF | cut -d= -f2 | sed s/\"//g
+done
+}
+
+show_applist() {
+[ "$CONNECT" ] && DOWNLOADBTN="--button=Download!emblem-downloads:2"
+
+APPNAME=`applist | yad --title=mod-get --window-icon=emblem-downloads --width=600 --height=350 \
+ --text="<b>mod-get</b>\nDownload applications and create .squashfs modules" \
+ --image=emblem-package --list --radiolist --listen --no-selection --print-column=2 \
+ --column=# --column=App --column=Version --column=Size --column=Description --column=License \
+ --button=Quit\!gtk-quit:1 --button='Offline (select file)'\!emblem-package:0 $DOWNLOADBTN`
+ret=$? ; [ "$ret" = 1 -o "$ret" = 252 ] && exit
+[ "$APPNAME" ] || exit
+APPNAME=`echo $APPNAME | cut -d'|' -f1`
+[ "$ret" = 0 ] && export OFFLINE=1
+}
+
+create_module() {
+. "$1"
+APPNAME=`basename "$1" .conf`
+
+if [ "$OFFLINE" ]; then
+  FILENAME=`yad --title=mod-get --window-icon=emblem-downloads --width=700 --height=500 \
+   --image=emblem-package --text="Please select\n<b>$FILENAME</b>" --file --filename="$FILENAME"`
+  [ "$?" = 1 -o "$?" = 252 ] && exit
+  [ -f "$FILENAME" ] || exit
+  md5sum "$FILENAME" | grep -q "$MD5SUM" || fail_summ
+else
+  mkdir -p ${WORKDIR}/${APPNAME}-${VER}
+  cd ${WORKDIR}
+  wget "$LINK"
+  md5sum "$FILENAME" | grep -q "$MD5SUM" || fail_summ
+  FILENAME="$WORKDIR"/"$FILENAME"
+fi
+
+mkdir -p ${WORKDIR}/${APPNAME}-${VER}
+cd ${WORKDIR}/${APPNAME}-${VER}
+unpack
+cd ${WORKDIR}
+
+if [ "$GUI" ]; then
+  [ `uname -m` = i686 ] && I686=32
+  while [ -z "$TARGETDIR" ]; do
+  TARGETDIR=`yad --title=mod-get --window-icon=emblem-downloads --image=emblem-package --width=700 --height=500 \
+   --text="Please select folder to save ${APPNAME}-${VER}.squashfs module.\nSave to <b>phb/modules${I686}</b> folder on USB flash-drive to auto load on boot." \
+   --file --filename="/mnt/home/" --directory --save --button="Skip (use /tmp)":1 --button=Select\!gtk-ok:0`
+  [ "$?" = 1 -o "$?" = 252 ] && break
+  done
+fi
+
+[ -d "$TARGETDIR" ] || TARGETDIR=/tmp
+[ -f "$TARGETDIR"/${APPNAME}-${VER}.squashfs ] && rm -f "$TARGETDIR"/${APPNAME}-${VER}.squashfs
+mksquashfs ${APPNAME}-${VER} "$TARGETDIR"/${APPNAME}-${VER}.squashfs -b 1M $MKSFSCMP || fail
+
+if [ "$GUI" ]; then
+  yad --title=mod-get --window-icon=emblem-package --image=dialog-question \
+   --text="Copy installed <b>${APPNAME}-${VER}</b> files to current session?\nPossible to run it without reboot." \
+   --button=Skip\!gtk-clear:1 --button=OK\!gtk-ok:0
+  ret=$?
+fi
+
+if [ "$ret" = 0 ]; then
+  mv -f ${APPNAME}-${VER}/opt/${APPNAME} /opt/ 2> /dev/null
+  cp -r ${APPNAME}-${VER}/* /
+  RANDOMFILE=$RANDOM
+  touch /usr/share/applications/$RANDOMFILE.desktop && rm -f /usr/share/applications/$RANDOMFILE.desktop
+fi
+
+cd ~ && rm -rf ${WORKDIR}
+
+echo -e "\e[1mModule saved to \e[33m${TARGETDIR}/${APPNAME}-${VER}.squashfs\e[0m"
+[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+}
+export -f create_module
+
+if [ "$1" = "-gui" ]; then
+  export GUI=1
+  show_applist
+  xterm +aw -T mod-get -e /bin/bash -c "create_module ${APPCONFDIR}/${APPNAME}.conf"
+elif [ -f "$1" ]; then
+  . "$1"
+  [ "$VER" ] || exit
+  create_module "$1"
+else
+  echo "mod-get Download applications and create .squashfs modules"
+  echo -e "\nUsage:"
+  echo "-gui Show applications list (YAD GUI)"
+  echo -e "[app].conf\n"
+  find "$APPCONFDIR"/*.conf
+fi
