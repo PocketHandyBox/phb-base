@@ -24,7 +24,7 @@ CHNGS=/mnt/SFS  # live-boot
 fi
 
 if [ "$(ls $CHNGS 2> /dev/null)" ]; then
-yad --title="Save Session" --window-icon=document-save --center \
+yad --title="Save Session" --window-icon=document-save --center --fixed \
  --text="Required is to unload modules that were manually loaded,\notherwise your changes will include broken symlinks.\n\nContinue ?"
 [ $? -ne 0 ] && exit
 sfsunload
@@ -63,7 +63,7 @@ TEXT="Sorry, not enough space available in savefile (or folder)
 No saving has been done
 Session data to copy: ${RAMUSEDMB}
 Available free space in save file/folder: ${SAVEFREEMB}MB"
-yad --title="Save Session"  --text="$TEXT" --window-icon=document-save --center --button=Close\!gtk-close
+yad --title="Save Session" --text="$TEXT" --window-icon=document-save --center --fixed --button=Close\!gtk-close
 exit 1
 fi
 }
@@ -96,6 +96,6 @@ elif [ -f /mnt/live/tmp/changes-exit ]; then
 	save2flashfn
 
 else
-	yad --title="Save Session" --window-icon=document-save --center --button=Close\!gtk-close \
+	yad --title="Save Session" --window-icon=document-save --center --fixed --button=Close\!gtk-close \
 	--text="Not booted with the 'changes=EXIT:/' option"
 fi

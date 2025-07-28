@@ -14,7 +14,7 @@
 
 DEVICES="`aplay -l | grep card | grep -v pcspeaker`"
 if [ "$DEVICES" = "" ]; then
-yad --title=alsaselect --text="No Sound Devices Detected" --window-icon=audio-card --center --button=Close\!gtk-close
+yad --title=alsaselect --text="No Sound Devices Detected" --window-icon=audio-card --center --fixed --button=Close\!gtk-close
 exit
 fi
 

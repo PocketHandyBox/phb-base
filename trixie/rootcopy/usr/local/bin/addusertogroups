@@ -17,11 +17,11 @@ user="`echo $user | cut -d "|" -f 1`"
 echo $user
 
 if ! id "$user" >/dev/null 2>&1; then
-yad --center --width=400 --text="User <b>$user</b> does not exist!" --button=Close\!gtk-close
+yad --center --fixed --width=400 --text="User <b>$user</b> does not exist!" --button=Close\!gtk-close
 exit 0
 
 elif [ "$user" = "root" ]; then
-yad --center --width=400 --text="No use to add Super-User: <b>root</b> to any groups" --button=Close\!gtk-close
+yad --center --fixed --width=400 --text="No use to add Super-User: <b>root</b> to any groups" --button=Close\!gtk-close
 exit 0
 fi
 
@@ -41,10 +41,10 @@ usermod -G "" $user # this will remove the user from all groups first... (reset 
 usermod -a -G $ADDGROUPS $user # add the selected groups of choice
 
 if [[ $? -eq 0 ]]; then
-yad --border=6 --center --width=500 --title "Succes" --text "Success! now <b>$user</b> is member of selected groups\n$ADDGROUPS" --button=OK\!gtk-ok
+yad --border=6 --center --fixed --width=500 --title "Succes" --text "Success! now <b>$user</b> is member of selected groups\n$ADDGROUPS" --button=OK\!gtk-ok
 else
-yad --center --width=500 --title "Not added to groups" --text "User <b>$user</b> has not been added/removed to any other groups" --button=Close\!gtk-close
+yad --center --fixed --width=500 --title "Not added to groups" --text "User <b>$user</b> has not been added/removed to any other groups" --button=Close\!gtk-close
 fi
 	else
-yad --center --width=500 --title "Not added to groups" --text "User <b>$user</b> has not been added/removed to any other groups" --button=Close\!gtk-close
+yad --center --fixed --width=500 --title "Not added to groups" --text "User <b>$user</b> has not been added/removed to any other groups" --button=Close\!gtk-close
 	fi

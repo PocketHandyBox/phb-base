@@ -158,7 +158,7 @@ fi
 if [ "$1" = "-rm" ]; then
 getsams
 if [ -n "$WYAD" ]; then
-    yad --text='Remove backup file?\nSAM.bak' --title=winpasswd --window-icon=dialog-password \
+    yad --text='Remove backup file?\nSAM.bak' --title=winpasswd --window-icon=dialog-password --fixed \
     --image=dialog-question && remove_backup 2>&1 | yad --text='Remove backup file:' --width=520 --height=200 \
     --title=winpasswd --window-icon=dialog-information --text-info --wrap --button=Close\!gtk-close
 else

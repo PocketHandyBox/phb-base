@@ -83,7 +83,7 @@ export INSTALL="`echo $SETUP | cut -d "|" -f 3`"
 export DISDPKG="`echo $SETUP | cut -d "|" -f 4`"
 
 if [ -z "$DRV" ] || [ -z "$INSTALL" ]; then
-yad --title="$YADTITLE" --window-icon=tap-create --center --text="You probably did not fill in all fields, please run apt2squashfs again." --button=Close\!gtk-close
+yad --title="$YADTITLE" --window-icon=tap-create --center --fixed --text="You probably did not fill in all fields, please run apt2squashfs again." --button=Close\!gtk-close
 exit 0
 fi
 
@@ -442,7 +442,7 @@ echo -e "\e[0;32mOK\e[0m"
 #cd "/mnt/$DRV"
 
 grep -sq ^MKSFSCMP= /root/*.conf && \
-MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
+MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d= -f2 | sed s/\"//g`
 
 msg="Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n
 For example: ~/.mozilla
@@ -456,7 +456,7 @@ trap 'rm -f "$SQFS"' 1 2 15; mksquashfs "$WORK" "$SQFS" -b 1M $MKSFSCMP
 
 # Remove working directory?
 if [ -f "$SQFS" ]; then
-yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center --fixed \
  --text="Done creating '$SFS.squashfs'\nDo you want to remove '$WORK'?" \
  --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
 ret=$?
@@ -466,7 +466,7 @@ rm -rf "$WORK"-w
 rm -rf "$WORK"
 fi
 else
-yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center \
+yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center --fixed \
  --text="Error: '$SQFS' is not created.\nDo you want to remove '$WORK'?" \
  --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
 ret=$?

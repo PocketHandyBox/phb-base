@@ -12,12 +12,12 @@ function new_user(){
 ret=$?
 [[ $ret -ne 0 ]] && exit 1
     if [ -z "$(echo $add_user | cut -d "|" -f 1)" ] || [ -z "$(echo $add_user | cut -d "|" -f 2)" ] || [ -z "$(echo $add_user | cut -d "|" -f 3)" ]; then
-        yad --title "Error" --text "You probably didn't fill in all fields, click 'OK' to try again."
+        yad --fixed --title "Error" --text "You probably didn't fill in all fields, click 'OK' to try again."
 ret=$?
 [[ $ret -ne 0 ]] && exit
         new_user
     elif [ "$(echo $add_user | cut -d "|" -f 2)" != "$(echo $add_user | cut -d "|" -f 3)" ]; then
-        yad --title "Error" --text "Passwords do not match, please try again"
+        yad --fixed --title "Error" --text "Passwords do not match, please try again"
 ret=$?
 [[ $ret -ne 0 ]] && exit
         new_user
@@ -33,7 +33,7 @@ ret=false
 getent passwd $user >/dev/null 2>&1 && ret=true
 
 if $ret; then
-yad --center --width=400 --title "User $user already exists" --text "User: <b>$user</b> already exists!" --button=Close\!gtk-close
+yad --center --fixed --width=400 --title "User $user already exists" --text "User: <b>$user</b> already exists!" --button=Close\!gtk-close
 exit 0
 fi
 
@@ -62,11 +62,11 @@ fi
 usermod -a -G $ADDGROUPS $user
 
 if [[ $? -eq 0 ]]; then
-yad --center --width=500 --title "Succes" --text "Succesfully added user: <b>$user</b> and added <b>$user</b> to the selected groups\n$ADDGROUPS" --button=OK\!gtk-ok
+yad --center --fixed --width=500 --title "Succes" --text "Succesfully added user: <b>$user</b> and added <b>$user</b> to the selected groups\n$ADDGROUPS" --button=OK\!gtk-ok
 else
-yad --center --width=500 --title "Succes" --text "Succesfully added user: <b>$user</b>\nNote: <b>$user</b> has not been added to any groups" --button=Close\!gtk-close
+yad --center --fixed --width=500 --title "Succes" --text "Succesfully added user: <b>$user</b>\nNote: <b>$user</b> has not been added to any groups" --button=Close\!gtk-close
 fi
 	else
-yad --center --width=500 --title "Succes" --text "Succesfully added user: <b>$user</b>\nNote: <b>$user</b> has not been added to any groups" --button=Close\!gtk-close
+yad --center --fixed --width=500 --title "Succes" --text "Succesfully added user: <b>$user</b>\nNote: <b>$user</b> has not been added to any groups" --button=Close\!gtk-close
 	fi
 exit 0
