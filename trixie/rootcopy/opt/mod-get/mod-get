@@ -39,14 +39,18 @@ fi
 }
 export -f geticon_chk
 
+printval() {
+grep -m1 ^${1}= $APPCONF | cut -d= -f2 | sed s/\"//g
+}
+
 applist() {
 ls "$APPCONFDIR"/*.conf | while read APPCONF; do
 [ "$FALSE" ] && echo FALSE || echo TRUE ; local FALSE=1
 basename $APPCONF .conf
-grep ^VER= $APPCONF | cut -d= -f2 | sed s/\"//g
-grep ^SIZE= $APPCONF | cut -d= -f2 | sed s/\"//g
-grep ^DESCRIPTION= $APPCONF | cut -d= -f2 | sed s/\"//g
-grep ^LICENSE= $APPCONF | cut -d= -f2 | sed s/\"//g
+printval VER
+printval SIZE
+printval DESCRIPTION
+printval LICENSE
 done
 }
 
@@ -75,15 +79,15 @@ if [ "$OFFLINE" ]; then
   [ -f "$FILENAME" ] || exit
   md5sum "$FILENAME" | grep -q "$MD5SUM" || fail_summ
 else
-  mkdir -p ${WORKDIR}/${APPNAME}-${VER}
+  mkdir -p ${WORKDIR}
   cd ${WORKDIR}
   wget "$LINK"
   md5sum "$FILENAME" | grep -q "$MD5SUM" || fail_summ
   FILENAME="$WORKDIR"/"$FILENAME"
 fi
 
-mkdir -p ${WORKDIR}/${APPNAME}-${VER}
-cd ${WORKDIR}/${APPNAME}-${VER}
+mkdir -p ${WORKDIR}/${APPNAME}
+cd ${WORKDIR}/${APPNAME}
 unpack
 cd ${WORKDIR}
 
@@ -99,7 +103,7 @@ fi
 
 [ -d "$TARGETDIR" ] || TARGETDIR=/tmp
 [ -f "$TARGETDIR"/${APPNAME}-${VER}.squashfs ] && rm -f "$TARGETDIR"/${APPNAME}-${VER}.squashfs
-mksquashfs ${APPNAME}-${VER} "$TARGETDIR"/${APPNAME}-${VER}.squashfs -b 1M $MKSFSCMP || fail
+mksquashfs ${APPNAME} "$TARGETDIR"/${APPNAME}-${VER}.squashfs -b 1M $MKSFSCMP || fail
 
 if [ "$GUI" ]; then
   yad --title=mod-get --window-icon=emblem-package --image=dialog-question --fixed \
@@ -109,8 +113,8 @@ if [ "$GUI" ]; then
 fi
 
 if [ "$ret" = 0 ]; then
-  mv -f ${APPNAME}-${VER}/opt/${APPNAME} /opt/ 2> /dev/null
-  cp -r ${APPNAME}-${VER}/* /
+  mv -f ${APPNAME}/opt/${APPNAME} /opt/ 2> /dev/null
+  cp -r ${APPNAME}/* /
   RANDOMFILE=$RANDOM
   touch /usr/share/applications/$RANDOMFILE.desktop && rm -f /usr/share/applications/$RANDOMFILE.desktop
 fi
