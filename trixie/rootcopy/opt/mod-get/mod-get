@@ -12,7 +12,9 @@ fi
 
 export WORKDIR=/tmp/mod-get-$$
 export MKSFSCMP="-comp xz -Xbcj x86"
-APPCONFDIR=/opt/mod-get/`uname -m`
+export ARCH=`uname -m`
+export APPCONFDIR=/opt/mod-get/${ARCH}
+export APPCONFURL="https://github.com/PocketHandyBox/phb-base/raw/main/trixie/rootcopy/opt/mod-get/"
 
 [ `nmcli -g STATE g` = connected ] && export CONNECT=1
 
@@ -39,13 +41,43 @@ fi
 }
 export -f geticon_chk
 
+getconf() {
+if ! wget -T 180 "$APPCONFURL""${ARCH}/${APPNAME}.conf"
+then [ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+fi
+}
+export -f getconf
+
+updconf() {
+mkdir -p /var/opt/mod-get
+cd /var/opt/mod-get
+[ -f ${APPNAME}.conf ] || xterm +aw -T mod-get -e /bin/bash -c getconf
+if [ ! -f ${APPNAME}.conf ]; then
+  UPDCONFMSG="\nCheck for ${APPNAME}.conf updates <span color='dark red'>failed</span>"
+  return 1
+fi
+if diff -q ${APPNAME}.conf ${APPCONFDIR}/${APPNAME}.conf ; then
+  UPDCONFMSG="\nNo <span color='dark green'>updates</span> found for ${APPNAME}.conf - file don't changed"
+else
+  APPCONF=${APPCONFDIR}/${APPNAME}.conf ; local VER1=`printval VER`
+  APPCONF=${APPNAME}.conf ; local VER2=`printval VER`
+  [ "$VER1" != "$VER2" ] && local UPDVER="$VER1 -> $VER2"
+  UPDCONFMSG="\nFile ${APPNAME}.conf <span color='dark green'>${UPDVER} updated</span> successfully"
+  cp ${APPNAME}.conf ${APPCONFDIR}/${APPNAME}.conf
+fi
+}
+
 printval() {
 grep -m1 ^${1}= $APPCONF | cut -d= -f2 | sed s/\"//g
 }
 
 applist() {
 ls "$APPCONFDIR"/*.conf | while read APPCONF; do
-[ "$FALSE" ] && echo FALSE || echo TRUE ; local FALSE=1
+if [ "$APPNAME" ]; then
+  [ `basename $APPCONF .conf` = "$APPNAME" ] && echo TRUE || echo FALSE
+else
+  [ "$FALSE" ] && echo FALSE || echo TRUE ; local FALSE=1
+fi
 basename $APPCONF .conf
 printval VER
 printval SIZE
@@ -55,16 +87,21 @@ done
 }
 
 show_applist() {
-[ "$CONNECT" ] && DOWNLOADBTN="--button=Download!emblem-downloads:2"
+[ "$CONNECT" ] && DOWNLOADBTN="--button=Check-update!system-software-update:4 --button=Download!emblem-downloads:2"
 
-APPNAME=`applist | yad --title=mod-get --window-icon=emblem-downloads --width=600 --height=350 \
- --text="<b>mod-get</b>\nDownload applications and create .squashfs modules" \
- --image=emblem-package --list --radiolist --listen --no-selection --print-column=2 \
- --column=# --column=App --column=Version --column=Size --column=Description --column=License \
- --button=Quit\!gtk-quit:1 --button='Offline (select file)'\!emblem-package:0 $DOWNLOADBTN`
-ret=$? ; [ "$ret" = 1 -o "$ret" = 252 ] && exit
-[ "$APPNAME" ] || exit
-APPNAME=`echo $APPNAME | cut -d'|' -f1`
+while true; do
+  APPNAME=`applist | yad --title=mod-get --window-icon=emblem-downloads --width=650 --height=350 \
+   --text="<b>mod-get</b>\nDownload applications and create .squashfs modules $UPDCONFMSG" \
+   --image=emblem-package --list --radiolist --listen --no-selection --print-column=2 \
+   --column=# --column=App --column=Version --column=Size --column=Description --column=License \
+   --button=Quit\!gtk-quit:1 --button='Offline (select file)'\!emblem-package:0 $DOWNLOADBTN`
+  ret=$?
+  [ "$ret" = 1 -o "$ret" = 252 ] && break
+  export APPNAME=`echo $APPNAME | cut -d'|' -f1`
+  [ "$ret" = 4 ] && updconf
+  [ "$ret" = 0 -o "$ret" = 2 ] && break
+done
+[ "$ret" = 1 -o "$ret" = 252 ] && exit
 [ "$ret" = 0 ] && export OFFLINE=1
 }
 
