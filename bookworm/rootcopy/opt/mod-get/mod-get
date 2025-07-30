@@ -111,7 +111,7 @@ APPNAME=`basename "$1" .conf`
 
 if [ "$OFFLINE" ]; then
   FILENAME=`yad --title=mod-get --window-icon=emblem-downloads --width=700 --height=500 \
-   --image=emblem-package --text="Please select\n<b>$FILENAME</b>" --file --filename="$FILENAME"`
+   --image=emblem-package --text="Please select\n<b>$FILENAME</b>" --file --file-filter="$FILENAME | $FILENAME"`
   [ "$?" = 1 -o "$?" = 252 ] && exit
   [ -f "$FILENAME" ] || exit
   md5sum "$FILENAME" | grep -q "$MD5SUM" || fail_summ
