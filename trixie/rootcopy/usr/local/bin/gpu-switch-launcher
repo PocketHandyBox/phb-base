@@ -72,6 +72,12 @@ run_unigine_heaven () {
 exec ./browser_x64 -config ../data/launcher/launcher.xml "$@"
 }
 
+run_unigine_valley () {
+[ -x bin/valley_x64 ] && cd bin
+[ -x valley_x64 ] || cd /opt/unigine-valley/bin
+exec ./browser_x64 -config ../data/launcher/launcher.xml "$@"
+}
+
 GPUN=0
 driver_name () {
 GPU[$GPUN]=`LANG=C ls /sys/class/drm/$card/device/driver/module/drivers 2>/dev/null | grep pci: | head -n1 | cut -d: -f2`
@@ -129,9 +135,11 @@ else case `basename $0` in
 gputest) APP=gputest ;;
 furmark) APP=furmark ;;
 unigine-heaven) APP=unigine-heaven ;;
+unigine-valley) APP=unigine-valley ;;
 *) if [ -x GpuTest ]; then APP=gputest
 elif [ -x furmark ]; then APP=furmark
 elif [ -x heaven_x64 ] || [ -x bin/heaven_x64 ]; then APP=unigine-heaven
+elif [ -x valley_x64 ] || [ -x bin/valley_x64 ]; then APP=unigine-valley
 fi ;;
 esac
 fi
@@ -140,6 +148,7 @@ fi
 [ "$APP" = gputest ] && setup_gputest
 [ "$APP" = furmark ] && setup_furmark
 [ "$APP" = unigine-heaven ] && setup_generic_app
+[ "$APP" = unigine-valley ] && setup_generic_app
 
 # Show GPU switch dialog
 if [ "$ret" = 2 ]; then
@@ -170,6 +179,7 @@ case "$APP" in
 gputest) run_gputest ;;
 furmark) run_furmark ;;
 unigine-heaven) run_unigine_heaven ;;
+unigine-valley) run_unigine_valley ;;
 *) if [ -x "$APP" ] || [ -x `which "$APP"` ]; then
 exec "$APP" "$@"
 fi ;;
