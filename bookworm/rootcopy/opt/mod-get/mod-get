@@ -99,11 +99,32 @@ while true; do
   [ "$ret" = 1 -o "$ret" = 252 ] && break
   export APPNAME=`echo $APPNAME | cut -d'|' -f1`
   [ "$ret" = 4 ] && updconf
+  [ "$ret" = 2 ] && show_eulaurl
   [ "$ret" = 0 -o "$ret" = 2 ] && break
 done
 [ "$ret" = 1 -o "$ret" = 252 ] && exit
 [ "$ret" = 0 ] && export OFFLINE=1
 }
+
+show_eulaurl() {
+APPCONF=${APPCONFDIR}/${APPNAME}.conf ; local EULAURL="`printval EULAURL`"
+[ -z "$EULAURL" ] && return 0
+yad --title="mod-get - $APPNAME EULA" --window-icon=emblem-downloads --image=dialog-information --height=160 --borders=8 \
+ --text="<b>$APPNAME</b> Software\nEnd User License Agreement\nPress Accept to continue or press Cancel\n" \
+ --fixed --form --field="$EULAURL:LINK" "$EULAURL" --button=Cancel\!gtk-cancel:1 --button=Accept\!gtk-ok:2 > /dev/null
+ret=$?
+}
+
+show_eulatxt() {
+[ -f "$EULATXT" ] || return 0
+yad --title="mod-get - $APPNAME EULA" --window-icon=emblem-downloads --center --width=600 --height=500 --no-escape \
+ --text="<b>$APPNAME</b> Software End User License Agreement\n<tt>$EULATXT</tt>\nPress Accept to continue or press Cancel" \
+ --text-info --show-uri --filename="$EULATXT" --button=Cancel\!gtk-cancel:1 --button=Accept\!gtk-ok:0
+[ "$?" = 0 ] && return 0
+cd ~ && rm -rf ${WORKDIR}
+exit 1
+}
+export -f show_eulatxt
 
 create_module() {
 . "$1"
