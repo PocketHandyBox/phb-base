@@ -92,7 +92,7 @@ show_applist() {
 while true; do
   APPNAME=`applist | yad --title=mod-get --window-icon=emblem-downloads --width=650 --height=350 \
    --text="<b>mod-get</b>\nDownload applications and create .squashfs modules $UPDCONFMSG" \
-   --image=emblem-package --list --radiolist --listen --no-selection --print-column=2 \
+   --image=emblem-package --list --radiolist --listen --no-selection --expand-column=0 --print-column=2 \
    --column=# --column=App --column=Version --column=Size --column=Description --column=License \
    --button=Quit\!gtk-quit:1 --button='Offline (select file)'\!emblem-package:0 $DOWNLOADBTN`
   ret=$?
@@ -153,7 +153,7 @@ if [ "$GUI" ]; then
   [ `uname -m` = i686 ] && I686=32
   while [ -z "$TARGETDIR" ]; do
   TARGETDIR=`yad --title=mod-get --window-icon=emblem-downloads --image=emblem-package --width=700 --height=500 \
-   --text="Please select folder to save ${APPNAME}-${VER}.squashfs module.\nSave to <b>phb/modules${I686}</b> folder on USB flash-drive to auto load on boot." \
+   --text="Please select folder to save <tt>${APPNAME}-${VER}.squashfs</tt> module.\nSave to <b>phb/modules${I686}</b> folder on USB flash-drive to auto load on boot." \
    --file --filename="/mnt/home/" --directory --save --button="Skip (use /tmp)":1 --button=Select\!gtk-ok:0`
   [ "$?" = 1 -o "$?" = 252 ] && break
   done
