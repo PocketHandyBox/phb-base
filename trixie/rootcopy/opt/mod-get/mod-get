@@ -116,6 +116,7 @@ ret=$?
 }
 
 show_eulatxt() {
+[ "$GUI" ] || return 0
 [ -f "$EULATXT" ] || return 0
 yad --title="mod-get - $APPNAME EULA" --window-icon=emblem-downloads --center --width=600 --height=500 --no-escape \
  --text="<b>$APPNAME</b> Software End User License Agreement\n<tt>$EULATXT</tt>\nPress Accept to continue or press Cancel" \
