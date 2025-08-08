@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories=GTK;Graphics;Viewer;
+Exec=gpicview /opt/lcdtest
+Icon=video-display
+StartupNotify=true
+Type=Application
+Terminal=false
+Name=LCD Test
+Comment=Show images for test LCD
