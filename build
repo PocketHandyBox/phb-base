@@ -508,7 +508,6 @@ fi
 # Prefer to make module with mesa and libdrm from bookworm-backports
 if [ "$DIST" = "bookworm" ] && [ "$ARCH" = "amd64" ]; then
 rm -f usr/lib/x86_64-linux-gnu/dri/*_dri.so
-rm -f usr/lib/x86_64-linux-gnu/libdrm_*so.*
 rm -f usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0*
 fi
 
