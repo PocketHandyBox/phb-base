@@ -45,6 +45,9 @@ if [ -z `which yad` ]; then
 exit 0
 fi
 
+# Fix for 'mount -t overlay' with util-linux >=2.39
+export LIBMOUNT_FORCE_MOUNT2=always
+
 # Remove temp file from possible previous run
 rm -f /tmp/mnts /tmp/notrap_ 2> /dev/null
 
