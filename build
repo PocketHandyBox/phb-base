@@ -504,6 +504,10 @@ rm -f usr/lib/xorg/modules/extensions/libvnc.so
 remove_broken_links etc/alternatives
 fi
 
+# Replace symlink for mesa-amber i915_dri.so -> i830_dri.so
+[ -f usr/lib/x86_64-linux-gnu/dri/i830_dri.so ] && ln -sf i830_dri.so usr/lib/x86_64-linux-gnu/dri/i915_dri.so
+[ -f usr/lib/i386-linux-gnu/dri/i830_dri.so ] && ln -sf i830_dri.so usr/lib/i386-linux-gnu/dri/i915_dri.so
+
 # Remove mesa libs from 01-filesystem.squashfs
 # Prefer to make module with mesa and libdrm from bookworm-backports
 if [ "$DIST" = "bookworm" ] && [ "$ARCH" = "amd64" ]; then
