@@ -41,7 +41,7 @@ fi
 apt-cache show firmware-intel-graphics > /dev/null
 [ "$?" -eq 0 ] || exit
 
-VER=`apt-cache show firmware-linux-nonfree | grep Version | cut -d' ' -f2 | cut -d- -f1`
+VER=`apt-cache --no-all-versions show firmware-linux-nonfree | grep Version | cut -d' ' -f2 | cut -d- -f1`
 
 mkdir -p /tmp/firmware-"$VER" && cd /tmp/firmware-"$VER"
 
