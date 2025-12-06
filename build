@@ -7,61 +7,17 @@
 # Based on DebianDog Bookworm build script mklive-bookworm by fredx181
 # https://forum.puppylinux.com/viewtopic.php?t=5069
 
-export LD_LIBRARY_PATH=
-
-if [ "`whoami`" != "root" ]; then
-	echo "This script should be run as root"
-	exit
-fi
-
-# This makes sure when the script is interrupted, that all mount 'binds' will unmount 
-exitfn () {
-trap SIGINT              # Resore signal handling for SIGINT
-echo -e "\e[0;36mUnmounting mount binds in chroot\e[0m"
-#umount -l chroot/tmp
-umount -l $LAUNCHDIR/$DIST/chroot/proc 2> /dev/null
-umount -l $LAUNCHDIR/$DIST/chroot/sys 2> /dev/null
-umount -l $LAUNCHDIR/$DIST/chroot/dev/pts 2> /dev/null
-umount -l $LAUNCHDIR/$DIST/chroot/dev 2> /dev/null
-
-rm -f $LAUNCHDIR/$DIST/apt/archives/lock 2> /dev/null
-
-if mountpoint -q $LAUNCHDIR/$DIST/chroot/dev; then     # just in case check dev
-	echo -e "\e[0;31mSomething went wrong, directory chroot cannot be removed\e[0m"
-	echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\e[0m"
-	exit
-else
-	rm -f $LAUNCHDIR/$DIST/*.conf 2> /dev/null
-fi
-exit
-}
-export -f exitfn
-
-trap "exitfn" 1 2 3 15           # Set up SIGINT trap to call function 'exitfn'
-
-# OK or FAILED
-ok_or_failed () {
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m" || echo -e "\e[0;31mFAILED\e[0m"
-}
-export -f ok_or_failed
-
-########################## End functions #####################################
-
-############# Start #############
-
-export LAUNCHDIR="$PWD"
-
-########### Options (configuration)  ###########
-
 if [ -f "$1" ]; then
 	config="$1"
 	. "$config"
-else exit
+else
+	echo "Please run again, e.g. 'sudo ./$(basename $0) <config>'"
+	exit
 fi
 
-export DIST=`basename "$1" | cut -d- -f1`
-if [ ! -d "$DIST" ]; then
-	echo -e "\e[0;33mDirectory '""$DIST""' not exist, exiting...\e[0m"
+if [ "`whoami`" != "root" ]; then
+	echo "This script should be run as root"
+	echo "Please run again, e.g. 'sudo ./$(basename $0) <config>'"
 	exit
 fi
 
@@ -69,26 +25,82 @@ if [ -z "$PL_BASE" ] || [ -z "$INSTALL" ]; then
 	echo -e "\e[0;31mThis config file cannot be used, sorry, exiting...\e[0m"
 	exit
 else
-	echo -e "\e[0;36mRunning with configuration: \e[1;29m$(readlink -f $config)\e[0m"
+	echo -e "\e[0;36mRunning with configuration:\e[0m $(readlink -f $config)"
 fi
 
-if [ -z "$GUESTUSER" ]; then export GUESTUSER=guest
-else export GUESTUSER="$GUESTUSER"
+export LD_LIBRARY_PATH=
+export LAUNCHDIR="$PWD"
+
+export DIST=`basename "$config" | cut -d- -f1`
+if [ ! -d "$DIST" ]; then
+	echo -e "\e[0;33mDirectory '""$DIST""' not exist, exiting...\e[0m"
+	exit
 fi
 
-# export final variables defined from custom .conf file
-export SYSTEMD="$SYSTEMD"
-export PL_BASE="$PL_BASE"
-export PL_SYSV="$PL_SYSV"
-export PL_SYSTEMD="$PL_SYSTEMD"
-export INSTALL="$INSTALL"
-export PL_AMD64="$PL_AMD64"
+echo -e "\e[0;33mBuild base filesystem '01-filesystem.squashfs' for 'PocketHandyBox'\e[0m"
+echo -e "\e[0;33m\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4\e[0m"
+echo -e "\e[0;32mBuilding will be done in:\e[0m $LAUNCHDIR/$DIST"
 
-if [ -n "$TEMPMIRROR" ]; then
-	MIRRORURL="http://""$TEMPMIRROR""/debian/"
+if [ $(command -v apt-get 2>/dev/null) ]; then
+	#echo -e "\e[0;36mUpdate the package lists...\e[0m"
+	#apt-get update
+	echo -e "\e[0;36mInstall required packages:\e[0m debootstrap squashfs-tools xz-utils zstd"
+	apt-get install debootstrap squashfs-tools xz-utils zstd -y
+fi
+
+if [ -z `which debootstrap` ] || [ ! -e /usr/share/debootstrap/scripts/"$DIST" ]; then
+	echo -e "\e[0;31mFile /usr/share/debootstrap/scripts/$DIST not found, exiting..."
+	echo -e "\e[0;36mPlease install required packages:\e[0m debootstrap (>=1.0.134) squashfs-tools xz-utils zstd"
+	exit
+fi
+
+########### Functions ###########
+
+# This makes sure when the script is interrupted, that all mount 'binds' will unmount
+exitfn () {
+trap SIGINT              # Resore signal handling for SIGINT
+echo -e "\e[0;36mUnmounting mount binds in chroot\e[0m"
+umount -l "$LAUNCHDIR/$DIST"/chroot/proc 2> /dev/null
+umount -l "$LAUNCHDIR/$DIST"/chroot/sys 2> /dev/null
+umount -l "$LAUNCHDIR/$DIST"/chroot/dev/pts 2> /dev/null
+umount -l "$LAUNCHDIR/$DIST"/chroot/dev 2> /dev/null
+
+rm -f "$LAUNCHDIR/$DIST"/apt/archives/lock 2> /dev/null
+
+if mountpoint -q "$LAUNCHDIR/$DIST"/chroot/dev; then     # just in case check dev
+	echo -e "\e[0;31mSomething went wrong, directory chroot cannot be removed\e[0m"
+	echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\e[0m"
+	exit
 else
-	MIRRORURL="http://deb.debian.org/debian/"
+	rm -f "$LAUNCHDIR/$DIST"/*.conf 2> /dev/null
 fi
+exit
+}
+export -f exitfn
+
+trap "exitfn" 1 2 3 15    # Set up SIGINT trap to call function 'exitfn'
+
+# OK or FAILED
+ok_or_failed () {
+[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m" || echo -e "\e[0;31mFAILED\e[0m"
+}
+export -f ok_or_failed
+
+apt_get () {
+DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" $@
+# try again if failed
+if [ $? -ne 0 ]; then
+DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" $@
+	if [ $? -ne 0 ]; then
+	echo -e "\e[0;31mFAILED\e[0m"
+	touch /exit_
+	exit
+	fi
+fi
+}
+export -f apt_get
+
+########### Options (configuration)  ###########
 
 if [ "$(uname -m)" = "i686" ]; then
 	echo -e "\e[0;32mOK, running 32-bit OS, building live system for 32-bit: $(uname -m)\e[0m"
@@ -103,17 +115,43 @@ elif [ "$(uname -m)" = "x86_64" ]; then
 	fi
 fi
 
-echo -e "\e[0;33mBuild base filesystem '01-filesystem.squashfs' for 'PocketHandyBox'\e[0m"
-echo -e "\e[0;33m\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4\e[0m"
-echo -e "\e[0;32mBuilding will be done in: $PWD/$DIST\e[0m"
+if [ -n "$DE_CONFIG" ]; then
+	export DE_CONFIG="$DE_CONFIG"
+else
+	export DE_CONFIG=`basename "$config" .conf | cut -d- -f2`
+fi
+export DECONFDIR="$DE_CONFIG"'conf'
+if [ ! -d "$DIST/$DECONFDIR" ]; then
+	echo -e "\e[0;33mDirectory '""$DIST/$DECONFDIR""' not exist, exiting...\e[0m"
+	exit
+fi
 
-#echo -e "\e[0;32mIf you'd like a log from the output, run again e.g:\e[0m"
-#echo -e "\e[0;33m$0 -gui 2>&1 | tee build.log\e[0m"
-echo -e "\e[0;36mFirst setting up debootstrap, this will take a few minutes\e[0m"
+[ -z "$GUESTUSER" ] && GUESTUSER=guest
+export GUESTUSER="$GUESTUSER"
+[ -n "$GUESTPASS" ] && export GUESTPASS="$GUESTPASS"
+[ -n "$LOGINUSER" ] && export LOGINUSER="$LOGINUSER"
+
+if [ -n "$TEMPMIRROR" ]; then
+	MIRRORURL="http://""$TEMPMIRROR""/debian/"
+else
+	MIRRORURL="http://deb.debian.org/debian/"
+fi
+
+# Export final variables defined from custom .conf file
+export SYSTEMD="$SYSTEMD"
+export PL_BASE="$PL_BASE"
+export PL_SYSV="$PL_SYSV"
+export PL_SYSTEMD="$PL_SYSTEMD"
+
+# Merge INSTALL= and PL_AMD64= variables into one
+[ "$ARCH" = "amd64" ] && INSTALL="$INSTALL $PL_AMD64"
+export INSTALL="$INSTALL"
+
+########## Set up debootstrap ##########
+echo -e "\e[0;36mSetting up debootstrap in $DIST/chroot, this will take a few minutes\e[0m"
 
 if [ -d "$DIST/chroot" ]; then
 	echo -e "\e[0;36mUnmount mount binds and remove $DIST/chroot...\e[0m"
-	#umount -l chroot/tmp
 	umount -l $DIST/chroot/proc 2> /dev/null
 	umount -l $DIST/chroot/sys 2> /dev/null
 	umount -l $DIST/chroot/dev/pts 2> /dev/null
@@ -127,31 +165,20 @@ if [ -d "$DIST/chroot" ]; then
 	else
 		rm -rf $DIST/chroot
 	fi
-	mkdir -p $DIST/chroot/var/cache 2> /dev/null
+	mkdir -p $DIST/chroot/var/cache
 	mv $DIST/apt $DIST/chroot/var/cache/ 2> /dev/null
-	rm -f $DIST/*.conf 2> /dev/null
 	echo -e "\e[0;32mOK, continue...\e[0m"
+else
+	mkdir -p $DIST/chroot
 fi
 
-if [ $(command -v apt-get 2>/dev/null) ];then
-	#echo -e "\e[0;36mUpdate the package lists...\e[0m"
-	#apt-get update
-	echo -e "\e[0;36mInstall some required packages, e.g. xz-utils, wget, squashfs-tools, etc...\e[0m"
-	apt-get install debootstrap squashfs-tools wget xz-utils zstd -y
-	ok_or_failed
-fi
+# Copy config co chroot/root
+mkdir -p $DIST/chroot/root
+grep -v ^GUESTPASS "$config" > $DIST/chroot/root/`basename "$config"`
 
-if [ -z `which debootstrap` ] || [ ! -e /usr/share/debootstrap/scripts/"$DIST" ]; then
-	msg=" You don't have debootstrap installed.\nIt's a dependency of this program.\n Please install it."
-	echo $msg
-exit 0
-fi
-
-########## Set up debootstrap ##########
-echo -e "\e[0;36mSetting up debootstrap in $DIST/chroot\e[0m"
-echo -e "\e[0;36mThis may take a while...\e[0m"
-mkdir -p $DIST/chroot && cp -a $config $DIST && cd $DIST &&
-debootstrap --arch=$ARCH --variant=minbase --include=apt-transport-https,ca-certificates,adduser "$DIST" chroot "$MIRRORURL"
+# Run debootstrap
+cd $DIST && debootstrap --arch=$ARCH --variant=minbase \
+--include=apt-transport-https,ca-certificates,adduser "$DIST" chroot "$MIRRORURL"
 ret=$?
 echo $ret
 if [ $ret -ne 0 ]; then
@@ -189,8 +216,8 @@ rm chroot/etc/apt/sources.list
 cp --preserve=mode,timestamps -rf rootcopy/* chroot/
 ok_or_failed
 
-mkdir chroot/xfceconf
-cp --preserve=mode,timestamps -rf xfceconf/* chroot/xfceconf/
+mkdir chroot/de_conf
+cp --preserve=mode,timestamps -rf "$DECONFDIR"/* chroot/de_conf/
 ok_or_failed
 
 if [ -n "$TEMPMIRROR" ]; then
@@ -223,7 +250,6 @@ fi
 
 # mount bind some required directories from host filesystem
 mount --bind /proc chroot/proc
-#mount --bind /tmp chroot/tmp
 mount --bind /dev chroot/dev
 mount --bind /sys chroot/sys
 mount -t devpts devpts chroot/dev/pts
@@ -245,68 +271,37 @@ echo "Acquire::Check-Valid-Until "0";" >> /etc/apt/apt.conf
 if [ "$SYSTEMD" = "FALSE" ]; then
 	PL_SYS="$PL_SYSV"
 elif [ "$SYSTEMD" = "TRUE" ]; then
-	rm -f /etc/apt/preferences.d/00systemd /etc/apt/sources.list.d/devuan.sources /usr/share/keyrings/devuan-archive-keyring.gpg
+	rm -f /etc/apt/preferences.d/00systemd /etc/apt/preferences.d/devuan
+	rm -f /etc/apt/sources.list.d/devuan.sources /usr/share/keyrings/devuan-archive-keyring.gpg
 	PL_SYS="$PL_SYSTEMD"
 fi
 
-[ "$ARCH" = "amd64" ] && dpkg --add-architecture i386
+# Add architecture i386 (in case of some :i386 packages listed in INSTALL=)
+if echo "$INSTALL" | grep -q ':i386'
+then dpkg --add-architecture i386
+fi
 
 apt-get update # required, repositories just added
 [ $? -ne 0 ] && apt-get update # try again if failed
 
-#echo -e "\e[0;36mPlease set the password for 'root'\e[0m"
-#passwd root
-#if [ $? -ne 0 ]; then # try again if passwords not match
-#	echo -e "\e[0;36mPlease try again, type password for root\e[0m"
-#	#passwd root
-#fi
-#[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\e[0m"; sleep 3
-
-# create user guest
-echo -e "\e[0;36mAdd user 'guest'...\e[0m"
+# Create GUESTUSER non-root user
 adduser "$GUESTUSER" --gecos ",,," --disabled-password 2> /dev/null
-#echo
-#echo -e "\e[0;36mPlease set the password for user 'guest'\e[0m"
-#passwd guest
-#if [ $? -ne 0 ]; then # try again if passwords not match
-#	echo -e "\e[0;36mPlease try again, type password for guest\e[0m"
-#	#passwd guest
-#fi
-#[ $? -ne 0 ] && echo -e "\e[0;31mWarning: password is not set\e[0m"; sleep 3
-#echo
-# add groups fuse and wheel
-#addgroup fuse
-#addgroup wheel
-#echo
-#usermod -a -G sudo,cdrom,disk,audio,video,plugdev,fuse,wheel guest
-usermod -a -G cdrom,audio,video,plugdev "$GUESTUSER"
-
-echo -e "\e[0;36mInstall sysvinit/systemd required packages\e[0m"
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYS
-# try again if failed
-if [ $? -ne 0 ]; then
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_SYS
-	if [ $? -ne 0 ]; then
-	echo -e "\e[0;31mFAILED\e[0m"
-	touch /exit_
-	exit
-	fi
+if [ -n "$GUESTPASS" ]; then
+	echo -e "$GUESTPASS\n$GUESTPASS" | passwd "$GUESTUSER" 2> /dev/null
+	usermod -a -G sudo,cdrom,audio,video,plugdev "$GUESTUSER"
+else
+	usermod -a -G cdrom,audio,video,plugdev "$GUESTUSER"
 fi
+
+############ Start installing packages ############
+echo -e "\e[0;36mInstall sysvinit/systemd required packages\e[0m"
+apt_get install $PL_SYS
 
 # Run 'apt-get upgrade' to force update packages from security.debian.org
-DEBIAN_FRONTEND=noninteractive apt-get upgrade -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y
+apt_get upgrade
 
-# Install some basic packages (do not edit, essential!)
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_BASE
-# try again if failed
-if [ $? -ne 0 ]; then
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $PL_BASE
-	if [ $? -ne 0 ]; then
-	echo -e "\e[0;31mFAILED\e[0m"
-	touch /exit_
-	exit
-	fi
-fi
+# Install some basic packages
+apt_get install $PL_BASE
 
 dbus-uuidgen > /var/lib/dbus/machine-id
 echo "live" > /etc/hostname
@@ -319,10 +314,7 @@ if [ "$DIST" = "trixie" ]; then
 apt-get install --yes sqv-dummy && apt-get purge --yes sqv
 fi
 
-# Merge all install variables into one
-[ "$ARCH" = "amd64" ] && INSTALL="$INSTALL $PL_AMD64"
-
-# simulate install first to check for errors, if there are, exit
+# Simulate install first to check for errors, if there are, exit
 echo -e "\e[0;36mChecking packages . . .\e[0m"
 apt-get install -s -y $INSTALL
 ret=$?
@@ -333,54 +325,20 @@ if [ $ret -eq 100 ]; then
 	touch /exit_
 	exit
 else
-	echo -e "\e[0;32mAll packages checked OK, continue now to install some basic packages... \e[0m"
+	echo -e "\e[0;32mAll packages checked OK, continue now to install packages...\e[0m"
 fi
-
-############ Start installing packages ############
-
-####### Start installing packages, as defined in configuration #######
-echo -e "\e[0;36mInstall packages, as defined in configuration\e[0m"
 
 ### Do the real installing
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
-# try again if failed
-if [ $? -ne 0 ]; then
-DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y $INSTALL
-	if [ $? -ne 0 ]; then
-	echo -e "\e[0;31mFAILED\e[0m"
-	touch /exit_
-	exit
-	fi
-fi
+apt_get install $INSTALL
 
-# ● fredx181, commented out installing kernel 
-### install the kernel
-#echo -e "\e[0;36mInstall the kernel, download and extract\e[0m"
-#mkdir -p /tmp/tmpapt
-#[ "$ARCH" = "i386" ] && apt-get -o dir::cache::archives="/tmp/tmpapt" install -d linux-image-686-pae -y
-#[ "$ARCH" = "amd64" ] && apt-get -o dir::cache::archives="/tmp/tmpapt" install -d linux-image-amd64 -y
-
-#L_IMG=$(ls -S /tmp/tmpapt | head -1)
-#dpkg-deb -x /tmp/tmpapt/$L_IMG /tmp/tmpapt
-#kernel=$(ls /tmp/tmpapt/lib/modules/)
-#cp -a /tmp/tmpapt/lib/modules /lib/
-#cp -a /tmp/tmpapt/boot/config-* /boot/
-#depmod $kernel
-
-############ End of installing packages ############
-
-# ● fredx181, for with systemd, seems not working anymore, not sure
-mkdir -p /etc/systemd/network 2> /dev/null   # might not exist
-ln -s /dev/null /etc/systemd/network/99-default.link # traditional network interface names
-
-### Uninstall gnome-icon-theme ######
-GNOME_ICON=$(apt-cache rdepends --installed gnome-icon-theme | grep -v "gnome-icon-theme\|Reverse Depends" | grep -v "|")  # check for reverse dependencies, remove only if none
+# Uninstall gnome-icon-theme (check for reverse dependencies, remove only if none)
+GNOME_ICON=$(apt-cache rdepends --installed gnome-icon-theme | grep -v "gnome-icon-theme\|Reverse Depends" | grep -v "|")
 [ -z "$GNOME_ICON" ] && apt-get purge --yes gnome-icon-theme    # in case installed
 
-# if "xserver-xorg-input-evdev" is installed:
-# apt-get purge --yes  xserver-xorg-input-libinput # uncomment if lxinput doesn't work
+### apt-get autoremove
 apt-get --yes autoremove
-#####################################
+
+############ End of installing packages ############
 
 # Use functions uncompress_files and remove_broken_links from linux-live
 # https://github.com/Tomas-M/linux-live/blob/master/Slax/debian12/cleanup
@@ -415,6 +373,10 @@ remove_broken_links usr/share/man
 # Re-create man-db /var/cache/man/
 mandb --create
 
+# Enable traditional network interface names for systemd
+mkdir -p /etc/systemd/network
+ln -sf /dev/null /etc/systemd/network/99-default.link
+
 if [ "$SYSTEMD" = "FALSE" ]; then
 # Enable /etc/init.d/snapexit (Save on exit when shutdown from console)
 	update-rc.d snapexit defaults
@@ -426,21 +388,36 @@ if [ "$SYSTEMD" = "FALSE" ]; then
 	update-rc.d checkroot-bootclean.sh disable 2> /dev/null
 	update-rc.d checkroot.sh disable 2> /dev/null
 # Enable pin priority 99 to initscripts package to disable auto updating
-	sed -i s/init-scripts/initscripts/g etc/apt/preferences.d/noupgrades
+	sed -i s/init-scripts/initscripts/g /etc/apt/preferences.d/noupgrades
+# Disable alsactl warning messages
+	sed -i s/'log_action_cont_msg'/'#log_action_cont_msg'/g /etc/init.d/alsa-utils 2> /dev/null
+fi
+
+if [ -s /etc/X11/default-display-manager ]; then
+# Disable tty1 autologin, using display-manager
+	echo -en "\e[0;32mDisable tty1 autologin, using display-manager: \e[0m"
+	cat /etc/X11/default-display-manager
+	rm -f /etc/systemd/system/graphical.target.wants/getty@tty1.service
+	rm -f /etc/systemd/system/getty.target.wants/getty@tty1.service
+elif [ -n "$LOGINUSER" ]; then
+# Enable tty1 auto login for non-root user
+	echo -e "\e[0;32mEnable autologin for $LOGINUSER user\e[0m"
+	[ "$SYSTEMD" = "FALSE" ] && sed -i "s/getty --noclear/getty --noclear -a $LOGINUSER/" /etc/inittab
+	sed -i "s/--noclear -a root/--noclear -a $LOGINUSER/" /etc/systemd/system/getty@tty1.service
+elif [ "$SYSTEMD" = "FALSE" ]; then
+# Enable tty1 auto login for root
+	sed -i "s/getty --noclear/getty --noclear -a root/" /etc/inittab
 fi
 
 # Create symlink for /usr/local/sbin/mount.ntfs
 ln -sf /usr/local/sbin/mount.ntfs /usr/sbin/mount.ntfs
 
 # Enable pin priority 99 to ntfs-3g package to disable auto updating
-sed -i s/ntfs3g/ntfs-3g/g etc/apt/preferences.d/noupgrades
+sed -i s/ntfs3g/ntfs-3g/g /etc/apt/preferences.d/noupgrades
 
-# Copy xfceconf/ to /
-cp --preserve=mode,timestamps -rf xfceconf/* ./
-rm -rf xfceconf
-
-mkdir -p root/{Desktop,Startup,.config} home/"$GUESTUSER"/{Desktop,Downloads,Startup,.config}
-ln -s /home/"$GUESTUSER"/Downloads /root/Downloads
+# Copy de_conf/ to /
+cp --preserve=mode,timestamps -rf de_conf/* ./
+rm -rf de_conf
 
 # After replacing org.gtk.Settings.FileChooser.gschema.xml with modified version
 # Need update /usr/share/glib-2.0/schemas/gschemas.compiled file
@@ -450,26 +427,27 @@ elif [ "$ARCH" = "i386" ]; then
 /usr/lib/i386-linux-gnu/glib-2.0/glib-compile-schemas /usr/share/glib-2.0/schemas/
 fi
 
+mkdir -p root/{Desktop,Startup,.config} home/"$GUESTUSER"/{Desktop,Downloads,Startup,.config}
+ln -s /home/"$GUESTUSER"/Downloads /root/Downloads
+
 # Copy /etc/skel/.config to /root/ and /home/guest/
-cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,gxkb,netsurf,volumeicon,xfce4,mimeapps.list} root/.config/
-cp --preserve=mode,timestamps -rf etc/skel/.config/{gtk-2.0,gtk-3.0,gxkb,netsurf,volumeicon,xfce4,mimeapps.list} home/"$GUESTUSER"/.config/
+cp --preserve=mode,timestamps -rf etc/skel/.config/* root/.config/ 2> /dev/null
+cp --preserve=mode,timestamps -rf etc/skel/.config/* home/"$GUESTUSER"/.config/ 2> /dev/null
 
 # Copy /etc/skel/Startup to /root/ and /home/guest/
-cp --preserve=mode,timestamps -f etc/skel/Startup/{gxkb,volumeicon} root/Startup/
-cp --preserve=mode,timestamps -f etc/skel/Startup/{gxkb,volumeicon} home/"$GUESTUSER"/Startup/
+cp --preserve=mode,timestamps -df etc/skel/Startup/* root/Startup/ 2> /dev/null
+cp --preserve=mode,timestamps -df etc/skel/Startup/* home/"$GUESTUSER"/Startup/ 2> /dev/null
+
+# chown /home/guest
+chown -R "$GUESTUSER":"$GUESTUSER" home/"$GUESTUSER"
 
 # Create symlinks for devices icons
+if [ -d usr/share/icons/devices ]; then
 for SIZE in 16x16 22x22 24x24 32x32 48x48; do
 	cp -df usr/share/icons/devices/* usr/share/icons/AdwaitaLegacy/$SIZE/devices/ 2> /dev/null
 done
 rm -rf usr/share/icons/devices
-
-# Create symlink for Thunar panel icon view-dual.svg
-#for SIZE in 22 24 32; do
-#	mkdir -p usr/share/icons/Numix/$SIZE/actions 2> /dev/null
-#	cp -df usr/share/icons/view-dual.svg usr/share/icons/Numix/$SIZE/actions
-#done
-#rm -f usr/share/icons/view-dual.svg
+fi
 
 remove_broken_links usr/share/icons/Adwaita
 remove_broken_links usr/share/icons/AdwaitaLegacy
@@ -515,6 +493,9 @@ rm -f usr/lib/x86_64-linux-gnu/dri/*_dri.so
 rm -f usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0*
 fi
 
+# Enable /etc/fonts/conf.d/10-hinting-full.conf
+[ -f etc/fonts/conf.d/10-hinting-full.conf ] && rm -f etc/fonts/conf.d/10-hinting-slight.conf
+
 echo "Cleaning..."
 rm -f var/cache/apt/*.bin
 rm -f var/cache/debconf/*-old
@@ -529,8 +510,6 @@ rm -f var/log/apt/*
 rm -f var/log/{alternatives.log,bootstrap.log,dpkg.log}
 
 rm -rf usr/share/doc/*/examples
-
-rm -f etc/fonts/conf.d/10-hinting-slight.conf
 
 rm -f var/lib/dbus/machine-id
 rm etc/resolv.conf
@@ -554,7 +533,6 @@ $CHROOT chroot /bin/bash -c chroot_in
 ################################################
 
 echo -e "\e[0;36mUnmounting mount binds in chroot\e[0m"
-#umount -l chroot/tmp
 umount -l chroot/proc
 umount -l chroot/dev/pts
 umount -l chroot/dev
@@ -562,15 +540,11 @@ umount -l chroot/sys
 
 cd "$LAUNCHDIR/$DIST/"
 
-rm -f "$ARCH"/01-filesystem.squashfs 2> /dev/null # just in case it exists remove first
-
-# copy config to chroot/root
-mv $(basename $config) chroot/root/
-
 # Copy /etc/skel/{.bashrc,.profile} to /root/
 cp chroot/etc/skel/{.bashrc,.profile} chroot/root/
 
-chown -R 1000:1000 chroot/home/"$GUESTUSER"
+# Create compatibility symlink /etc/mtab
+ln -sf /proc/self/mounts chroot/etc/mtab
 
 if [ -n "$TEMPMIRROR" ]; then
 	sed -i s/"$TEMPMIRROR"/deb.debian.org/ chroot/etc/apt/sources.list.d/debian.sources
@@ -587,31 +561,14 @@ if [ -n "$LOGO" ]; then
 	sed -i s/phblogo/"$LOGO"/g chroot/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
 fi
 
-# Disable alsactl warning messages
-if [ "$SYSTEMD" = "FALSE" ]; then
-	sed -i s/'log_action_cont_msg'/'#log_action_cont_msg'/g chroot/etc/init.d/alsa-utils
-fi
-
-# Create compatibility symlink /etc/mtab
-ln -sf /proc/self/mounts chroot/etc/mtab
-
-if [ "$(cat chroot/etc/X11/default-display-manager 2> /dev/null)" ]; then
-	echo -e "\e[0;36mIt looks like you have a display-manager installed\e[0m"
-	cat chroot/etc/X11/default-display-manager
-	echo -e "\e[0;36mThis probably will conflict with the default login method (through /etc/inittab)\e[0m"
-	cp -af chroot/etc/inittab-noauto chroot/etc/inittab
-	if [ "$SYSTEMD" = "TRUE" ]; then
-		rm -f chroot/etc/systemd/system/graphical.target.wants/getty@tty1.service
-		rm -f chroot/etc/systemd/system/getty.target.wants/getty@tty1.service
-	fi
-	echo -e "\e[0;32mDisabled autologin, using display-manager for login\e[0m"
-fi
-
+# Move apt cache away from chroot
 mkdir -p apt/archives
 mv -f chroot/var/cache/apt/archives/*.deb ./apt/archives/
 
-mkdir -p "$ARCH" 2> /dev/null
-echo -e "\e[0;33mNow we will create: filesystem: '01-filesystem.squashfs'\e[0m"
+rm -f "$ARCH"/01-filesystem.squashfs # just in case it exists remove first
+
+mkdir -p "$ARCH"
+echo -e "\e[0;36mCreating filesystem '01-filesystem.squashfs' . . .\e[0m"
 mksquashfs chroot "$ARCH"/01-filesystem.squashfs -b 512k $MKSFSCMP
 ok_or_failed
 
