@@ -20,7 +20,7 @@ grep -sq ^MKSFSCMP= /root/*.conf && \
 MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | head -1 | cut -d= -f2 | sed s/\"//g`
 
 if [ -d "$1" ]; then
-	DIR="$1"
+	DIR="${1%/}" # strip trailing slash from dir name (if it exists)
 	shift
 	echo "mksquashfs $DIR $DIR.squashfs $ALLROOT -b 1M $MKSFSCMP $@"
 	mksquashfs "$DIR" "$DIR".squashfs $ALLROOT -b 1M $MKSFSCMP $@
