@@ -442,7 +442,7 @@ echo -e "\e[0;32mOK\e[0m"
 #cd "/mnt/$DRV"
 
 grep -sq ^MKSFSCMP= /root/*.conf && \
-MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d= -f2 | sed s/\"//g`
+MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | head -1 | cut -d= -f2 | sed s/\"//g`
 
 msg="Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n
 For example: ~/.mozilla

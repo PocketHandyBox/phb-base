@@ -14,7 +14,7 @@ if [ -z `command -v "$1" 2> /dev/null` ]; then
 fi
 
 if grep -sq ^GUESTUSER= /root/*.conf ; then
-	GUESTUSER=`grep ^GUESTUSER= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
+	GUESTUSER=`grep ^GUESTUSER= /root/*.conf | head -1 | cut -d "=" -f2 | sed s/\"//g`
 else
 	GUESTUSER=guest
 fi

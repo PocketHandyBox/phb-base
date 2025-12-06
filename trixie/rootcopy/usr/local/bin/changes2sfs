@@ -229,7 +229,7 @@ cleanup 2> /dev/null
 #    chown -R man:root usr/share/man
 
 grep -sq ^MKSFSCMP= /root/*.conf && \
-MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d= -f2 | sed s/\"//g`
+MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | head -1 | cut -d= -f2 | sed s/\"//g`
 
 msg="Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n
 For example: ~/.mozilla

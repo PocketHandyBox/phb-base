@@ -17,7 +17,7 @@ if [ "`whoami`" != "root" ]; then
 fi
 
 grep -sq ^MKSFSCMP= /root/*.conf && \
-MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | cut -d= -f2 | sed s/\"//g`
+MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | head -1 | cut -d= -f2 | sed s/\"//g`
 
 if [ -d "$1" ]; then
 	DIR="$1"
