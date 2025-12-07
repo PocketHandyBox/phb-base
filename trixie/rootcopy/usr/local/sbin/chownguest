@@ -1,14 +1,15 @@
 #!/bin/dash
 
-if grep -sq ^GUESTUSER= /root/*.conf ; then
-	GUESTUSER=`grep ^GUESTUSER= /root/*.conf | cut -d "=" -f2 | sed s/\"//g`
-else
-	GUESTUSER=guest
-fi
+# Run chown -R /home/user
+# in case of directory owner user:group do not match
 
-if [ -d "/home/$GUESTUSER" ]; then
-	STATGUEST=$(stat -c "%U %G" "/home/$GUESTUSER")
-	[ "$STATGUEST" != "$GUESTUSER $GUESTUSER" ] && chown -R "$GUESTUSER":"$GUESTUSER" "/home/$GUESTUSER"
-fi
+[ -n "`ls -d /home/*/.profile 2> /dev/null`" ] || exit 0
+
+dirname `ls -d /home/*/.profile 2> /dev/null` | while read LINE; do
+	GUESTUSER=`basename "$LINE"`
+	grep -sq "$GUESTUSER" /etc/group || continue
+	STATGUEST=$(stat -c "%U %G" "$LINE")
+	[ "$STATGUEST" != "$GUESTUSER $GUESTUSER" ] && chown -R "$GUESTUSER":"$GUESTUSER" "$LINE" 2> /dev/null
+done
 
 exit 0
