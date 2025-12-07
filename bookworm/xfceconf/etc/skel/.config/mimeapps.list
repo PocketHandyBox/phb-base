@@ -2,4 +2,7 @@
 application/vnd.squashfs=pfilemnt.desktop
 application/x-squashfs=pfilemnt.desktop
 application/x-kmodsfs=pfilemnt.desktop
+image/jpeg=gpicview.desktop
+image/png=gpicview.desktop
 image/webp=gpicview.desktop
+application/x-zerosize=mousepad.desktop
