@@ -52,8 +52,8 @@ mkdir -p /tmp/firmware-"$VER" && cd /tmp/firmware-"$VER"
 # fw-gpu
 mkdir gpu && cd gpu
 download_and_extract firmware-amd-graphics firmware-intel-graphics firmware-nvidia-graphics
-#rm -rf usr/lib/firmware/nvidia/*/gsp
-#rmdir usr/lib/firmware/nvidia/* 2> /dev/null
+rm -rf usr/lib/firmware/nvidia/*/gsp
+rmdir usr/lib/firmware/nvidia/* 2> /dev/null
 mksquashfs_firmware gpu
 
 # fw-wifibt
