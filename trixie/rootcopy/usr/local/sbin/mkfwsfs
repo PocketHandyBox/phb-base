@@ -38,18 +38,22 @@ if [ ! -f /var/cache/apt/pkgcache.bin ]; then
 apt-get update
 fi
 
-apt-cache show firmware-intel-graphics > /dev/null
-[ "$?" -eq 0 ] || exit
+apt-cache show firmware-intel-graphics > /dev/null || exit 1
 
-VER=`apt-cache --no-all-versions show firmware-linux-nonfree | grep Version | cut -d' ' -f2 | cut -d- -f1`
+VER=`apt-cache --no-all-versions show firmware-linux-nonfree | grep 'Version:' | cut -d' ' -f2 | cut -d- -f1`
+
+if [ -d "/tmp/firmware-$VER" ]; then
+echo "/tmp/firmware-$VER - already created, exit"
+exit 1
+fi
 
 mkdir -p /tmp/firmware-"$VER" && cd /tmp/firmware-"$VER"
 
 # fw-gpu
 mkdir gpu && cd gpu
 download_and_extract firmware-amd-graphics firmware-intel-graphics firmware-nvidia-graphics
-rm -rf usr/lib/firmware/nvidia/*/gsp
-rmdir usr/lib/firmware/nvidia/* 2> /dev/null
+#rm -rf usr/lib/firmware/nvidia/*/gsp
+#rmdir usr/lib/firmware/nvidia/* 2> /dev/null
 mksquashfs_firmware gpu
 
 # fw-wifibt

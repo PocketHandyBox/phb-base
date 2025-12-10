@@ -86,16 +86,20 @@ ok_or_failed () {
 }
 export -f ok_or_failed
 
+ok_or_failed_chroot () {
+[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m" && return 0
+echo -e "\e[0;31mFAILED\e[0m"
+touch /exit_
+exit
+}
+export -f ok_or_failed_chroot
+
 apt_get () {
 DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" $@
 # try again if failed
 if [ $? -ne 0 ]; then
 DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" $@
-	if [ $? -ne 0 ]; then
-	echo -e "\e[0;31mFAILED\e[0m"
-	touch /exit_
-	exit
-	fi
+ok_or_failed_chroot
 fi
 }
 export -f apt_get
