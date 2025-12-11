@@ -1,6 +1,5 @@
+*/apt
 */chroot
 */amd64
 */i386
 01-filesystem.squashfs
-*/apt
-*/*.conf
