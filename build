@@ -182,7 +182,7 @@ grep -v ^GUESTPASS "$config" > $DIST/chroot/root/`basename "$config"`
 
 # Run debootstrap
 cd $DIST && debootstrap --arch=$ARCH --variant=minbase \
---include=apt-transport-https,ca-certificates,adduser "$DIST" chroot "$MIRRORURL"
+--include=gpgv,apt-transport-https,ca-certificates,adduser "$DIST" chroot "$MIRRORURL"
 ret=$?
 echo $ret
 if [ $ret -ne 0 ]; then
@@ -283,6 +283,10 @@ fi
 # Add architecture i386 (in case of some :i386 packages listed in INSTALL=)
 if echo "$INSTALL" | grep -q ':i386'
 then dpkg --add-architecture i386
+fi
+
+if [ -x /usr/bin/sqv ] && [ -x /usr/bin/gpgv ]; then
+	rm -f /usr/bin/sqv
 fi
 
 apt-get update # required, repositories just added
