@@ -45,7 +45,7 @@ IP=`value ip | cut -d: -f2`
 NFSPATH=`value nfspath`; [ $NFSPATH ] || NFSPATH=/srv/pxe
 MOPT=`value mopt`; [ $MOPT ] || MOPT="noatime,nodiratime,suid,dev,exec,async"
 CHANGES=`value changes`
-PFULL=`value pfull`
+PFULL=`value pfull`; [ $PFULL ] && CHANGES=$PFULL
 RAMSIZE=`value ramsize`; [ $RAMSIZE ] || RAMSIZE=60%
 
 LOAD=`multivalue load | sed 's/[,;]/|/g'`; [ $LOAD ] || LOAD=._null
@@ -96,6 +96,12 @@ mount -t devtmpfs none /dev
 if [ $IP ]; then
     load_net_modules
     udhcpc
+fi
+
+param noauto && MOUNT=noauto
+if param noauto && [ -z "$CHANGES" ]; then
+    MOPT='ro,'"$MOPT"
+    MOUNT=ro
 fi
 
 # Create /etc/fstab and mount devices:
@@ -154,8 +160,6 @@ echo $DATADIR > /etc/homedrv
 debug
 
 # Setup changes:
-[ $PFULL ] && CHANGES=$PFULL
-
 if [ $CHANGES ]; then
 	echo "${i}setting up directory for changes"
 	CHNEXIT=`echo $CHANGES | cut -d: -f1`
@@ -359,26 +363,29 @@ if [ "$CHNDEV" != memory ] && [ -d "$CHNDEV" ]; then
 MNTPOINTS="$CHNDEV $MNTPOINTS"
 fi
 
-# Move mountpoints /mnt/XX to /union/mnt/XX
+# Unmount or remount,rw and move mountpoints /mnt/XX to /union/mnt/XX
 for MNTDEV in $MNTPOINTS
 do mkdir -p /union"$MNTDEV"
-if [ "$MNTDEV" = "$CHNDEV" ]; then
-	if [ "$CHNEXIT" ] && [ $TORAM ]; then
-		mount -o move "$MNTDEV" /union"$MNTDEV" # && umount /union"$MNTDEV" 2>/dev/null
-		continue
-	else
-		mount -o move "$MNTDEV" /union"$MNTDEV"
-		continue # keep CHNDEV mounted
-	fi
+if [ "$MNTDEV" = "$CHNDEV" ]; then # keep CHNDEV mounted
+    mount -o move "$MNTDEV" /union"$MNTDEV" 2>/dev/null
 elif [ "$MNTDEV" = "$DATADEV" -o "$MNTDEV" = "$BOOTDEV" ]; then
-	if param noauto && [ $TORAM ]; then
-		umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
-	else
-		mount -o move "$MNTDEV" /union"$MNTDEV"
-	fi
-	continue
+    if [ $TORAM ] && [ "$MOUNT" = ro -o "$MOUNT" = noauto ]; then
+        umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
+    elif [ "$MNTDEV" = /mnt/isoloop -o "$MNTDEV" = /mnt/nfs ]; then
+        mount -o move "$MNTDEV" /union"$MNTDEV"
+    elif [ "$MOUNT" = ro ]; then # try remount,rw if copy2ram not used
+        mount -o remount,rw "$MNTDEV" 2>/dev/null
+        mount -o move "$MNTDEV" /union"$MNTDEV"
+    else
+        mount -o move "$MNTDEV" /union"$MNTDEV"
+    fi
+elif [ "$MOUNT" = ro ]; then # try remount,rw if filesystem in use
+    umount "$MNTDEV" 2>/dev/null || { mount -o remount,rw "$MNTDEV" 2>/dev/null; mount -o move "$MNTDEV" /union"$MNTDEV"; }
+elif [ "$MOUNT" = noauto ]; then # try unmount unused mountpoints if noauto
+    umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
+else
+    mount -o move "$MNTDEV" /union"$MNTDEV" # move all mountpoints if noauto not used
 fi
-param noauto && umount "$MNTDEV" 2>/dev/null || mount -o move "$MNTDEV" /union"$MNTDEV"
 done
 
 # Remove unused /mnt/XX dir's
