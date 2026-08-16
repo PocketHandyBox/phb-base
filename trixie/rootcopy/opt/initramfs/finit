@@ -119,7 +119,9 @@ lazy() { SLEEP=6; while [ $SLEEP -gt 0 -a $FND = none ]; do nap; let SLEEP=SLEEP
 # Find location of Porteus files
 locate() { LPATH=`echo $2 | cut -b-5 | sed s@/dev@/mnt@`
 if [ $LPATH = /mnt/ ]; then
-    DEV=`echo $2 | cut -d/ -f3`; LPTH=`echo $2 | cut -d/ -f4-`; SLEEP=6
+    DEV=`echo $2 | cut -d/ -f3`; LPTH=`echo $2 | cut -d/ -f4-`
+    [ $1 /mnt/$DEV/$LPTH ] && return 0
+    SLEEP=6
     while [ $SLEEP -gt 0 -a ! -b /dev/$DEV ]; do nap; let SLEEP=SLEEP-1; fstab; done
     [ -d /mnt/$DEV ] || mount_device $DEV
     [ $1 /mnt/$DEV/$LPTH ]

@@ -43,6 +43,7 @@ LANGM=`value lang`; [ "$LANGM" = en_US ] && LANGM=""
 
 IP=`value ip | cut -d: -f2`
 NFSPATH=`value nfspath`; [ $NFSPATH ] || NFSPATH=/srv/pxe
+NFSRW=`value nfsrw`
 MOPT=`value mopt`; [ $MOPT ] || MOPT="noatime,nodiratime,suid,dev,exec,async"
 CHANGES=`value changes`
 PFULL=`value pfull`; [ $PFULL ] && CHANGES=$PFULL
@@ -93,9 +94,15 @@ modprobe -qa `cat modlist`
 mount -t devtmpfs none /dev
 
 # Load network kernel modules in case of PXE boot
-if [ $IP ]; then
+if [ $IP ] || [ $NFSRW ]; then
     load_net_modules
     udhcpc
+fi
+
+if [ $NFSRW ]; then
+    mkdir -p /mnt/nfsrw
+    modprobe -q nfsv4; mount -t nfs4 $NFSRW /mnt/nfsrw -o rw,nolock 2>/dev/null || { modprobe -q nfsv3; mount -t nfs $NFSRW /mnt/nfsrw -o rw,nolock 2>/dev/null; }
+    [ $? -ne 0 ] && rmdir /mnt/nfsrw 2>/dev/null
 fi
 
 param noauto && MOUNT=noauto
@@ -115,18 +122,11 @@ debug
 # Searching for PHB data
 echo "${i}searching for PHB data: $FOLDER folder"
 if [ $IP ]; then BOOTDEV=network; DATADEV=/mnt/nfs
-    mkdir -p /mnt/nfs/storage
+    mkdir -p /mnt/nfs
     modprobe -q nfsv4; mount -t nfs4 $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null || { modprobe -q nfsv3; mount -t nfs $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null; }
-    MAC=`ifconfig | grep eth0 | cut -d: -f5-7 | sed s/://g | cut -d" " -f1`
-    if [ "$CHANGES" = /srv/pxe/storage ]; then
-	if lsmod | grep -q nfsv3; then
-	    mount -t nfs $IP:/srv/pxe/storage /mnt/nfs/storage -o rw,nolock 2>/dev/null && { mkdir -p /mnt/nfs/storage/client-$MAC/changes/home; CHANGES="/storage/client-$MAC"; }
-	else
-	    mount -t nfs4 $IP:/srv/pxe/storage /mnt/nfs/storage -o rw,nolock 2>/dev/null && { mkdir -p /mnt/nfs/storage/client-$MAC/changes/home; CHANGES="/storage/client-$MAC"; }
-	fi
-    fi
     if [ $FROM ]; then
         FOLDER=$FROM/$FOLDER
+        CMDIR=$FROM/$CMDIR
     fi
 elif [ $ISO ]; then DATADEV=/mnt/isoloop
     locate -e $FROM && { BOOTDEV=/mnt/$DEV; mkdir /mnt/isoloop; mount -o loop /mnt/$DEV/$LPTH /mnt/isoloop; ISOSRC=/mnt/$DEV/$LPTH; }
@@ -358,6 +358,7 @@ fi
 
 MNTPOINTS=`grep /mnt/ /etc/fstab | cut -d" " -f2`
 [ -d /mnt/nfs ] && MNTPOINTS="/mnt/nfs $MNTPOINTS"
+[ -d /mnt/nfsrw ] && MNTPOINTS="/mnt/nfsrw $MNTPOINTS"
 [ -d /mnt/isoloop ] && MNTPOINTS="/mnt/isoloop $MNTPOINTS"
 if [ "$CHNDEV" != memory ] && [ -d "$CHNDEV" ]; then
 MNTPOINTS="$CHNDEV $MNTPOINTS"
