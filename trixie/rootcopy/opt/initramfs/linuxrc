@@ -391,17 +391,9 @@ done
 # Remove unused /mnt/XX dir's
 rmdir /mnt/* 2>/dev/null
 
-# TO DO
-#[ `ls /mnt | grep $CFGDISK` ] || echo $i"[1;36m""finished copying to RAM - booting media can be removed safely""[0m"
-
-#sed -i 's/ ntfs / ntfs-3g /g' /etc/fstab
-#cp -f /etc/fstab /union/etc 2>/dev/null
-
-# Add all symlinks of all mount points at /mnt to union
-#for x in `ls -1 /mnt`; do
-# [ -d /union/mnt/$x ] && rmdir /union/mnt/$x
-# ln -sf /mnt/live/mnt/$x /union/mnt/$x
-#done
+if [ $TORAM ] && [ "$MOUNT" = ro ] && [ -z "`grep -v memory/copy2ram /tmp/modules`" ]; then
+	echo "${i}${GREEN}finished copying to RAM - booting media can be removed safely${RST}"
+fi
 
 debug
 
