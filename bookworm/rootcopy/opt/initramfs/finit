@@ -107,40 +107,91 @@ else
 fi
 }
 
-# Search for boot location
+# Search for file/folder path
 search() { FND=none; for x in `ls /mnt | tac`; do
-[ $1 /mnt/$x/$2 ] && { DEV=$x; FND=y; break; }; done
+[ $1 /mnt/$x/"$2" ] && { DEV=$x; FND=y; break; }; done
 [ $FND = y ]; }
 
 # Delay booting a little until devices have settled
 nap() { echo -en "${i}device not ready yet? delaying ${YELLOW}${SLEEP}${RST} seconds \r"; sleep 1; }
-lazy() { SLEEP=6; while [ $SLEEP -gt 0 -a $FND = none ]; do nap; let SLEEP=SLEEP-1; fstab; search $*; done }
+lazy() { SLEEP=6; while [ $SLEEP -gt 0 -a $FND = none ]; do nap; let SLEEP=SLEEP-1; fstab; search $1 "$2"; done }
 
-# Find location of Porteus files
-locate() { LPATH=`echo $2 | cut -b-5 | sed s@/dev@/mnt@`
-if [ $LPATH = /mnt/ ]; then
-    DEV=`echo $2 | cut -d/ -f3`; LPTH=`echo $2 | cut -d/ -f4-`
-    [ $1 /mnt/$DEV/$LPTH ] && return 0
+# Search for file/folder path /mnt/ or /dev/ or UUID/LABEL
+locate() { LPATH="`echo $2 | cut -b-5 | sed s@/dev@/mnt@`"
+if [ "$LPATH" = /mnt/ ]; then
+    DEV="`echo $2 | cut -d/ -f3`"; LPTH="`echo $2 | cut -d/ -f4-`"
+    [ $1 /mnt/$DEV/"$LPTH" ] && return 0
     SLEEP=6
     while [ $SLEEP -gt 0 -a ! -b /dev/$DEV ]; do nap; let SLEEP=SLEEP-1; fstab; done
     [ -d /mnt/$DEV ] || mount_device $DEV
-    [ $1 /mnt/$DEV/$LPTH ]
-elif [ $LPATH = UUID: -o $LPATH = LABEL ]; then
-    ID=`echo $2 | cut -d: -f2 | cut -d/ -f1`; LPTH=`echo $2 | cut -d/ -f2-`; DEV=`blkid | grep $ID | cut -d: -f1 | cut -d/ -f3`; SLEEP=6
-    while [ $SLEEP -gt 0 -a "$DEV" = "" ]; do nap; let SLEEP=SLEEP-1; fstab; DEV=`blkid | grep $ID | cut -d: -f1 | cut -d/ -f3`; done
+    [ $1 /mnt/$DEV/"$LPTH" ]
+elif [ "$LPATH" = UUID: -o "$LPATH" = LABEL ]; then
+    ID="`echo $2 | cut -d: -f2 | cut -d/ -f1`"; LPTH="`echo $2 | cut -d/ -f2-`"; DEV="`blkid | grep $ID | cut -d: -f1 | cut -d/ -f3`"; SLEEP=6
+    while [ $SLEEP -gt 0 -a "$DEV" = "" ]; do nap; let SLEEP=SLEEP-1; fstab; DEV="`blkid | grep $ID | cut -d: -f1 | cut -d/ -f3`"; done
     [ -d /mnt/$DEV ] || mount_device $DEV
-    [ $1 /mnt/$DEV/$LPTH ]
+    [ $1 /mnt/$DEV/"$LPTH" ]
 else
-    LPTH=$2; search $* || lazy $*
+    LPTH="$2"; search $1 "$2" || lazy $1 "$2"
 fi }
+
+# Search for live folder
+locate_data() {
+ISO="`egrep -io '(^| )from=.*\.iso( |\$)' /proc/cmdline | cut -d= -f2 | sed 's/[ ]$//'`"
+if [ -n "$ISO" ]; then
+    locate -e "$ISO"
+    if [ $? -ne 0 ]; then echo "${i}couldn't find ISO file${CYAN} $ISO ${RST}"
+    else
+        mkdir /mnt/isoloop && mount -o loop /mnt/$DEV/"$LPTH" /mnt/isoloop
+        if [ $? -ne 0 ]; then rmdir /mnt/isoloop
+            echo "${i}Cannot mount ISO${CYAN} /mnt/$DEV/$LPTH ${RST}"
+        elif [ -d /mnt/isoloop/$FOLDER ]; then
+            DATADEV=/mnt/isoloop; BOOTDEV=/mnt/$DEV
+            ISOSRC="`echo /mnt/$DEV/$LPTH | tr -s /`"
+            echo "${i}ISO=$ISO"
+            return 0
+        fi
+    fi
+    echo "${i}Cannot boot from ISO file. Press 'enter' to search through all devices"
+    read -s
+fi
+if [ $IP ]; then
+    mkdir -p /mnt/nfs
+    modprobe -q nfsv4; mount -t nfs4 $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null || { modprobe -q nfsv3; mount -t nfs $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null; }
+    [ $? -ne 0 ] && echo "${i}Cannot mount NFS${CYAN} $IP:$NFSPATH ${RST}"
+    if [ $FROM ]; then
+        FOLDER=$FROM/$FOLDER
+        CMDIR=$FROM/$CMDIR
+    fi
+    DATADEV=/mnt/nfs
+    if [ -d $DATADEV/$FOLDER ]; then
+        BOOTDEV=network
+        echo "${i}mount NFS${BOLD} $IP:$NFSPATH ${RST}"
+        return 0
+    fi
+    echo "${i}Cannot find${BOLD} $IP:$NFSPATH/$FOLDER ${RST}"
+    echo "${YELLOW}Press 'enter' to search through all devices${RST}"
+    read -s
+elif [ $FROM ]; then
+    locate -d $FROM/$FOLDER
+    if [ $? -ne 0 ]; then
+        echo "${i}couldn't find${BOLD} $FROM/$FOLDER ${RST}Correct your from= cheatcode"
+        echo "${YELLOW}Press 'enter' to search through all devices${RST}"
+        read -s
+    else
+        DIR=`echo /$LPTH | rev | cut -d/ -f2- | rev | tr -s /`
+        [ $DIR ] && FOLDER=$DIR/$FOLDER
+        [ $DIR ] && CMDIR=$DIR/$CMDIR
+        DATADEV=/mnt/$DEV
+        return 0
+    fi
+fi
+search -d $FOLDER || lazy -d $FOLDER
+[ $? -eq 0 ] || fatal
+DATADEV=/mnt/$DEV
+}
 
 # Check if a location is writable
 is_writable() { touch $1/.test 2>/dev/null; [ -e $1/.test ] && rm $1/.test; }
-
-# Booting failed. Failed to find live folder. 
-fail() {
-echo "${i}couldn't find $1. Correct your from= cheatcode. Press 'enter' to continue booting." ; read -s
-}
 
 # Failed to initiate changes. Creating temporary changes on tmpfs for this session.
 fail_chn() { mount -t tmpfs -o size=$RAMSIZE tmpfs /memory/changes; CHANGES=memory; CHNDEV=memory; touch /etc/nochanges; }

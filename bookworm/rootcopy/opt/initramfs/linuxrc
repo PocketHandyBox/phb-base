@@ -38,7 +38,7 @@ CMDIR=live
 else CMDIR=$FOLDER
 fi
 
-FROM=`value from`; ISO=`echo $FROM | egrep ".*\.iso( |\$)"`
+FROM=`value from`
 LANGM=`value lang`; [ "$LANGM" = en_US ] && LANGM=""
 
 IP=`value ip | cut -d: -f2`
@@ -102,7 +102,11 @@ fi
 if [ $NFSRW ]; then
     mkdir -p /mnt/nfsrw
     modprobe -q nfsv4; mount -t nfs4 $NFSRW /mnt/nfsrw -o rw,nolock 2>/dev/null || { modprobe -q nfsv3; mount -t nfs $NFSRW /mnt/nfsrw -o rw,nolock 2>/dev/null; }
-    [ $? -ne 0 ] && rmdir /mnt/nfsrw 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo "${i}mount nfsrw=$NFSRW /mnt/nfsrw"
+    else rmdir /mnt/nfsrw 2>/dev/null
+        echo "${i}Cannot mount ${BOLD}nfsrw=$NFSRW ${RST}"
+    fi
 fi
 
 param noauto && MOUNT=noauto
@@ -121,38 +125,15 @@ debug
 
 # Searching for PHB data
 echo "${i}searching for PHB data: $FOLDER folder"
-if [ $IP ]; then BOOTDEV=network; DATADEV=/mnt/nfs
-    mkdir -p /mnt/nfs
-    modprobe -q nfsv4; mount -t nfs4 $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null || { modprobe -q nfsv3; mount -t nfs $IP:$NFSPATH /mnt/nfs -o ro,nolock 2>/dev/null; }
-    if [ $FROM ]; then
-        FOLDER=$FROM/$FOLDER
-        CMDIR=$FROM/$CMDIR
-    fi
-elif [ $ISO ]; then DATADEV=/mnt/isoloop
-    locate -e $FROM && { BOOTDEV=/mnt/$DEV; mkdir /mnt/isoloop; mount -o loop /mnt/$DEV/$LPTH /mnt/isoloop; ISOSRC=/mnt/$DEV/$LPTH; }
-else
-    if [ $FROM ]; then
-	locate -d $FROM/$FOLDER
-	if [ $? -eq 0 ]; then
-	    DIR=`echo $LPTH | rev | cut -d/ -f2- | rev`
-	    [ $DIR ] && FOLDER=$DIR/$FOLDER
-	    [ $DIR ] && CMDIR=$DIR/$CMDIR
-	else
-	    echo "${YELLOW}from= cheatcode is incorrect, press enter to search through all devices${RST}"
-	    read -s; search -d $FOLDER
-	fi
-    else
-	search -d $FOLDER || lazy -d $FOLDER
-    fi
-    DATADEV=/mnt/$DEV
-fi
+locate_data
 
 # DATADEV value example /mnt/sda1
 # DATADIR value example /mnt/sda1/live
-[ -d $DATADEV/$FOLDER ] && DATADIR=$DATADEV/$FOLDER || fatal
+DATADIR="`echo $DATADEV/$FOLDER | tr -s /`"
 
 echo "${i}using data from $DATADIR          "
 # 10 spaces at the end added to overwrite previous message "device not ready yet? delaying X seconds"
+
 # Create file /mnt/live/etc/homedrv for use in
 # scripts 'makepfile' and 'pseudofull-setup'
 echo $DATADIR > /etc/homedrv
@@ -175,7 +156,8 @@ if [ $CHANGES ]; then
 		fi
 	else
 		#Can not locate changes dir
-		fail $CHANGES
+		echo "${i}couldn't find ${BOLD}changes=$CHANGES ${RST}Press 'enter' to continue booting"
+		read -s
 		fail_chn
 	fi
 else
@@ -255,7 +237,7 @@ for EXTFOLDER in $EXTRAMOD; do
 	if locate -d "$EXTFOLDER"; then
 	find /mnt/$DEV/$LPTH -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
 #	find /mnt/$DEV/$LPTH -name "*.kmodsfs" 2>/dev/null | egrep -ve "$NOLOAD" | grep $KERNEL | sort >>/tmp/modules
-	else fail $EXTFOLDER
+	else echo "${i}couldn't find${BOLD} $EXTFOLDER ${RST}Correct your extramod= cheatcode"
 	fi
 done
 fi
@@ -285,7 +267,7 @@ elif [ $ROOTCOPY ] && locate -d $ROOTCOPY ; then
 	echo "${i}copying content of $ROOTCOPY directory"
 	cp -af /mnt/$DEV/$LPTH/. /union/. 2>/dev/null
 elif [ $ROOTCOPY ]; then
-	fail $ROOTCOPY
+	echo "${i}couldn't find${BOLD} $ROOTCOPY ${RST}Correct your rootcopy= cheatcode"
 	ROOTCOPY=none
 elif search -d /phb/rootcopy ; then
 	ROOTCOPY=/phb/rootcopy
@@ -411,7 +393,7 @@ echo -e "\n# Booting device:\n$DATADEV
 \n# Non standard /rootcopy dir:\n$ROOTCOPY
 \n# Modules activated during boot time:" >>$livedbg
 cat /tmp/modules >>$livedbg
-[ $ISOSRC ] && echo -e "\n# ISO=$ISOSRC" >> $livedbg
+[ "$ISOSRC" ] && echo -e "\n# ISO=$ISOSRC" >> $livedbg
 cp -af $livedbg /union/var/log/
 
 cat /proc/cmdline
