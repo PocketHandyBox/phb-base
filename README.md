@@ -15,3 +15,9 @@ sudo bash
 ./build trixie-xfce.conf
 BUILD686=TRUE ./build trixie-xfce.conf
 ```
+
+Use mirror for download deb packages at build time
+```
+TEMPMIRROR=mirror.yandex.ru ./build trixie-xfce.conf
+BUILD686=TRUE TEMPMIRROR=mirror.yandex.ru ./build trixie-xfce.conf
+```

@@ -228,6 +228,10 @@ if [ -n "$TEMPMIRROR" ]; then
 	sed -i s/deb.debian.org/"$TEMPMIRROR"/ chroot/etc/apt/sources.list.d/debian.sources
 fi
 
+if [ "$TEMPMIRROR" = "mirror.yandex.ru" ] && [ -f chroot/etc/apt/sources.list.d/devuan.sources ]; then
+	sed -i s@pkgmaster.devuan.org@mirror.yandex.ru/mirrors/devuan@ chroot/etc/apt/sources.list.d/devuan.sources
+fi
+
 [ -n "$XKBLAYOUT" ] || XKBLAYOUT="us"
 echo "XKBLAYOUT=\"$XKBLAYOUT\"" >> chroot/etc/default/keyboard
 echo "XKBVARIANT=\"$XKBVARIANT\"" >> chroot/etc/default/keyboard
@@ -549,6 +553,10 @@ ln -sf /proc/self/mounts chroot/etc/mtab
 
 if [ -n "$TEMPMIRROR" ]; then
 	sed -i s/"$TEMPMIRROR"/deb.debian.org/ chroot/etc/apt/sources.list.d/debian.sources
+fi
+
+if [ "$TEMPMIRROR" = "mirror.yandex.ru" ] && [ -f chroot/etc/apt/sources.list.d/devuan.sources ]; then
+	sed -i s@mirror.yandex.ru/mirrors/devuan@pkgmaster.devuan.org@ chroot/etc/apt/sources.list.d/devuan.sources
 fi
 
 if [ -n "$LOCALE" ] && [ "$DIST" = "bookworm" ]; then
