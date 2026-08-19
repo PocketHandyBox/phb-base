@@ -225,9 +225,6 @@ blog(){
 		param log && echo "$1" >> $LOGFILE
 }
 
-# Check for a boot param
-#chk_bootcfg(){ grep "^$1" /union/etc/bootcmd.cfg; }
-
 #======================================
 # setClean
 #--------------------------------------
@@ -252,36 +249,6 @@ local PLACE=/memory/changes/$UDIR
 	rm -rf $PLACE/var/run 2>/dev/null
 	rm -rf $PLACE/var/tmp 2>/dev/null
 	rm -rf $PLACE/var/spool/cron/cron.?????? 2>/dev/null
-
-#	chown -R guest:users $PLACE/home/guest 2>/dev/null
-
-#--< activate 後 deactivate 無しで終了した残骸を削除する >--#
-#--- delete symbolic link setting "entity & tag" ---#
-local x
-local DIR
-local PKG
-	for x in `find $PLACE -name '.act.new.*' `
-	do
-		DIR=${x%/*}
-		PKG=${x##*/}
-		PKG=${PKG#.act.new.}
-#echo "x=$x DIR=$DIR PKG=$PKG" 
-		if [ -h $DIR/$PKG ]
-		then
-			rm $DIR/$PKG
-		fi
-		rm $x
-	done
-
-#--- recover original entity ---#
-	for x in `find $PLACE -name '.act.org.*' `
-	do
-#		DIR=${x%/*}
-#		PKG=${x##*/}
-#		PKG=${PKG#.act.org.}
-#		mv $x $DIR/$PKG
-		rm $x
-	done
 }
 #======================================
 # IncludeModules

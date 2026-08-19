@@ -83,11 +83,6 @@ if param nocd || [ $IP ]; then
 sed 's/pata_[0-9a-z]\{3,\} //g' -i modlist
 fi
 
-#for MODULE in $(cat modlist)
-#do
-#modprobe $MODULE 2> /dev/null
-#done
-
 # Load kernel modules
 modprobe -qa `cat modlist`
 
@@ -302,19 +297,6 @@ for MODULE in $MODLISTMMC cb710 tifm_core sdhci cqhci mmc_core
 do rmmod $MODULE 2>/dev/null
 done
 
-## Finish:
-# Create 7 free loop devices for truecrypt, etc...
-#x=`losetup | tail -n1 | cut -d: -f1 | sed 's@/dev/loop@@'`
-x=`grep -oE 'loop[0-9]+$' /proc/partitions  | tail -n1 | tr -d [:alpha:]`
-let y=x+20
-#while [ $x -le $y ]; do [ -b /dev/loop$y ] && break || mknod /dev/loop$y b 7 $y; let y=y-1; done
-#x=`losetup | tail -n1 | cut -d: -f1 | sed 's@/dev/loop@@'`; let y=x+20
-while [ $x -le $y ]; do [ -b /dev/loop$y ] && break || mknod /dev/loop$y b 7 $y; chmod g+rw-x,o-rwx /dev/loop$y; let y=y-1; done
-
-cp -af /dev/console /union/dev
-
-#fstab
-
 debug
 
 # Remove /union/mnt/XX dir's
@@ -398,7 +380,7 @@ cp -af $livedbg /union/var/log/
 
 cat /proc/cmdline
 
-echo "${i}changing root directory" 
+echo "${i}changing root directory"
 if [ -x /union/usr/sbin/init ]; then
 	cp -f /union/usr/sbin/init /bin
 	INIT=init
@@ -408,6 +390,7 @@ elif [ -x /union/usr/lib/systemd/systemd ]; then
 fi
 
 if [ -x /bin/$INIT ]; then
+	cp -af /dev/console /union/dev
 	mkdir -p /union/mnt/live
 	echo "${BOLD}live system is ready now - starting Debian${RST}"
 	pivot_root /union /union/mnt/live
