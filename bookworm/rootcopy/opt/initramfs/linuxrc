@@ -28,7 +28,6 @@ clear
 echo "${BOLD}Starting init script.${RST}"
 
 # Variables:
-#CFG=`value cfgfile`; [ $CFG ] || CFG=initrd1.xz
 KERNEL=`uname -r`
 
 FOLDER=`value folder`
@@ -59,7 +58,6 @@ NVIDIA=`value nvidia`
 [ "$NVIDIA" = no -o "$NVIDIA" = none ] && NVIDIA=""
 
 livedbg=/var/log/livedbg
-LOGFILE=/var/log/boot.log
 
 ## Let's start!
 echo "${i}loading kernel modules..."
@@ -135,7 +133,11 @@ echo $DATADIR > /etc/homedrv
 
 debug
 
-# Setup changes:
+# Setup changes
+[ $PFULL ] && UDIR=filesystem || UDIR=upperdir
+UPPERDIR=/memory/changes/$UDIR
+WORKDIR=/memory/changes/workdir
+
 if [ $CHANGES ]; then
 	echo "${i}setting up directory for changes"
 	CHNEXIT=`echo $CHANGES | cut -d: -f1`
@@ -160,13 +162,11 @@ else
 	fail_chn
 fi
 
-if [ $PFULL ]; then
-mkdir -p /memory/changes/filesystem/mnt/live
-else
-mkdir -p /memory/changes/upperdir/mnt/live
-fi
-
 debug
+
+if [ $PFULL ] && [ -d /mnt/$DEV/"$LPTH"/pfull ]; then
+	NOLOAD="01-filesystem.squashfs|$NOLOAD"
+fi
 
 # Find base modules
 find $DATADIR -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >/tmp/modules
@@ -237,20 +237,69 @@ for EXTFOLDER in $EXTRAMOD; do
 done
 fi
 
-# Copy data to RAM:
+# Copy modules to RAM
 param copy2ram && TORAM=1
 param toram && TORAM=1
-if [ $TORAM ]; then echo "${i}copying data to RAM, this may take some time..."
-	if [ "$RAMMOD" ]; then
-	egrep -e "$RAMMOD" /tmp/modules > /tmp/rammod; cpmod /tmp/rammod
-	else cpmod /tmp/modules
-	fi
+if [ $TORAM ]; then
+    MODFILE=/tmp/modules # list of modules
+    [ "$RAMMOD" ] && { egrep -e "$RAMMOD" /tmp/modules > /tmp/rammod; MODFILE=/tmp/rammod; }
+    echo "${i}copying data to RAM, this may take some time..."
+    NUM=`grep -c '.' $MODFILE`
+    while read MODULE; do
+        echo -en "${YELLOW}  ($NUM modules left)  ${RST} \r"
+        let NUM=NUM-1
+        NAME="$(basename "$MODULE")"
+        cp "$MODULE" /memory/copy2ram 2>/dev/null
+        [ $? -eq 0 ] && { sed -i "s@^.*/$NAME@/memory/copy2ram/$NAME@" /tmp/modules; continue; }
+        rm /memory/copy2ram/"$NAME"
+        echo "${i}${CYAN}Cannot copy $NAME Other modules will be skipped${RST}"
+        #find /memory/copy2ram -name "*.kmodsfs" | sort >/tmp/modules
+        #find /memory/copy2ram -name "*.squashfs" | sort >>/tmp/modules
+        break
+    done < $MODFILE
+    echo -en "                       \r"
 fi
 
-#======================================
-# IncludeModules
-#--------------------------------------
-IncludeModules
+# Mount modules
+NUM=0
+echo "/memory/images/01-filesystem.squashfs" >/tmp/lowerdir
+MODULE="`grep -m1 '/01-filesystem.squashfs$' /tmp/modules`"
+if [ -n "$MODULE" ]; then
+	NAME="01-filesystem.squashfs"
+	mount_module # mount 01-filesystem.squashfs if existed
+else
+	mkdir -p /memory/images/"01-filesystem.squashfs"
+fi
+
+# Mount .kmodsfs kernel modules squashfs
+grep '.kmodsfs$' /tmp/modules | while read MODULE; do
+NAME="$(basename "${MODULE%.*}")" # remove extension .kmodsfs
+mount_module
+done
+
+# Mount other modules from list /tmp/modules
+grep -v '/01-filesystem.squashfs$' /tmp/modules | grep -v '.kmodsfs$' | while read MODULE; do
+NAME="$(basename "${MODULE%.*}" | tr -d ' ')" # remove extension .squashfs
+NAME="${NAME:0:14}" # truncate mountpoint name
+mount_module
+done
+
+clean_changes_dir
+if [ -d /memory/images/changes-exit ]; then
+	echo "/memory/images/changes-exit/$UDIR" >>/tmp/lowerdir
+	cp -a /memory/images/changes-exit/workdir/* $WORKDIR/. 2> /dev/null
+fi
+
+# Setup lowerdir list
+LOWLIST="`cat /tmp/lowerdir | tac`"
+LOWLIST="`echo $LOWLIST | sed 's/ /:/g'`"
+
+# Mount overlayfs
+mount -t overlay -o upperdir=$UPPERDIR,lowerdir=$LOWLIST,workdir=$WORKDIR overlay /union
+if [ $? -ne 0 ]; then
+	echo "${RED}ERROR Something went wrong. Press Ctrl+Alt+Del to reboot.${RST}"
+	sh
+fi
 
 debug
 
@@ -301,7 +350,6 @@ debug
 
 # Remove /union/mnt/XX dir's
 for x in `ls -1 /union/mnt | grep -v live`; do
-#	echo $x
 	[ -d /union/mnt/$x ] && rmdir /union/mnt/$x # Will fail if dir not empty!
 	[ -L /union/mnt/$x ] && rm -f /union/mnt/$x
 done

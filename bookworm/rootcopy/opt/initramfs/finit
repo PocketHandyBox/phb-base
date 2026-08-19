@@ -196,128 +196,27 @@ is_writable() { touch $1/.test 2>/dev/null; [ -e $1/.test ] && rm $1/.test; }
 # Failed to initiate changes. Creating temporary changes on tmpfs for this session.
 fail_chn() { mount -t tmpfs -o size=$RAMSIZE tmpfs /memory/changes; CHANGES=memory; CHNDEV=memory; touch /etc/nochanges; }
 
-# Just draw a line
-draw() { echo "${YELLOW}---------------------------------------------------------${RST}"; }
-
-# Copy modules
-cpmod() {
-NUM=`grep -c '.' $1`
-modfile=$1
-while read x; do
-    echo -en "${YELLOW}  ($NUM modules left)  ${RST} \r"; let NUM=NUM-1; NAME=`basename "$x"`
-    cp "$x" /memory/copy2ram 2>/dev/null
-    if [ $? -eq 0 ]; then
-	sed -i s@^.*/$NAME@/memory/copy2ram/$NAME@ /tmp/modules
-    else
-	rm /memory/copy2ram/"$NAME"
-	echo -e "${i}${CYAN}Not enough memory to copy ${NAME}${RST}"
-	echo -e "${i}${CYAN}Other modules will be skipped.${RST}"
-	find /memory/copy2ram -name "*.kmodsfs" | sort >/tmp/modules
-	find /memory/copy2ram -name "*.squashfs" | sort >>/tmp/modules
-	break
-    fi
-done < $modfile
-echo -en "                       \r"
+clean_changes_dir() {
+local U=$UPPERDIR
+rm -rf $U/dev $U/media $U/mnt $U/proc $U/run $U/sys $U/tmp 2>/dev/null
+rm -rf $U/var/lock/* $U/var/run $U/var/tmp $U/var/spool/cron/cron.?????? 2>/dev/null
+mkdir -p $UPPERDIR/mnt/live $WORKDIR
 }
 
-# If bootlog cheatcode is present then make log entry
-blog(){
-		param log && echo "$1" >> $LOGFILE
-}
-
-#======================================
-# setClean
-#--------------------------------------
-setClean()
-{
-[ $PFULL ] && UDIR=filesystem || UDIR=upperdir
-#=== 変分反映層
-	mkdir -p /memory/changes/$UDIR
-#=== 変分管理データ層
-	mkdir -p /memory/changes/workdir
-
-#--<継承エリア初期化>--#
-local PLACE=/memory/changes/$UDIR
-#	rm -rf $PLACE/boot 2>/dev/null
-	rm -rf $PLACE/dev 2>/dev/null
-	rm -rf $PLACE/mnt 2>/dev/null
-	rm -rf $PLACE/proc 2>/dev/null
-	rm -rf $PLACE/run 2>/dev/null
-	rm -rf $PLACE/sys 2>/dev/null
-	rm -rf $PLACE/tmp 2>/dev/null
-	rm -rf $PLACE/var/lock/* 2>/dev/null
-	rm -rf $PLACE/var/run 2>/dev/null
-	rm -rf $PLACE/var/tmp 2>/dev/null
-	rm -rf $PLACE/var/spool/cron/cron.?????? 2>/dev/null
-}
-#======================================
-# IncludeModules
-#--------------------------------------
-IncludeModules()
-{
-[ $PFULL ] && UDIR=filesystem || UDIR=upperdir
-echo yes > /etc/pfull-compat
-#=== 変分反映層
-mkdir -p /memory/changes/$UDIR
-UPPERDIR=/memory/changes/$UDIR
-#=== 変分管理データ層
-mkdir -p /memory/changes/workdir
-WORKDIR=/memory/changes/workdir
-
-#--<継承エリア初期化>--#
-setClean
-
-#=== 固定不変層
-LOWLIST=""
-a=2
-for x in `cat /tmp/modules`;
-do
-    ############### truncate mountpoint names ############## fred181 mod 231020 for 01-filesystem.squashfs
-    #   NAME=`basename $x`; //ORIGINAL line
-    if [ "$(basename $x)" = "01-filesystem.squashfs" ]; then  #fred181 mod 231020 keep name 01-filesystem.squashfs
-if [ $PFULL ] && [ -d /mnt/$DEV/$LPTH/pfull ]; then
-continue
+# Mount module
+mount_module() {
+# NUM+1 if /memory/images/$NAME exists already
+if [ -d /memory/images/"$NAME" ]; then let NUM=NUM+1
+	NAME="${NAME}-${NUM}"
+fi
+mkdir -p /memory/images/"$NAME"
+mount -o loop "$MODULE" /memory/images/"$NAME" 2>/dev/null
+if [ $? -eq 0 ]; then
+	echo -n " ${m} "; basename "$MODULE"
+	[ "$NAME" != "01-filesystem.squashfs" ] && echo "/memory/images/$NAME" >>/tmp/lowerdir
 else
-NAME=`basename $x`;
-fi
-	else
-        NAME=`basename ${x%.*}`; # remove extension .squashfs
-        #NAME="${NAME:0:14}""-$a" # initial OK 
-        #NAME="${NAME:0:14}""-$a"".squashfs" fix PROBLEM returned too many filename characters
-        NAME="${NAME:0:9}""-$a"".squashfs"
-	    # skip if (truncated) /memory/images/$NAME exists already
-	    [ -d /memory/images/$NAME ] && continue
-	    let a=a+1
- 	fi
-    #########################################################
-	mkdir /memory/images/$NAME;
-	mount -o loop $x /memory/images/$NAME 2>/dev/null
-	if [ $? -eq 0 ];
-	then
-		echo " ${m} `basename $x`"
-		LOWLIST=/memory/images/${NAME}:${LOWLIST}
-	else
-		echo "${i}${CYAN}Cannot read $NAME - corrupted module?${RST}"
-		rmdir /memory/images/$NAME
-	fi
-done
-if [ -z "$(echo "${LOWLIST}" | grep 01-filesystem.squashfs)" ]; then
-mkdir -p "/memory/images/01-filesystem.squashfs"
-LOWLIST=/memory/images/01-filesystem.squashfs:${LOWLIST}
-fi
-
-if [ -d /memory/images/changes-exit ]
-then
-	LOWLIST=/memory/images/changes-exit/$UDIR:${LOWLIST}
-	cp -a /memory/images/changes-exit/workdir/* $WORKDIR/. 2> /dev/null
-fi
-LOWLIST=`echo $LOWLIST | sed 's/:$//'`
-
-#echo "mount -t overlay -o upperdir=$UPPERDIR,lowerdir=$LOWLIST,workdir=$WORKDIR overlay /union"
-mount -t overlay -o upperdir=$UPPERDIR,lowerdir=$LOWLIST,workdir=$WORKDIR overlay /union
-if [ $? -ne 0 ]
-then
-	sh
+	echo "${i}${CYAN}Cannot read $NAME - corrupted module?${RST}"
+	rmdir /memory/images/"$NAME"
 fi
 }
 
@@ -412,7 +311,7 @@ fi
 if [ "$CHNEXIT" = EXIT ] || param changes-ro ; then
 	CHNEXIT=$CHNDEV/$LPTH; echo $CHNEXIT >/tmp/changes-exit
 	param changes-ro && echo "${i}${CYAN}changes will not be saved for this session${RST}" || echo "${i}${CYAN}changes will be saved only during reboot/shutdown${RST}"
-	setClean
+	clean_changes_dir
 	mkdir -p /memory/images/changes-exit
 	mount -o move /memory/changes /memory/images/changes-exit
 	umount /memory/changes 2>/dev/null;
@@ -428,7 +327,7 @@ elif [ $CHNEXIT = +EXIT ]; then
 		umount /memory/changes 2>/dev/null
 		rmdir $APTH/changes 2>/dev/null
 		mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null
-		setClean
+		clean_changes_dir
 		mkdir -p /memory/images/changes-exit
 		mount -o move /memory/changes /memory/images/changes-exit
 		rm -rf $APTH/tmp-changes 2> /dev/null
@@ -437,7 +336,7 @@ elif [ $CHNEXIT = +EXIT ]; then
 	else
 		echo "${i}${CYAN}option +EXIT is being used, changes are NOT written in memory${RST}"
 		echo "${i}${CYAN}temporary changes will be in /mnt/$DEV/$LPTH/tmp-changes ${RST}"
-		setClean
+		clean_changes_dir
 		mkdir -p /memory/images/changes-exit
 		mount -o move /memory/changes /memory/images/changes-exit
 		umount /memory/changes 2>/dev/null
