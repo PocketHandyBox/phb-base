@@ -190,17 +190,26 @@ search -d $FOLDER || lazy -d $FOLDER
 DATADEV=/mnt/$DEV
 }
 
-# Check if a location is writable
-is_writable() { touch $1/.test 2>/dev/null; [ -e $1/.test ] && rm $1/.test; }
-
 # Failed to initiate changes. Creating temporary changes on tmpfs for this session.
-fail_chn() { mount -t tmpfs -o size=$RAMSIZE tmpfs /memory/changes; CHANGES=memory; CHNDEV=memory; touch /etc/nochanges; }
+fail_chn() {
+mount -t tmpfs -o size=$RAMSIZE tmpfs /memory/changes
+CHANGES=memory; CHNDEV=memory; CHNEXIT=""; PFULL=""
+touch /etc/nochanges
+}
+
+fail_chn_msge() {
+[ "$PFULL" ] && echo "${i}Failed to setting up${BOLD} pfull= ${RST}filesystem"
+echo "${YELLOW}Press 'enter' to continue booting, using memory only${RST}"
+read -s
+if [ "$PFULL" ]; then [ -f "$DATADIR"/01-filesystem.squashfs ] || fatal; fi
+fail_chn
+}
 
 clean_changes_dir() {
-local U=$UPPERDIR
-rm -rf $U/dev $U/media $U/mnt $U/proc $U/run $U/sys $U/tmp 2>/dev/null
-rm -rf $U/var/lock/* $U/var/run $U/var/tmp $U/var/spool/cron/cron.?????? 2>/dev/null
-mkdir -p $UPPERDIR/mnt/live $WORKDIR
+local U=/memory/changes
+[ -n "$1" ] && local U="$1"
+rm -rf $U/$UDIR/dev/* $U/$UDIR/proc/* $U/$UDIR/run/* $U/$UDIR/sys/* $U/$UDIR/tmp/* 2>/dev/null
+rm -rf $U/upperdir/media $U/upperdir/mnt $U/upperdir/var/tmp 2>/dev/null
 }
 
 # Mount module
@@ -220,136 +229,88 @@ else
 fi
 }
 
+# testing filesystem on changes for posix compatibility
+posix_test() {
+local T1=/mnt/$DEV/"$LPTH"/._test1
+local T2=/mnt/$DEV/"$LPTH"/._test2
+touch "$T1" && ln -s "$T1" "$T2" 2>/dev/null && chmod +x "$T1" 2>/dev/null && [ -x "$T1" ] && chmod -x "$T1" 2>/dev/null && [ ! -x "$T1" ] && rm -f "$T1" "$T2" 2>/dev/null && return 0
+echo "${i}filesystem /mnt/$DEV/$LPTH is posix compatible"
+rm -f "$T1" "$T2" 2>/dev/null
+return 1
+}
+
 pos_fail() {
-rm -f /memory/changes/._test1 /memory/changes/._test2
-umount /memory/changes
-echo -e '\n'
-echo "${YELLOW}A Windows filesystem (FAT, NTFS) or other non-posix compatible filesystem
-has been detected on $CHANGES or $(echo $CHANGES |sed 's|\(.*\)/.*|\1|') .
-Your changes cannot be saved directly to the specified storage media with this setup.
-Please use the ${CYAN}makepfile${YELLOW} to create a .dat container
-and use it for saving your changes after your next reboot.${RST}"
-echo "Boot will continue in ${CYAN}Always Fresh${RST} mode for this session"
-sleep 10
-rmdir /mnt/$DEV/$LPTH/changes
-fail_chn
+echo "${i}A Windows filesystem (FAT, NTFS) or other non-posix compatible filesystem
+has been detected on changes${BOLD} /mnt/$DEV/$LPTH ${RST}.
+Your changes cannot be saved directly to the specified storage media.
+Please use the ${CYAN}makepfile${RST} to create a .dat container
+and use it for saving your changes after your next reboot."
+fail_chn_msge
 }
 
-pos_fail1() {
-rm -f /memory/changes/._test1 /memory/changes/._test2
-umount /memory/changes
-echo -e '\n'
-echo "${YELLOW}A Windows filesystem (FAT, NTFS) or other non-posix compatible filesystem
-has been detected on $(echo $CHANGES |sed 's|\(.*\)/.*|\1|').
-Your changes cannot be saved directly to the specified storage media with this setup.${RST}"
-echo "Press enter to continue in ${CYAN}Always Fresh${RST} mode for this session"
-read -s -n1
-rmdir /mnt/$DEV/$LPTH/changes 2>/dev/null
-fail_chn
-}
-
-setup_changes_dir_or_dat() {
-if [ $PFULL ] && [ -d /mnt/$DEV/$LPTH/pfull/filesystem/var ] && [ -d /mnt/$DEV/$LPTH/pfull/filesystem/usr ] && [ -d /mnt/$DEV/$LPTH/pfull/filesystem/root ]; then
-	mount -o bind /mnt/$DEV/$LPTH/pfull /memory/changes && touch /memory/changes/._test1 2>/dev/null
-elif [ $PFULL ]; then pseudo_fatal
-elif [ -d /mnt/$DEV/$LPTH ]; then
-	mkdir -p /mnt/$DEV/$LPTH/changes 2>/dev/null && \
-	mount -o bind /mnt/$DEV/$LPTH/changes /memory/changes && touch /memory/changes/._test1 2>/dev/null
-else
-	if blkid /mnt/$DEV/$LPTH 2>/dev/null | cut -d" " -f3- | grep -q _LUKS; then
-		echo "${i}found LUKS encrypted .dat container - unsupported"
-		fail_chn ; return 1
-		#for x in dm_crypt cryptd cbc sha256_generic aes_generic aes_x86_64; do modprobe $x 2>/dev/null; done
-		#losetup /dev/loop2 /mnt/$DEV/$LPTH
-		#echo "${i}found encrypted .dat container"
-		#cryptsetup luksOpen /dev/loop2 crypt
-		#mount /dev/mapper/crypt /memory/changes 2>/dev/null && touch /memory/changes/._test1 2>/dev/null
-	else
-		mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null && touch /memory/changes/._test1 2>/dev/null
-	fi
-fi
-}
-
-setup_changes() {
-echo "${i}testing filesystem on $CHANGES for posix compatibility"
-ln -s /memory/changes/._test1 /memory/changes/._test2 2>/dev/null && chmod +x /memory/changes/._test1 2>/dev/null && [ -x /memory/changes/._test1 ] && chmod -x /memory/changes/._test1 2>/dev/null && [ ! -x /memory/changes/._test1 ] && rm -f /memory/changes/._test1 /memory/changes/._test2
-ret=$?
-[ $ret -ne 0 ] && posfail=yes
-if [ $CHNEXIT = +EXIT ]; then
-	if [ $PFULL ] && [ ! -d /mnt/$DEV/$LPTH ]; then
-		APTH=$(echo /mnt/$DEV/$LPTH |sed 's|\(.*\)/.*|\1|')
-		rm -f /memory/changes/._test1 /memory/changes/._test2; umount /memory/changes
-		mount -o bind $APTH/pfull /memory/changes && touch /memory/changes/._test1 2>/dev/null
-	elif [ -z "$PFULL" ] && [ ! -d /mnt/$DEV/$LPTH ]; then
-		APTH=$(echo /mnt/$DEV/$LPTH |sed 's|\(.*\)/.*|\1|')
-		rm -f /memory/changes/._test1 /memory/changes/._test2; umount /memory/changes
-		mkdir -p $APTH/changes 2>/dev/null && \
-		mount -o bind $APTH/changes /memory/changes && touch /memory/changes/._test1 2>/dev/null
-	elif [ $PFULL ]; then
-		rm -f /memory/changes/._test1 /memory/changes/._test2; umount /memory/changes
-		mount -o bind /mnt/$DEV/$LPTH/pfull /memory/changes && touch /memory/changes/._test1 2>/dev/null
-	else
-		rm -f /memory/changes/._test1 /memory/changes/._test2; umount /memory/changes
-		mkdir -p /mnt/$DEV/$LPTH/changes 2>/dev/null && \
-		mount -o bind /mnt/$DEV/$LPTH/changes /memory/changes && touch /memory/changes/._test1 2>/dev/null
-	fi
-	ln -s /memory/changes/._test1 /memory/changes/._test2 2>/dev/null && chmod +x /memory/changes/._test1 2>/dev/null && [ -x /memory/changes/._test1 ] && chmod -x /memory/changes/._test1 2>/dev/null && [ ! -x /memory/changes/._test1 ] && rm -f /memory/changes/._test1 /memory/changes/._test2
-fi
-ret1=$?
-if [ $ret -ne 0 ] && [ "$posfail" = "yes" ]; then pos_fail ; return 0
-elif [ $ret1 -ne 0 ] && [ -z "$posfail" ]; then pos_fail1 ; return 0
-fi
-
-echo "${i}filesystem is posix compatible"
-CHNDEV=/mnt/$DEV
-
-if [ -f /memory/changes/clear-changes-on-reboot ]; then
-	echo "${i}${CYAN}changes content signalled to be cleared${RST}"
-	rm -rf /memory/changes/*
-fi
-
-if [ "$CHNEXIT" = EXIT ] || param changes-ro ; then
-	CHNEXIT=$CHNDEV/$LPTH; echo $CHNEXIT >/tmp/changes-exit
-	param changes-ro && echo "${i}${CYAN}changes will not be saved for this session${RST}" || echo "${i}${CYAN}changes will be saved only during reboot/shutdown${RST}"
-	clean_changes_dir
+# mount changes or pfull directory
+mount_changes_bind() {
+CHNDIR=changes
+[ "$PFULL" ] && CHNDIR=pfull
+if param changes-ro || [ "$CHNEXIT" ]; then
 	mkdir -p /memory/images/changes-exit
-	mount -o move /memory/changes /memory/images/changes-exit
-	umount /memory/changes 2>/dev/null;
-	mount -t tmpfs -o size=$RAMSIZE tmpfs /memory/changes;
-	CHANGES=memory
-elif [ $CHNEXIT = +EXIT ]; then
-	CHNEXIT=$CHNDEV/$LPTH; echo $CHNEXIT >/tmp/changes-exit
-	echo "${i}${CYAN}changes will be saved only during reboot/shutdown${RST}"
-	if [ ! -d /mnt/$DEV/$LPTH ]; then
-		APTH=$(echo /mnt/$DEV/$LPTH |sed 's|\(.*\)/.*|\1|')
-		echo "${i}${CYAN}option +EXIT is being used, changes are NOT written in memory${RST}"
-		echo "${i}${CYAN}temporary changes will be in $APTH/tmp-changes ${RST}"
-		umount /memory/changes 2>/dev/null
-		rmdir $APTH/changes 2>/dev/null
-		mount -o loop /mnt/$DEV/$LPTH /memory/changes 2>/dev/null
-		clean_changes_dir
-		mkdir -p /memory/images/changes-exit
-		mount -o move /memory/changes /memory/images/changes-exit
-		rm -rf $APTH/tmp-changes 2> /dev/null
-		mkdir -p $APTH/tmp-changes
-		mount -o bind $APTH/tmp-changes /memory/changes
-	else
-		echo "${i}${CYAN}option +EXIT is being used, changes are NOT written in memory${RST}"
-		echo "${i}${CYAN}temporary changes will be in /mnt/$DEV/$LPTH/tmp-changes ${RST}"
-		clean_changes_dir
-		mkdir -p /memory/images/changes-exit
-		mount -o move /memory/changes /memory/images/changes-exit
-		umount /memory/changes 2>/dev/null
-		rm -rf /mnt/$DEV/$LPTH/tmp-changes 2> /dev/null
-		mkdir -p /mnt/$DEV/$LPTH/tmp-changes
-		mount -o bind /mnt/$DEV/$LPTH/tmp-changes /memory/changes
+	mount -o bind /mnt/$DEV/"$LPTH"/$CHNDIR /memory/images/changes-exit 2>/dev/null
+else
+	mount -o bind /mnt/$DEV/"$LPTH"/$CHNDIR /memory/changes 2>/dev/null
+fi
+if [ "$CHNEXIT" = +EXIT ]; then
+	echo "${i}${CYAN}option +EXIT is being used, changes are NOT written in memory${RST}"
+	echo "${i}${CYAN}temporary changes will be in /mnt/$DEV/$LPTH/tmp-changes ${RST}"
+	[ -d /mnt/$DEV/"$LPTH"/tmp-changes ] && rm -rf /mnt/$DEV/"$LPTH"/tmp-changes 2> /dev/null
+	mkdir -p /mnt/$DEV/"$LPTH"/tmp-changes
+	mount -o bind /mnt/$DEV/"$LPTH"/tmp-changes /memory/changes 2>/dev/null
+	[ $? -eq 0 ] && touch /tmp/tmp-changes
+fi
+}
+
+# mount changes file container
+mount_changes_loop() {
+if blkid /mnt/$DEV/"$LPTH" 2>/dev/null | egrep -o ' TYPE=[^ ]+' | grep -q _LUKS; then
+	echo "${i}found LUKS encrypted .dat container - unsupported"
+	fail_chn_msge
+	return 1
+	#for x in dm_crypt cryptd cbc sha256_generic aes_generic aes_x86_64; do modprobe $x 2>/dev/null; done
+	#losetup /dev/loop2 /mnt/$DEV/$LPTH
+	#echo "${i}found encrypted .dat container"
+	#cryptsetup luksOpen /dev/loop2 crypt
+	#mount /dev/mapper/crypt /memory/changes 2>/dev/null && touch /memory/changes/._test1 2>/dev/null
+elif param changes-ro || [ "$CHNEXIT" ]; then
+	mkdir -p /memory/images/changes-exit
+	# mount changes file container
+	mount -o loop /mnt/$DEV/"$LPTH" /memory/images/changes-exit 2>/dev/null
+else
+	mount -o loop /mnt/$DEV/"$LPTH" /memory/changes 2>/dev/null
+fi
+if [ $? -ne 0 ]; then
+	[ -d /memory/images/changes-exit ] && rmdir /memory/images/changes-exit 2>/dev/null
+	echo "${i}Cannot mount${BOLD} /mnt/$DEV/$LPTH ${RST}changes file container"
+	fail_chn_msge
+	return 1
+elif [ -d /memory/images/changes-exit ]; then # container mounted, test filesystem is writable
+	touch /memory/images/changes-exit/._test1 2>/dev/null
+else
+	touch /memory/changes/._test1 2>/dev/null
+fi
+if [ $? -ne 0 ]; then
+	if [ -d /memory/images/changes-exit ]; then
+		umount /memory/images/changes-exit 2>/dev/null && rmdir /memory/images/changes-exit 2>/dev/null
 	fi
+	echo "${i}changes${BOLD} /mnt/$DEV/$LPTH ${RST}filesystem is not writable"
+	fail_chn_msge
+	return 1
+else
+	rm -f /memory/changes/._test1 /memory/images/changes-exit/._test1 2>/dev/null
+	return 0
 fi
 }
 
 fatal() {
-echo -e '\n'
-echo "${BOLD}/$FOLDER/01-filesystem.squashfs not found!${RST}
+echo "${BOLD}/$FOLDER/01-filesystem.squashfs not found!${RST}    
 You are maybe using an unsupported boot device (eg. RAID SCSI or SAS).
 ${RED}Make sure UEFI Secure Boot is disabled!${RST}
 Workaround: Copy the directory /$FOLDER from your boot device to internal SATA
@@ -371,8 +332,7 @@ fi
 }
 
 pseudo_fatal() {
-echo -e '\n'
-echo "Data not found for pseudo-full install ${BOLD}/mnt/$DEV/$LPTH/pfull${RST}
+echo "Data not found for pseudo-full install ${BOLD}/mnt/$DEV/$LPTH/pfull/filesystem${RST}
 ${BOLD}Press ${YELLOW}space/enter ${RST}${BOLD}to unmount all devices and reboot
 or ${YELLOW}any other key ${RST}${BOLD}to drop to the debug shell.${RST}"
 read -s -n1 ans

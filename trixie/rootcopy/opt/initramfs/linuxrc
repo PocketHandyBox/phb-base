@@ -125,7 +125,7 @@ locate_data
 DATADIR="`echo $DATADEV/$FOLDER | tr -s /`"
 
 echo "${i}using data from $DATADIR          "
-# 10 spaces at the end added to overwrite previous message "device not ready yet? delaying X seconds"
+# 10 spaces at the end added to overwrite nap() message "device not ready yet? delaying X seconds"
 
 # Create file /mnt/live/etc/homedrv for use in
 # scripts 'makepfile' and 'pseudofull-setup'
@@ -134,39 +134,57 @@ echo $DATADIR > /etc/homedrv
 debug
 
 # Setup changes
-[ $PFULL ] && UDIR=filesystem || UDIR=upperdir
-UPPERDIR=/memory/changes/$UDIR
-WORKDIR=/memory/changes/workdir
+CHNEXIT="`echo $CHANGES | cut -d: -f1`"
+[ "$CHNEXIT" = EXIT -o "$CHNEXIT" = +EXIT ] && CHANGES="`echo $CHANGES | cut -d: -f2-`" || CHNEXIT=""
 
-if [ $CHANGES ]; then
-	echo "${i}setting up directory for changes"
-	CHNEXIT=`echo $CHANGES | cut -d: -f1`
-	[ $CHNEXIT = EXIT ] && CHANGES=`echo $CHANGES | cut -d: -f2-`
-	[ $CHNEXIT = +EXIT ] && CHANGES=`echo $CHANGES | cut -d: -f2-`
-	[ -r $DATADEV/$CHANGES ] && { DEV=`echo $DATADEV | sed s@/mnt/@@`; LPTH=$CHANGES; } || locate -r $CHANGES
-	if [ $? -eq 0 ]; then setup_changes_dir_or_dat #finit setup_changes_dir_or_dat()
-		if [ $? -eq 0 ]; then setup_changes #finit setup_changes()
-		else
-			echo "${i}changes not writable, using memory instead"
-			umount /memory/changes 2>/dev/null
-			fail_chn
-		fi
-	else
-		#Can not locate changes dir
-		echo "${i}couldn't find ${BOLD}changes=$CHANGES ${RST}Press 'enter' to continue booting"
-		read -s
-		fail_chn
-	fi
+if [ -z "$CHANGES" ] || [ "$CHANGES" = memory ]; then
+    echo "${i}changes cheatcode not found, using memory only"
+    fail_chn
 else
-	echo "${i}changes cheatcode not found, using memory only"
-	fail_chn
+    [ "$PFULL" ] && echo "${i}setup pfull=$PFULL directory" || echo "${i}setting up directory for changes=$CHANGES"
+    [ "$DATADEV" = /mnt/isoloop ] && CHNDEV="$BOOTDEV" || CHNDEV="$DATADEV"
+    [ -r "$CHNDEV/$CHANGES" ] && { DEV="`echo $DATADEV | sed s@/mnt/@@`"; LPTH="$CHANGES"; } || locate -r "$CHANGES"
+    if [ $? -ne 0 ]; then # cannot locate changes dir
+        # 12 spaces at the end added to overwrite nap() message "device not ready yet? delaying X seconds"
+        [ "$PFULL" ] && echo "${i}couldn't find ${BOLD}pfull=$PFULL               ${RST}" || echo "${i}couldn't find ${BOLD}changes=$CHANGES             ${RST}"
+        fail_chn_msge
+    elif [ -d /mnt/$DEV/"$LPTH" ] && touch /mnt/$DEV/"$LPTH"/._test1 2>/dev/null; then
+        # filesystem is writable, testing for posix compatibility
+        posix_test || pos_fail
+    elif [ -d /mnt/$DEV/"$LPTH" ]; then
+        echo "${i}changes${BOLD} /mnt/$DEV/$LPTH ${RST}filesystem is not writable"
+        fail_chn_msge
+    elif [ -f /mnt/$DEV/"$LPTH" ] && [ -s /mnt/$DEV/"$LPTH" ]; then
+        # found changes file container
+        mount_changes_loop
+    fi
+    if [ "$CHANGES" != memory ] && [ -d /mnt/$DEV/"$LPTH" ]; then
+        if [ -z "$PFULL" ]; then mkdir -p /mnt/$DEV/"$LPTH"/changes
+        else [ -d /mnt/$DEV/"$LPTH"/pfull/filesystem/usr/bin ] || pseudo_fatal
+        fi
+        # found changes or pfull directory
+        mount_changes_bind
+    fi
+    [ "$CHNDEV" != memory ] && CHNDEV=/mnt/$DEV
+    if [ -d /memory/images/changes-exit ]; then
+        CHNEXIT=$CHNDEV/"$LPTH"; echo "$CHNEXIT" >/tmp/changes-exit
+        if [ ! -f /tmp/tmp-changes ]; then
+            echo "${i}${CYAN}changes will be saved only during reboot/shutdown${RST}"
+            mount -t tmpfs -o size=$RAMSIZE tmpfs /memory/changes
+            CHANGES=memory
+        fi
+    fi
 fi
 
 debug
 
-if [ $PFULL ] && [ -d /mnt/$DEV/"$LPTH"/pfull ]; then
-	NOLOAD="01-filesystem.squashfs|$NOLOAD"
+if [ -f /memory/changes/clear-changes-on-reboot ]; then
+	echo "${i}${CYAN}changes content signalled to be cleared${RST}"
+	rm -rf /memory/changes/*
 fi
+
+# Disable loading 01-filesystem.squashfs for pfull= setup
+[ "$PFULL" ] && NOLOAD="01-filesystem.squashfs|$NOLOAD"
 
 # Find base modules
 find $DATADIR -maxdepth 1 -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >/tmp/modules
@@ -284,8 +302,16 @@ NAME="${NAME:0:14}" # truncate mountpoint name
 mount_module
 done
 
-clean_changes_dir
+[ "$PFULL" ] && UDIR=filesystem || UDIR=upperdir
+UPPERDIR=/memory/changes/$UDIR
+WORKDIR=/memory/changes/workdir
+
+[ "$CHANGES" = memory ] || clean_changes_dir
+mkdir -p $UPPERDIR/mnt/live $WORKDIR
 if [ -d /memory/images/changes-exit ]; then
+	clean_changes_dir /memory/images/changes-exit
+	mkdir -p /memory/images/changes-exit/$UDIR/mnt/live
+	mkdir -p /memory/images/changes-exit/workdir
 	echo "/memory/images/changes-exit/$UDIR" >>/tmp/lowerdir
 	cp -a /memory/images/changes-exit/workdir/* $WORKDIR/. 2> /dev/null
 fi
@@ -321,13 +347,6 @@ else
 	ROOTCOPY=none
 	echo "${i}copying content of $DATADIR/rootcopy directory"
 	cp -af $DATADIR/rootcopy/. /union/. 2>/dev/null
-fi
-
-# mkdir for pfull=
-if [ $PFULL ]; then
-U=/union
-mkdir -p $U/dev $U/etc $U/media $U/mnt $U/proc $U/run $U/srv $U/sys $U/tmp $U/var/log
-chmod 1777 $U/tmp
 fi
 
 # Copy /etc/resolv.conf
