@@ -303,6 +303,8 @@ fi
 if [ $? -ne 0 ]; then
 	if [ -d /memory/images/changes-exit ]; then
 		umount /memory/images/changes-exit 2>/dev/null && rmdir /memory/images/changes-exit 2>/dev/null
+	else
+		umount /memory/changes 2>/dev/null
 	fi
 	echo "${i}changes${BOLD} /mnt/$DEV/$LPTH ${RST}filesystem is not writable"
 	fail_chn_msge
