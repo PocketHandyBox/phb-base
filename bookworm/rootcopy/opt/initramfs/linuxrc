@@ -178,11 +178,6 @@ fi
 
 debug
 
-if [ -f /memory/changes/clear-changes-on-reboot ]; then
-	echo "${i}${CYAN}changes content signalled to be cleared${RST}"
-	rm -rf /memory/changes/*
-fi
-
 # Disable loading 01-filesystem.squashfs for pfull= setup
 [ "$PFULL" ] && NOLOAD="01-filesystem.squashfs|$NOLOAD"
 

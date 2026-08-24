@@ -208,6 +208,10 @@ fail_chn
 clean_changes_dir() {
 local U=/memory/changes
 [ -n "$1" ] && local U="$1"
+if [ -z "$PFULL" ] && [ -f $U/clear-changes-on-reboot ]; then
+	echo "${i}${CYAN}changes content signalled to be cleared${RST}"
+	rm -rf $U/* 2>/dev/null && return 0
+fi
 rm -rf $U/$UDIR/dev/* $U/$UDIR/proc/* $U/$UDIR/run/* $U/$UDIR/sys/* $U/$UDIR/tmp/* 2>/dev/null
 rm -rf $U/upperdir/media $U/upperdir/mnt $U/upperdir/var/tmp 2>/dev/null
 }
