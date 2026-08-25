@@ -1,11 +1,8 @@
-#! /bin/bash
-# Multiple-Sound-Card-Wizard
-#120323 npierce: remove OK button if no cards detected. refer: http://murga-linux.com/puppy/viewtopic.php?t=76182&start=90
-#120815 rodin.s: i18n
-#130216 01micko, BK: fix retrovol.
-#150630 rg66, Geoffrey, change GUI uses buttons, only non active cards selectable, save retrovol mixer settings for each sound card
+#!/bin/dash
 
-# Modified by gumanzoy https://github.com/PocketHandyBox
+# alsaselect Choose default sound card
+# by gumanzoy https://github.com/PocketHandyBox
+
 # Renamed from Multiple-Sound-Card-Wizard to alsaselect
 # Deprecated gtkdialog-splash replaced by yad
 # Add speaker-test
@@ -25,71 +22,44 @@ cp /etc/asound.conf ~/.asoundrc
 else ASOUNDCONF=~/.asoundrc
 fi
 
-if [ ! -f "$ASOUNDCONF" -a "$DEVICES" != "" ]; then
-echo defaults.pcm.card 0 > "$ASOUNDCONF"
-echo defaults.pcm.device 0 >> "$ASOUNDCONF"
-echo defaults.ctl.card 0 >> "$ASOUNDCONF"
-fi
-
 unmute_hdmi() {
-CONTROLS=""
-CONTROLS="`LANG=C amixer scontrols 2> /dev/null | sed s/'Simple mixer control '//g | grep -v PCM`"
-if [ "$CONTROLS" != "" ]; then
-for CONTROL in $CONTROLS
-do
-amixer sset $CONTROL unmute 2> /dev/null
+LANG=C amixer scontrols 2>/dev/null | sed s/'Simple mixer control '//g | grep -v PCM | while read CONTROL; do
+amixer sset "$CONTROL" unmute 2>/dev/null
 done
-fi
 }
 
-alsaselect_wizard() {
-ACARD=`awk 'FNR == 1 {print $2}' "$ASOUNDCONF"`
-ADEVICE=`awk 'FNR == 2 {print $2}' "$ASOUNDCONF"`
-ACTIVE=`aplay -l | grep card | grep -w "card $ACARD" | grep -w "device $ADEVICE"`
-CURRENT=`echo "$ACTIVE" | cut -f1,2 -d'['`
+ACARD="`grep -m1 defaults.pcm.card "$ASOUNDCONF" 2>/dev/null | rev | cut -d' ' -f1 | rev`"
+ADEVICE="`grep -m1 defaults.pcm.device "$ASOUNDCONF" 2>/dev/null | rev | cut -d' ' -f1 | rev`"
+ACTIVE="`aplay -l | grep card | grep -w "card $ACARD" | grep -w "device $ADEVICE" | cut -f1,2 -d'[' | sed 's/[ ]$//'`"
+[ -z "$ACTIVE" ] && ACTIVE="`aplay -l | grep card | grep -m1 -w "card $ACARD" | cut -f1,2 -d'[' | sed 's/[ ]$//'`"
+[ -z "$ACTIVE" ] && ACTIVE="`aplay -l | grep -m1 card | cut -f1,2 -d'[' | sed 's/[ ]$//'`"
 
-#150623 rg66, change gui
-echo "export MAIN_DIALOG='
-<window title=\"alsaselect\" image-name=\"/usr/share/icons/AdwaitaLegacy/24x24/legacy/audio-card.png\" resizable=\"false\">
-  <vbox>
-    <text use-markup=\"true\"><label>\"<b>Choose default sound card</b>\"</label></text>
-    <text wrap=\"false\" justify=\"2\" use-markup=\"true\"><label>\"<b>Current:</b> $CURRENT\"</label></text>" > /tmp/mscw.tmp
-
-aplay -l | grep card | grep -v pcspeaker | grep -xvF "$ACTIVE" | cut -f1,2 -d'[' | while read line; do
-echo "<button>
-      <label>$line</label>     
-      </button>" >> /tmp/mscw.tmp ;
-done   
-echo "<hbox homogeneous=\"true\">
-       <button cancel></button>
-    </hbox>
-  </vbox>
-</window>
-'" >> /tmp/mscw.tmp
-
-. /tmp/mscw.tmp
-
-I=$IFS; IFS=""
-  for STATEMENTS in $(gtkdialog --center --program MAIN_DIALOG); do
-    eval $STATEMENTS
-  done
-IFS=$I
-
-[ "$EXIT" = "Cancel" -o "$EXIT" = "abort" ] && exit
+aplay_list_devices() {
+aplay -l | grep card | cut -f1,2 -d'[' | while read LINE; do
+[ "$LINE" = "$ACTIVE" ] && echo TRUE || echo FALSE
+echo "$LINE"
+done
 }
 
-while true ; do
-alsaselect_wizard
-Card="$(echo $EXIT | cut -d ":" -f 1 | sed -e 's/\(^.*\)\(.$\)/\2/')"
-Device="$(echo $EXIT | cut -d ":" -f 2 | sed -e 's/\(^.*\)\(.$\)/\2/')"
+while true; do
+ACTIVE="`aplay_list_devices | yad --title=alsaselect --image=audio-speakers --window-icon=audio-card \
+ --text="<b>alsaselect</b> Choose default sound card\nSelect card and press 'OK', then listen to the speakers" \
+ --width=600 --height=300 --fixed --center --list --radiolist --listen --no-click --no-selection \
+ --expand-column=2 --print-column=2 --column=# --column=Card --button=Quit\!gtk-quit:1 --button=OK\!gtk-ok:0`"
+[ "$?" = 1 -o "$?" = 252 ] && break
 
-echo defaults.pcm.card $Card > "$ASOUNDCONF"
-echo defaults.pcm.device $Device >> "$ASOUNDCONF"
-echo defaults.ctl.card $Card >> "$ASOUNDCONF"
+ACTIVE="`echo "$ACTIVE" | cut -d'|' -f1`"
+CARD="`echo "$ACTIVE" | cut -d':' -f1 | rev | cut -d' ' -f1 | rev`"
+DEVICE="`echo "$ACTIVE" | cut -d':' -f2 | rev | cut -d' ' -f1 | rev`"
 
-echo $EXIT | grep -q HDMI && unmute_hdmi > /dev/null
+echo "defaults.pcm.card $CARD" > "$ASOUNDCONF"
+echo "defaults.pcm.device $DEVICE" >> "$ASOUNDCONF"
+echo "defaults.ctl.card $CARD" >> "$ASOUNDCONF"
 
-speaker-test -c 2 -t wav -l 2 &
+echo "$ACTIVE" | grep -q HDMI && unmute_hdmi >/dev/null
+
+speaker-test -c 2 -t wav -l 2 >/dev/null 2>&1 &
+
 yad --title=alsaselect --image=audio-speakers --text=speaker-test --window-icon=audio-card --timeout=4 \
---timeout-indicator top --width=200 --borders=10 --sticky --fixed --center --on-top --skip-taskbar --no-buttons
+ --timeout-indicator top --width=200 --borders=10 --sticky --fixed --center --on-top --skip-taskbar --no-buttons
 done
