@@ -39,7 +39,7 @@ AUTORUNCMD="`egrep -o ' autorun=[^ ]+' /proc/cmdline | cut -d= -f2`"
   if [ -n "$AUTORUNCMD" ]; then
     echo -e "\n\e[1m""autorun=""\e[1;32m""$AUTORUNCMD""\e[0m"
     "$AUTORUNCMD"
-  elif ! grep -q text /proc/cmdline; then
+  elif ! egrep -qo "(^| )text( |\$)" /proc/cmdline; then
     sleep 3
     startx
   fi
