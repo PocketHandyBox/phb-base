@@ -189,7 +189,7 @@ find $DATADIR -maxdepth 2 -name "*.kmodsfs" ! -path "*/nvidia/*" ! -path "*/root
 find $DATADIR/optional -name "*.kmodsfs" 2>/dev/null | egrep -e "$LOAD" | grep $KERNEL | sort >>/tmp/modules
 
 # Find firmware modules
-find $DATADEV/$CMDIR/firmware -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
+find $DATADEV/$CMDIR/firmware -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort | tr -s / >>/tmp/modules
 
 # Detect nvidia video cards on pcie bus
 if [ "$NVIDIA" = detect ]; then
@@ -221,7 +221,7 @@ if [ "$NVIDIA" ] && [ "$NVIDIA" != detect ]; then
 fi
 
 # Find lang modules
-[ "$LANGM" ] && find $DATADEV/$CMDIR/lang -name "*.squashfs" 2>/dev/null | grep -i $LANGM >>/tmp/modules
+[ "$LANGM" ] && find $DATADEV/$CMDIR/lang -name "*.squashfs" 2>/dev/null | grep -i $LANGM | tr -s / >>/tmp/modules
 
 # Find modules and optional modules
 find $DATADIR/modules -name "*.squashfs" 2>/dev/null | egrep -ve "$NOLOAD" | sort >>/tmp/modules
@@ -262,9 +262,14 @@ if [ $TORAM ]; then
         echo -en "${YELLOW}  ($NUM modules left)  ${RST} \r"
         let NUM=NUM-1
         NAME="$(basename "$MODULE")"
-        cp "$MODULE" /memory/copy2ram 2>/dev/null
-        [ $? -eq 0 ] && { sed -i "s@^.*/$NAME@/memory/copy2ram/$NAME@" /tmp/modules; continue; }
-        rm /memory/copy2ram/"$NAME"
+        if [ `grep -c "/$NAME$" /tmp/modules` -ne 1 ]; then
+            sed -i "1,/\/$NAME\$/{//d}" /tmp/modules
+            MODULE="`tac /tmp/modules | grep -m1 "/$NAME$"`"
+        fi
+        [ -f /memory/copy2ram/"$NAME" ] && continue # skip modules with duplicate names
+        cp "$MODULE" /memory/copy2ram/"$NAME" 2>/dev/null
+        [ $? -eq 0 ] && { sed -i "s@$MODULE\$@/memory/copy2ram/$NAME@" /tmp/modules; continue; }
+        rm -f /memory/copy2ram/"$NAME" 2>/dev/null
         echo "${i}${CYAN}Cannot copy $NAME Other modules will be skipped${RST}"
         #find /memory/copy2ram -name "*.kmodsfs" | sort >/tmp/modules
         #find /memory/copy2ram -name "*.squashfs" | sort >>/tmp/modules
@@ -276,7 +281,7 @@ fi
 # Mount modules
 NUM=0
 echo "/memory/images/01-filesystem.squashfs" >/tmp/lowerdir
-MODULE="`grep -m1 '/01-filesystem.squashfs$' /tmp/modules`"
+MODULE="`tac /tmp/modules | grep -m1 '/01-filesystem.squashfs$'`"
 if [ -n "$MODULE" ]; then
 	NAME="01-filesystem.squashfs"
 	mount_module # mount 01-filesystem.squashfs if existed
@@ -292,6 +297,11 @@ done
 
 # Mount other modules from list /tmp/modules
 grep -v '/01-filesystem.squashfs$' /tmp/modules | grep -v '.kmodsfs$' | while read MODULE; do
+NAME="$(basename "$MODULE")"
+if [ -z "$TORAM" ] && [ `grep -c "/$NAME$" /tmp/modules` -ne 1 ]; then
+	sed -i "1,/\/$NAME\$/{//d}" /tmp/modules
+	continue # skip modules with duplicate names
+fi
 NAME="$(basename "${MODULE%.*}" | tr -d ' ')" # remove extension .squashfs
 NAME="${NAME:0:14}" # truncate mountpoint name
 mount_module
@@ -312,7 +322,7 @@ if [ -d /memory/images/changes-exit ]; then
 fi
 
 # Setup lowerdir list
-LOWLIST="`cat /tmp/lowerdir | tac`"
+LOWLIST="`tac /tmp/lowerdir`"
 LOWLIST="`echo $LOWLIST | sed 's/ /:/g'`"
 
 # Mount overlayfs
