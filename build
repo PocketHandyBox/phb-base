@@ -390,8 +390,8 @@ mkdir -p /etc/systemd/network
 ln -sf /dev/null /etc/systemd/network/99-default.link
 
 if [ "$SYSTEMD" = "FALSE" ]; then
-# Enable /etc/init.d/snapexit (Save on exit when shutdown from console)
-	update-rc.d snapexit defaults
+# Enable /etc/init.d/save2flash (Save on exit when shutdown from console)
+	update-rc.d save2flash defaults
 # Disable unneeded initscripts
 #	sed -i s/'# Required-Start:    checkroot'/'# Required-Start:'/ etc/init.d/checkroot-bootclean.sh
 	update-rc.d mountall-bootclean.sh disable 2> /dev/null

@@ -1,6 +1,6 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          snapexit
+# Provides:          save2flash
 # Required-Start:    $local_fs $remote_fs
 # Required-Stop:     $local_fs $remote_fs alsa-utils
 # Default-Start:     2 3 4 5
@@ -24,7 +24,7 @@ case "$1" in
 	;;
   stop)
 	/usr/local/bin/sfsunload
-	exec /usr/local/bin/snap-ex </dev/console >/dev/console 2>&1
+	exec /usr/local/bin/save2flash </dev/console >/dev/console 2>&1
         ;;
   *)
 	echo "Usage: $0 start|stop" >&2
