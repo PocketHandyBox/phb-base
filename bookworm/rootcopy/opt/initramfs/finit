@@ -238,7 +238,6 @@ posix_test() {
 local T1=/mnt/$DEV/"$LPTH"/._test1
 local T2=/mnt/$DEV/"$LPTH"/._test2
 touch "$T1" && ln -s "$T1" "$T2" 2>/dev/null && chmod +x "$T1" 2>/dev/null && [ -x "$T1" ] && chmod -x "$T1" 2>/dev/null && [ ! -x "$T1" ] && rm -f "$T1" "$T2" 2>/dev/null && return 0
-echo "${i}filesystem /mnt/$DEV/$LPTH is posix compatible"
 rm -f "$T1" "$T2" 2>/dev/null
 return 1
 }
