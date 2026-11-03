@@ -1,3 +1,7 @@
+Package: xserver-*
+Pin: release o=Devuan
+Pin-Priority: -1
+
 Package: *
 Pin: release o=Devuan
 Pin-Priority: 900
