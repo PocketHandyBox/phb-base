@@ -1,6 +1,6 @@
 #!/bin/dash
-sleep 3
-ls $HOME/Startup/* | while read J
+sleep 2
+ls $HOME/Startup/* | while read LINE
 do
-   "$J" &
+	"$LINE" &
 done
