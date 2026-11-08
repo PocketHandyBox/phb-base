@@ -3,30 +3,40 @@
 # instdeb: script to install local deb(s) with dependencies from filemanager
 # by gumanzoy https://github.com/PocketHandyBox
 
+if [ "`whoami`" != "root" ] && which pkexec > /dev/null; then
+	PKEXEC=pkexec
+fi
+
+if [ "$1" != "-runterm" ]; then
+	if which run-in-terminal > /dev/null; then
+		export WNAME=instdeb
+		exec run-in-terminal ${PKEXEC} ${0} -runterm $@
+	elif which xterm > /dev/null; then
+		exec xterm -T instdeb -e ${PKEXEC} ${0} -runterm $@
+	else
+		exec x-terminal-emulator -T instdeb -e ${PKEXEC} ${0} -runterm $@
+	fi
+fi
+
 if [ "`whoami`" != "root" ]; then
-	which gksu > /dev/null && exec gksu ${0} "$@"
-	which gsu > /dev/null && exec gsu ${0} "$@"
+	[ -z "`which pkexec`" ] && echo "pkexec is not installed"
 	echo "This script should be run as root"
+	read -s -n 1 -p "Press any key to close . . ."
 	exit 1
 fi
 
-export DEBS="$@"
-export DEBSNAME="$(for DEB in `basename -a $DEBS`; do echo -n $DEB' '; done)"
+[ "$1" = "-runterm" ] && shift
+DEBS="$@"
+DEBSNAME="`basename -a $DEBS | tr '\n' ' '`"
 
-apt_install() {
-echo -e "instdeb \E[33m$DEBSNAME"
-echo -e "\E[32m\nInstallation starting . . ."
-tput sgr0
-APT_ERRMSG=`apt-get -s -y --allow-downgrades install $DEBS`
-if [ "$?" = 0 ]; then
+echo -e "instdeb \e[33m$DEBSNAME"
+echo -e "\e[32m\nInstallation starting . . .\e[0m"
+APT_ERRMSG="`apt-get -s -y --allow-downgrades install $DEBS`"
+if [ "$?" -eq 0 ]; then
 	apt --allow-downgrades --reinstall install $DEBS
-	[ "$?" = 0 ] && echo -en "\nDeb(s): \e[32m$DEBSNAME\n\e[1m\nInstalled. "
+	[ "$?" -eq 0 ] && echo -en "\nDeb(s): \e[32m$DEBSNAME\n\e[1m\nInstalled. "
 else
 	echo "$APT_ERRMSG"
 	echo -en "\nExit. "
 fi
 read -s -n 1 -p "Press any key to close . . ."
-}
-export -f apt_install
-
-xterm +aw -T instdeb -e /bin/bash -c apt_install
