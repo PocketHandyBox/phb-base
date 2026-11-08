@@ -16,9 +16,9 @@ PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
 save_session_fn() {
 if [ -f /mnt/live/tmp/changes-exit ]; then
-yad --title="Save Session" --window-icon=document-save --timeout=30 --timeout-indicator bottom \
- --sticky --fixed --center --on-top --skip-taskbar --close-on-unfocus \
- --text="Do you want to save your changes?\nIf not, click the 'No' button within 30 seconds" \
+yad --title="Save Session" --window-icon=document-save --image=dialog-question --timeout=30 \
+ --timeout-indicator bottom --sticky --fixed --center --on-top --skip-taskbar --close-on-unfocus \
+ --text="Do you want to save your changes?\nIf not, click the 'No' button\nwithin 30 seconds" \
  --button=Cancel\!gtk-close:1 --button=No\!gtk-no:2 --button=Yes\!gtk-yes:0
 ret=$?
 case $ret in

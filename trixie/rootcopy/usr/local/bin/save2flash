@@ -35,14 +35,14 @@ SNAP="/mnt/live/memory/changes"
 BASE="/mnt/live/memory/images/changes-exit"
 
 sfsunload_ask_fn() {
-if [ -f /mnt/live/tmp/modules ]; then
-CHNGS=/mnt/live/memory/images/SFS  # porteus-boot
-else
-CHNGS=/mnt/SFS  # live-boot
+if [ -d /mnt/live/memory/images ]; then # porteus-boot
+	MNTSFS=/mnt/live/memory/images/SFS
+else # live-boot
+	MNTSFS=/mnt/SFS
 fi
 
-if [ "$(ls $CHNGS 2> /dev/null)" ]; then
-yad --title="Save Session" --window-icon=document-save --center --fixed \
+if [ "$(ls $MNTSFS 2> /dev/null)" ]; then
+yad --title="Save Session" --window-icon=document-save --image=dialog-question --center --fixed \
  --text="Required is to unload modules that were manually loaded,\notherwise your changes will include broken symlinks.\n\nContinue ?"
 [ $? -ne 0 ] && exit 1
 fi
@@ -71,8 +71,8 @@ exit 0
 }
 
 if [ $GUI ] && [ ! -f /tmp/savefile.txt ] && [ ! -f /mnt/live/tmp/changes-exit ]; then
-yad --title="Save Session" --window-icon=document-save --center --fixed --button=Close\!gtk-close \
- --text="Not booted with the 'changes=EXIT:/' option"
+yad --title="Save Session" --window-icon=document-save --image=dialog-information --center --fixed \
+ --text="Not booted with the <b>changes=EXIT:/</b> option" --button=Close\!gtk-close
 exit 0
 fi
 
@@ -118,24 +118,24 @@ sfsunload
 
 RAMUSED=$(du -cs --apparent-size "$SNAP" | tail -1 | cut -f1)
 SAVEFREE=$(df -k --output=avail "$BASE" | tail -1 | tr -d ' ')
-RAMUSEDMB=$(du -chs --apparent-size "$SNAP" | tail -1 | cut -f1)
-SAVEFREEMB=$(df -m --output=avail "$BASE" | tail -1 | tr -d ' ')
+RAMUSEDMB=$(du -chs --apparent-size "$SNAP" | tail -1 | cut -f1)B
+SAVEFREEMB=$(df -m --output=avail "$BASE" | tail -1 | tr -d ' ')MB
 
 TEXT="Sorry, not enough space available in savefile (or folder)
 No saving has been done
 Session data to copy: <b>${RAMUSEDMB}</b>
-Available free space in save file/folder: <b>${SAVEFREEMB}MB</b>"
+Available free space in save file/folder: <b>${SAVEFREEMB}</b>"
 
 if [ "$SAVEFREE" -lt "$RAMUSED" ]; then
     echo "${RED}Session not saved! ${BOLD}Session data to copy: ${BLUE}${RAMUSEDMB}${RST}"
-    echo "${BOLD}Not enough free space in save file/folder: ${BLUE}${SAVEFREEMB}MB${RST}"
+    echo "${BOLD}Not enough free space in save file/folder: ${BLUE}${SAVEFREEMB}${RST}"
     [ $GUI ] && yad --title="Save Session" --text="$TEXT" --window-icon=document-save --center --fixed --button=Close\!gtk-close
     exit 1
 fi
 
 echo "${GREEN}Saving session...                       ${RST}"
 [ $GUI ] && notify-send --app-name=save2flash --icon=document-save "Saving session" \
-"Session data to copy: ${RAMUSEDMB}\nFree space in save file/folder: ${SAVEFREEMB}MB"
+"Session data to copy: ${RAMUSEDMB}\nFree space in save file/folder: ${SAVEFREEMB}"
 
 touch /mnt/live/tmp/changes-exit
 FILESAVELIST="/mnt/live/tmp/filesave$RANDOM"

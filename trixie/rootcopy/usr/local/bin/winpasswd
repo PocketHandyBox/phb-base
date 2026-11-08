@@ -12,11 +12,12 @@ find /media/*/*/W*/*32/config/ -ipath "/media/*/*"/'Windows/System32/config/SAM'
 getsams() {
 [ -z "$SAMS" ] && export SAMS="`findsams`"
 if [ -z "$SAMS" ] && [ -n "$WYAD" ]; then
-yad --text='Error: Can not find SAM registry hive file. Mount Windows partition first.' \
- --title=winpasswd --window-icon=dialog-error --fixed --button=Close\!gtk-close
+yad --text='Can not find registry hive file\n<tt>Windows/System32/config/SAM</tt>\n\nPlease mount <b>Windows</b> partition\nand run again' \
+ --title=winpasswd --window-icon=dialog-password --image=dialog-warning --width=320 --fixed --button=Close\!gtk-close
 exit
 elif [ -z "$SAMS" ]; then
-echo 'Error: Can not find SAM registry hive file. Mount Windows partition first.'
+echo 'Error: Can not find SAM registry hive file'
+echo 'Please mount Windows partition and run again'
 exit
 fi
 }

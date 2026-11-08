@@ -46,7 +46,7 @@ SETUP="`yad --title="$YADTITLE" --window-icon=tap-create --text="$TEXT" --form -
 [ $? -eq 0 ] || exit 0
 
 MNTPT="`echo $SETUP | cut -d "|" -f 2`"
-DIR="`echo $SETUP | cut -d "|" -f 3`"
+DIR="`echo $SETUP | cut -d "|" -f 3 | tr -d ' '`"
 NOPKG="`echo $SETUP | cut -d "|" -f 4`"
 RMDIR="`echo $SETUP | cut -d "|" -f 5`"
 
@@ -58,13 +58,13 @@ WORK="$MNTPT"/"$DIR"
 
 if [ "$RMDIR" != "TRUE" ] && [ -d "$WORK" ]; then
 yad --title="$YADTITLE" --window-icon=tap-create --image=dialog-warning --center --fixed --button=Close\!gtk-close \
- --text="Directory '$WORK' already exists,\nPlease rename and run again."
+ --text="Directory <tt>$WORK</tt> already exists,\nPlease rename and run again."
 exit 0
 fi
 
 if [ -f "$WORK".squashfs ]; then
 yad --title="$YADTITLE" --window-icon=tap-create --image=dialog-warning --center --fixed --button=Close\!gtk-close \
- --text="Module '$WORK.squashfs' already exists,\nPlease rename and run again."
+ --text="Module <tt>$WORK.squashfs</tt> already exists,\nPlease rename and run again."
 exit 0
 fi
 
@@ -86,11 +86,11 @@ fi
 
 if which run-in-terminal > /dev/null; then
 	export WNAME=changes2sfs
-	run-in-terminal ${PKEXEC} ${0} "$WORK" -runterm $OPTIONS
+	exec run-in-terminal ${PKEXEC} ${0} "$WORK" -runterm $OPTIONS
 elif which xterm > /dev/null; then
-	xterm -T changes2sfs -e ${PKEXEC} ${0} "$WORK" -runterm $OPTIONS
+	exec xterm -T changes2sfs -e ${PKEXEC} ${0} "$WORK" -runterm $OPTIONS
 else
-	x-terminal-emulator -T changes2sfs -e ${PKEXEC} ${0} "$WORK" -runterm $OPTIONS
+	exec x-terminal-emulator -T changes2sfs -e ${PKEXEC} ${0} "$WORK" -runterm $OPTIONS
 fi
 
 exit 0
@@ -163,11 +163,11 @@ fi
 dpkg --purge `dpkg --get-selections | grep deinstall | cut -f1` 2> /dev/null
 
 CHNUSED=$(du -cs --apparent-size "$CHANGES" | tail -1 | cut -f1)
-CHNUSEDMB=$(du -chs --apparent-size "$CHANGES" | tail -1 | cut -f1)
+CHNUSEDMB=$(du -chs --apparent-size "$CHANGES" | tail -1 | cut -f1)B
 DIRFREE=$(df -k --output=avail "$WORKDIR" | tail -1 | tr -d ' ')
-DIRFREEMB=$(df -m --output=avail "$WORKDIR" | tail -1 | tr -d ' ')
+DIRFREEMB=$(df -m --output=avail "$WORKDIR" | tail -1 | tr -d ' ')MB
 
-echo "Changes data to copy: $CHNUSEDMB / available free space: ${DIRFREEMB}MB"
+echo "Changes data to copy: $CHNUSEDMB / available free space: $DIRFREEMB"
 
 if [ "$DIRFREE" -lt "$CHNUSED" ]; then
 	echo -e "Not enough free space available in $WORKDIR\n"

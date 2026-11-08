@@ -14,14 +14,14 @@ fi
 
 # Ignore sudo arguments
 if [ -z `command -v "$1" 2> /dev/null` ]; then
-	until [ "$#" = 0 ]; do
+	until [ "$#" -eq 0 ]; do
 		if [ -z `command -v "$1" 2> /dev/null` ]; then shift
 		else break
 		fi
 	done
 fi
 
-if [ "$#" = 0 ]; then
+if [ "$#" -eq 0 ]; then
 	echo "# pkexec wrapper script for sudo, gksu, gsu replacement"
 	echo "Usage: sudo command [arguments]"
 	exit 1
