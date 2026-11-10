@@ -1,40 +1,45 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
-echo "usage: redeb <package>.deb to extract or: redeb <packagedirectory> to build"
-exit 0
-fi
+# redeb: script extract or build deb pkg's from filemanager
+# by gumanzoy https://github.com/PocketHandyBox
 
-newbuild() {
-dpkg-deb --root-owner-group --build $FILE "$FILE"_newbuild/ && \
-echo -e "----------------------\n""If there are no errors shown above, the package has been build."
+notify_send() {
+notify-send --app-name=redeb --replace-id=$$ "$@"
 }
 
-FILE=$1
-cd "`dirname $FILE`"
-
-ifdeb=`echo "${FILE##*.}"`
-
-if [ "$ifdeb" = "deb" ]; then
-  newdir=`basename $1 .deb`
-  echo $newdir
-  mkdir $newdir
-  dpkg-deb --extract $FILE $newdir
-  dpkg-deb --control $FILE $newdir/DEBIAN
-elif [[ $ifdeb != "deb" ]] && [ ! -d $FILE ]; then
-  echo "The file you chose is not a .deb file."
-  yad --title="Extract deb" --window-icon=deb --center --fixed --text="The file you chose is not a .deb file." --button=Close\!gtk-close
-  exit
-else
-  if [ -d $FILE ]; then
-    lsdeb=`ls $FILE/DEBIAN/control`
-    if [ -z $lsdeb ]; then
-      echo "No file DEBIAN/control found, cannot continue."
-      yad --title="Build deb" --window-icon=deb --center --fixed --text="No file DEBIAN/control found, cannot build package." --button=Close\!gtk-close
-      exit
+if [ -f "$1" ]; then
+    FILE="`basename "$1"`"
+    DIR="${1%.*}"
+    [ -d "$DIR" ] && DIR="$DIR-$$"
+    ERROR="`dpkg-deb --raw-extract "$1" "$DIR" 2>&1`"
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        notify_send --icon=deb "$FILE extracted" "$DIR"
     else
-      mkdir "$FILE"_newbuild
-      newbuild 2>&1 | yad --title="Build deb" --window-icon=deb --width=500 --height=200 --center --text-info --wrap --button=Close\!gtk-close
+        notify_send -t 15000 --icon=dialog-error "Extract deb package Error" "$ERROR"
     fi
-  fi
+    exit $ret
 fi
+
+if [ -d "$1" ] && [ -f "$1".deb ]; then
+yad --title="Build deb" --window-icon=deb --image=dialog-warning --center --fixed \
+ --text="DEB file already exists, overwrite it?\n<tt>$1.deb</tt>"
+[ $? -ne 0 ] && exit 1
+fi
+
+if [ -d "$1" ]; then
+    notify_send --icon=deb "Building deb package . . ." "$1"
+    ERROR="`dpkg-deb --root-owner-group --build "$1" 2>&1`"
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        notify_send --icon=deb "Build deb package... Done" "$1.deb"
+    else
+        notify_send -t 15000 --icon=dialog-error "Build deb package Error" "$ERROR"
+    fi
+    exit $ret
+fi
+
+echo "Usage:"
+echo "Extract deb: redeb <package>.deb"
+echo "Build deb: redeb <packagedirectory>"
+exit 0
