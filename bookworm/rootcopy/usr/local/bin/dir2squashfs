@@ -1,15 +1,15 @@
 #!/bin/bash
 
 if [ "$1" = "-runterm" ]; then shift
-	export RUNTERM=1
 	if which run-in-terminal > /dev/null; then
 		export WNAME=mksquashfs
-		exec run-in-terminal ${0} "$@"
+		exec run-in-terminal ${0} -termrun "$@"
 	elif which xterm > /dev/null; then
-		exec xterm -T mksquashfs -e ${0} "$@"
+		exec xterm -T mksquashfs -e ${0} -termrun "$@"
 	else
-		exec x-terminal-emulator -T mksquashfs -e ${0} "$@"
+		exec x-terminal-emulator -T mksquashfs -e ${0} -termrun "$@"
 	fi
+elif [ "$1" = "-termrun" ]; then GUI=1; shift
 fi
 
 if [ "`whoami`" != "root" ]; then
@@ -28,6 +28,4 @@ else
 	echo "Exit: No such directory "$1""
 fi
 
-if [ "$RUNTERM" = 1 ]; then
-	read -s -n 1 -p "Press any key to close . . ."
-fi
+[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
