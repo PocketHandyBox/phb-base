@@ -1,13 +1,9 @@
-Package: dash
+Package: init-scripts
 Pin: release o=Debian*
 Pin-Priority: 50
 
-Package: dash
-Pin: origin *
-Pin-Priority: 99
-
 Package: init-scripts
-Pin: release o=Debian*
+Pin: release o=Devuan*
 Pin-Priority: 50
 
 Package: init-scripts

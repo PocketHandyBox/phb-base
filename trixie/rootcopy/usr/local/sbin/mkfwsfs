@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 # mkfwsfs script create fw-gpu fw-misc fw-sound fw-wifibt .squashfs modules
 # by gumanzoy https://github.com/PocketHandyBox

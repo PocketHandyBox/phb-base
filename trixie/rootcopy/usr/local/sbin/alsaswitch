@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 doalsaswitch() {
 if ! lspci | grep -qi audio; then

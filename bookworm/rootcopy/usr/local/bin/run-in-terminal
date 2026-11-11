@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 which "$1" > /dev/null || exit 1
 

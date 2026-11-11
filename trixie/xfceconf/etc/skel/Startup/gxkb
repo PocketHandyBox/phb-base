@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 [ "$LANG" = "C.UTF-8" ] && exit 0
 

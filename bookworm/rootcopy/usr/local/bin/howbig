@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 # howbig: script to show yad dialog with 'du --apparent-size' output from filemanager
 # by gumanzoy https://github.com/PocketHandyBox

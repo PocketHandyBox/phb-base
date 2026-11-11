@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 # Run chown -R /home/user
 # in case of directory owner user:group do not match

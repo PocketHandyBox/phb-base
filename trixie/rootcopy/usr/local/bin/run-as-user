@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 # generic wrapper to run program as normal user (when currently running as root)
 # (C) James Budiono 2012
 # License: GPL version 3 or later
@@ -73,4 +73,4 @@ fi
 
 ARGS=""
 while [ "$1" ]; do ARGS="$ARGS \"$1\""; shift; done
-exec su "$GUESTUSER" --session-command /bin/dash -c "cd \"$CWD\"; dbus-launch \"$APP\" $ARGS"
+exec su "$GUESTUSER" --session-command /bin/sh -c "cd \"$CWD\"; dbus-launch \"$APP\" $ARGS"

@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 # sfsunload script by fredx181
 # Unload manually activated sfs modules and remove leftover symlinks

@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 # pfilemnt: Click image files to mount & unmount
 # by: Terry Becker aka: SunBurnt

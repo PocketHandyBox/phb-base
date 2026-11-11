@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 # freechk: Script to check when running out of space, by fredx181
 # 2025 Deprecated gtkdialog-splash replaced by notify-send (libnotify-bin package required) # Re-write by gumanzoy

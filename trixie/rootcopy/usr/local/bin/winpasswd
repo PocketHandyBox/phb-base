@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 # winpasswd (GUI for chntpw) tool for resetting Windows (2000/XP/Vista/7/8/10/11) users passwords
 # by gumanzoy https://github.com/PocketHandyBox

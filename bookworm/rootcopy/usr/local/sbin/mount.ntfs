@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 mountntfs3 () {
 exec mount -t ntfs3 -o force,sparse "$@"

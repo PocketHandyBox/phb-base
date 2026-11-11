@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # redeb: script extract or build deb pkg's from filemanager
 # by gumanzoy https://github.com/PocketHandyBox

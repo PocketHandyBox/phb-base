@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 # load zfs kernel modules by 'insmod' instead of 'modprobe'
 # 'insmod' not require updated modules.dep file

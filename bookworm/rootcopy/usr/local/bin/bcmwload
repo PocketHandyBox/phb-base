@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/sh
 
 [ -f /usr/lib/modules/`uname -r`/updates/dkms/wl.ko ] || exit 1
 
