@@ -1,9 +1,0 @@
-Package: dash
-Pin: origin github.com
-Pin: release l=DebianDog
-Pin-Priority: -1
-
-Package: *
-Pin: origin github.com
-Pin: release l=DebianDog
-Pin-Priority: 200
