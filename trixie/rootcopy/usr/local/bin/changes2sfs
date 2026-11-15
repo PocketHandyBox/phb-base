@@ -56,7 +56,7 @@ WORK="$MNTPT"/"$DIR"
 [ "$NOPKG" = "TRUE" ] && OPTIONS="-nopkg"
 [ "$RMDIR" = "TRUE" ] && OPTIONS="$OPTIONS -rmdir"
 
-if [ "$RMDIR" != "TRUE" ] && [ -d "$WORK" ]; then
+if [ -d "$WORK" ]; then
 yad --title="$YADTITLE" --window-icon=tap-create --image=dialog-warning --center --fixed --button=Close\!gtk-close \
  --text="Directory <tt>$WORK</tt> already exists,\nPlease rename and run again."
 exit 0
@@ -136,6 +136,7 @@ fi
 
 PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
+# Unload manually activated sfs modules and remove leftover symlinks
 sfsunload
 
 if [ -d /mnt/live/memory/changes/upperdir ]; then # porteus-boot
@@ -151,8 +152,6 @@ if [ -z "$(ls $CHANGES 2> /dev/null)" ]; then
 	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
 	exit 1
 fi
-
-[ "$RMDIR" ] && rm -rf "$WORK"
 
 if [ -d "$WORK" ]; then
 	echo -e "Directory\e[1;33m ${WORK} \e[0malready exists,\nPlease rename and run again."
@@ -212,7 +211,9 @@ MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | head -1 | cut -d= -f2 | sed s/\"//g`
 mksquashfs "$WORK" "$WORK".squashfs -b 1M $MKSFSCMP
 ret=$?
 
-[ "$RMDIR" ] && rm -rf "$WORK"
+if [ $ret -eq 0 ] && [ "$RMDIR" ]; then
+	rm -rf "$WORK"
+fi
 
 if [ $ret -eq 0 ]; then
 	echo -e "\n\e[1mModule created:\e[33m ${WORK}.squashfs\e[0m"
