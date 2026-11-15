@@ -56,13 +56,13 @@ WORK="$MNTPT"/"$DIR"
 [ "$NOPKG" = "TRUE" ] && OPTIONS="-nopkg"
 [ "$RMDIR" = "TRUE" ] && OPTIONS="$OPTIONS -rmdir"
 
-if [ -d "$WORK" ]; then
+if [ -e "$WORK" ]; then
 yad --title="$YADTITLE" --window-icon=tap-create --image=dialog-warning --center --fixed --button=Close\!gtk-close \
  --text="Directory <tt>$WORK</tt> already exists,\nPlease rename and run again."
 exit 0
 fi
 
-if [ -f "$WORK".squashfs ]; then
+if [ -e "$WORK".squashfs ]; then
 yad --title="$YADTITLE" --window-icon=tap-create --image=dialog-warning --center --fixed --button=Close\!gtk-close \
  --text="Module <tt>$WORK.squashfs</tt> already exists,\nPlease rename and run again."
 exit 0
@@ -153,12 +153,12 @@ if [ -z "$(ls $CHANGES 2> /dev/null)" ]; then
 	exit 1
 fi
 
-if [ -d "$WORK" ]; then
+if [ -e "$WORK" ]; then
 	echo -e "Directory\e[1;33m ${WORK} \e[0malready exists,\nPlease rename and run again."
 	exit 1
 fi
 
-if [ -f "$WORK".squashfs ]; then
+if [ -e "$WORK".squashfs ]; then
 	echo -e "Module\e[1;33m ${WORK}.squashfs \e[0malready exists,\nPlease rename and run again."
 	exit 1
 fi

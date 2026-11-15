@@ -212,7 +212,7 @@ MODNAME="`basename "$MODNAME"`"
 
 export WRITE="$WORK"/"$MODNAME"
 
-if [ -d "$WRITE" ]; then
+if [ -e "$WRITE" ]; then
 	echo -e "Directory\e[1;33m ${WRITE} \e[0malready exists,\nPlease rename and run again."
 	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
 	exit 1
@@ -222,7 +222,7 @@ if [ "$WORK" = "/mnt/live" ]; then SQFS='/tmp/'"$MODNAME".squashfs
 else SQFS="$WORK/$MODNAME".squashfs
 fi
 
-if [ -f "$SQFS" ]; then
+if [ -e "$SQFS" ]; then
 	echo -e "Module\e[1;33m ${SQFS} \e[0malready exists,\nPlease rename and run again."
 	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
 	exit 1
