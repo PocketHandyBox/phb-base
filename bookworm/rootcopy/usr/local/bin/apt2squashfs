@@ -1,52 +1,20 @@
 #!/bin/bash
 
-. /usr/local/lib/cleanup
+# apt2squashfs script for creating module from package(s)
+# by gumanzoy https://github.com/PocketHandyBox
 
-# april 12 2015 apt2sfs version 1.0.4, Fred: added /tmp and / to the choice of where to create working dir and module.
-# april 12 2015 apt2sfs version 1.0.6, Fred: force being 'root' user in chroot 
-# febr 10 2016 apt2sfs version 1.0.8, Fred: Run the most part in xterm
-# and delete doc and man files instead of zerosizing them. 
-# febr 10 2016 apt2sfs version 1.0.8, Fred: Added choice dialog for compression type, xz, gz and lz4
-# sep 22 2016 fix from saintless for /etc/resolv.conf in UNION in case resolv.conf is a symlink
-# okt 08 2016 Fred: if more than 100 chars, truncate working directory name to 100,
-# also to prevent error from mkdir 'filename too long'
-# dec 06 2016 Fred: add to clean list: remove cache files, e.g. icon-theme.cache
-# this prevents possible problems when deactivating a module
-# version 1.1.2: jd7654, make possible to add version number of package, e.g. mpv=0.23.0-2+b2
+# Use code from 'apt2sfs' by fredx181
+# https://github.com/doglinux/bookworm/raw/master/amd64/apt2sfs_1.1.4_all.deb
 
-# Modified by gumanzoy https://github.com/PocketHandyBox
 # Renamed from apt2sfs to apt2squashfs
 # Replace unionfs-fuse with overlayfs
 # Remove live-boot support
 # Add . /usr/local/lib/cleanup
 # Add 'Disable dpkg registration' checkbox
-# Fixes for GTK3 version of yad
 # Copy to chroot apt/*pkgcache.bin and apt/lists/* files
+# Re-write, support CLI mode, support non-root user by pkexec
 
-export YADTITLE="Apt2squashfs (create module from package(s))"
-
-if [ "`whoami`" != "root" ]; then
-	which gksu > /dev/null && exec gksu ${0} "$@"
-	which gsu > /dev/null && exec gsu ${0} "$@"
-	echo "This script should be run as root"
-	exit 1
-fi
-
-#if [ -z `which unionfs-fuse` ]; then
-#	msg="You don't have unionfs-fuse installed.\nIt's a dependency of this program.\n Please install it first."
-#echo -e "\e[0;33m$msg\e[0m"
-#	xmessage "`echo -e $msg`"
-#exit 0
-#fi
-
-if [ -z `which yad` ]; then
-	msg="  You don't have yad installed.\nIt's a dependency of this program.\n Please install it."
-	xmessage "`echo -e $msg`"
-exit 0
-fi
-
-# Remove temp file from possible previous run
-rm -f /tmp/mnts /tmp/notrap_ 2> /dev/null
+YADTITLE="Apt2squashfs (create module from package(s))"
 
 info_dpkg_reg() {
 INFODPKGREG="Question 1: What happens if I leave the default Disable dpkg registration box checked?
@@ -63,423 +31,299 @@ echo "$INFODPKGREG" | yad --title='Info dpkg registration' --window-icon=tap-cre
 }
 export -f info_dpkg_reg
 
-devs="$(blkid --match-tag TYPE  | grep /dev | grep -E -v "swap|ntfs|vfat"  | sort | cut -d" " -f1 | grep -E -v "/loop|sr0|swap" | sed 's|/dev/||g;s|:||g')"
-echo $devs
-DEVS=`echo $devs | sed 's/ /!/g'`
-SETUP=`yad --title="$YADTITLE" --window-icon=tap-create --width=500 \
- --text="Create module from temporary installed package(s) by apt-get.\n\nDepending on the sort of application(s) it may work or not. An application depending on startup at boot might not work. The package(s) will be installed in chroot using 'overlayfs'. (but in fact directly into binded write/working directory). This way no traces are left behind in the actual running system.\n\nChoose where to create new module, must be linux filesystem, NTFS or FAT filesytems are excluded.\n\nFor no dpkg registration check the box 'Disable dpkg registration'" \
- --form \
+show_gui() {
+MNTPT="`findmnt -k -n --raw --real --uniq -O rw -o TARGET,FSTYPE | egrep -v 'fuse|fat$' | cut -d' ' -f1`"
+MNTPT="`echo $MNTPT | sed 's/ /!/g'`"
+
+TEXT="Create module from temporary installed package(s) by apt-get.\n
+Depending on the sort of application(s) it may work or not. An application depending on startup at boot might not work. The package(s) will be installed in chroot using 'overlayfs'. This way no traces are left behind in the actual running system.\n
+Choose where to create new module, must be linux filesystem, NTFS or FAT filesytems are excluded.\n
+For no dpkg registration check the box 'Disable dpkg registration'"
+
+SETUP=`yad --title="$YADTITLE" --window-icon=tap-create --text="$TEXT" --form --width=500 \
  --field="*** Click for info about dpkg registration ***:BTN" "bash -c info_dpkg_reg" \
- --field="Choose where to create new module::CB" "$DEVS!/mnt/live" \
- --field="Packagename(s) separated by a space:: " "" \
+ --field="Choose where to create new module::CB" "/mnt/live!$MNTPT" \
+ --field="Packagename(s) separated by a space:" "" \
  --field="Disable dpkg registration:CHK" "TRUE" \
+ --field="Remove working directory:CHK" "TRUE" \
  --button=Quit\!gtk-quit:1 --button=OK\!gtk-ok:0`
-ret=$?
-[[ $ret -ne 0 ]] && exit
+[ $? -eq 0 ] || exit 0
 
-#export UNION=/mnt/unionsfs_$RANDOM; mkdir -p "$UNION"
-export DRV="`echo $SETUP | cut -d "|" -f 2`"
-export INSTALL="`echo $SETUP | cut -d "|" -f 3`"
-export DISDPKG="`echo $SETUP | cut -d "|" -f 4`"
+MNTPT="`echo $SETUP | cut -d "|" -f 2`"
+INSTALL="`echo $SETUP | cut -d "|" -f 3 | tr -s ' '`"
+NOPKG="`echo $SETUP | cut -d "|" -f 4`"
+RMDIR="`echo $SETUP | cut -d "|" -f 5`"
 
-if [ -z "$DRV" ] || [ -z "$INSTALL" ]; then
-yad --title="$YADTITLE" --window-icon=tap-create --center --fixed --text="You probably did not fill in all fields, please run apt2squashfs again." --button=Close\!gtk-close
-exit 0
+[ "$NOPKG" = "TRUE" ] && OPTIONS="-nopkg"
+[ "$RMDIR" = "TRUE" ] && OPTIONS="$OPTIONS -rmdir"
+
+if [ -z "$INSTALL" ] || [ "$INSTALL" = ' ' ]; then
+	INSTALL=""
+	return 1
 fi
 
-run_xterm () {
-# Function to cleanly unmount if the script is interrupted
-exitfn () {
-    trap SIGINT              # Resore signal handling for SIGINT
-cmd="apt-get install -y $INSTALL"
-pdapt="`ps -eo pid,cmd | grep -v grep | grep "$cmd" | awk '{ print $1 }'`"
-kill $pdapt 2> /dev/null
-if [ ! -f /tmp/notrap_ ]; then 
-echo -e "\e[0;31mRestoring now, script was interrupted.\e[0m"
-	if [ "$UNIONCREATED" = "yes" ]; then
-   if [ "$RESTOREDONE" != "yes" ]; then
-# Unmount everything
-#umount "$UNION"/tmp
-umount "$UNION"/proc
-umount "$UNION"/dev/pts
-umount "$UNION"/dev
-umount "$UNION"/sys
-umount "$UNION"
-   if [ "$?" -ne 0 ]; then # Try the -l umount option (lazy) in this case
-echo "Try to gently force unmounting of $UNION..."
-#umount -l "$UNION"/tmp 2> /dev/null
+if [ "`whoami`" != "root" ]; then
+	if which pkexec > /dev/null; then PKEXEC=pkexec
+	elif which sudo > /dev/null; then PKEXEC=sudo
+	fi
+fi
+
+if which run-in-terminal > /dev/null; then
+	export WNAME=apt2squashfs
+	exec run-in-terminal ${PKEXEC} ${0} -dir "$MNTPT" -runterm $OPTIONS "$INSTALL"
+elif which xterm > /dev/null; then
+	exec xterm -T apt2squashfs -e ${PKEXEC} ${0} -dir "$MNTPT" -runterm $OPTIONS "$INSTALL"
+else
+	exec x-terminal-emulator -T apt2squashfs -e ${PKEXEC} ${0} -dir "$MNTPT" -runterm $OPTIONS "$INSTALL"
+fi
+
+exit 0
+}
+
+if [ "$1" = "-gui" ]; then
+	while [ -z "$INSTALL" ]; do show_gui; done
+	exit 0
+fi
+
+echo -e "# apt2squashfs script for creating module from package(s)\n"
+
+show_help() {
+echo "Usage:"
+echo "apt2squashfs -gui Show YAD GUI"
+echo "apt2squashfs [-dir WORKDIR] [options] INSTALL"
+echo -e "\n -dir WORKDIR - Temporary writeable directory to copy module files
+ must be mounted tmpfs or linux filesystem, overlayfs are excluded
+ by default /mnt/live is used"
+echo -e "\n INSTALL - Packagename(s) separated by a space"
+echo -e "\nOptions:"
+echo " -pause Pause before run mksquashfs"
+echo " -nopkg Disable dpkg registration"
+echo " -rmdir Remove working directory"
+exit 1
+}
+
+find_mnt() {
+WORK="`realpath -e "$1" 2> /dev/null`"
+[ -z "$WORK" ] && show_help
+# Check WORKDIR is on mounted linux filesystem
+[ -n "`findmnt -k -n --raw --real --uniq -O rw -o FSTYPE --target "$WORK" | egrep -v 'fuse|fat$'`" ] && return 0
+# If fail - check WORKDIR is on tmpfs
+findmnt -k -n --raw --pseudo --uniq -O rw -t tmpfs --target "$WORK" 2> /dev/null && return 0
+show_help
+}
+
+if [ "$1" = "-dir" ]; then shift
+	if [ -d "$1" ]; then find_mnt "$1" && shift
+	else show_help
+	fi
+fi
+
+[ -z "$WORK" ] && WORK=/mnt/live
+
+for PARAM in $@
+do case "$PARAM" in
+-h) show_help ;;
+--help) show_help ;;
+-runterm) export GUI=1; PAUSE=1; shift ;;
+-pause) PAUSE=1; shift ;;
+-nopkg) NOPKG=1; shift ;;
+-rmdir) export RMDIR=1; shift ;;
+esac; done
+
+export INSTALL="`echo "$@" | tr -s ' '`"
+
+[ "$INSTALL" = ' ' ] && INSTALL=""
+[ -z "$INSTALL" ] && show_help
+
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+if [ "`whoami`" != "root" ]; then
+	[ -z "`which pkexec`" ] && echo "pkexec is not installed"
+	[ -z "`which sudo`" ] && echo "sudo is not installed"
+	echo "This script should be run as root"
+	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+	exit 1
+fi
+
+if [ ! -f /var/cache/apt/pkgcache.bin ]; then
+echo -e "\e[32mapt update\e[0m"
+apt-get update
+[ $? -ne 0 ] && apt-get update # try again if failed
+echo ''
+fi
+
+echo -e "apt install\e[33m $INSTALL\e[0m"
+APT_ERRMSG="`apt-get -s -y --allow-downgrades install $INSTALL`"
+ret=$?
+if [ $ret -ne 0 ]; then
+	echo "$APT_ERRMSG"
+	echo -e "\n\e[0;31mSorry, there are one or more errors, see above\nCould be a typo in a package name. Exit.\e[0m"
+	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+	exit $ret
+fi
+
+apt_install () {
+echo -e "\e[32m\nInstallation starting . . .\e[0m"
+DEBIAN_FRONTEND=noninteractive apt -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --allow-downgrades --reinstall install $INSTALL && return 0
+# try again if failed
+if [ $? -ne 0 ]; then
+DEBIAN_FRONTEND=noninteractive apt -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --allow-downgrades --reinstall install $INSTALL && return 0
+fi
+touch /exit_
+}
+export -f apt_install
+
+# Fix for 'mount -t overlay' with util-linux >=2.39
+export LIBMOUNT_FORCE_MOUNT2=always
+
+unmount_union() {
 umount -l "$UNION"/proc 2> /dev/null
 umount -l "$UNION"/dev/pts 2> /dev/null
 umount -l "$UNION"/dev 2> /dev/null
 umount -l "$UNION"/sys 2> /dev/null
 umount -l "$UNION" 2> /dev/null
-# As last resort use brute force in this (rare) case
-#[ "$?" -ne 0 ] && killall unionfs-fuse && echo "Forced unmounting of $UNION"
-#rmdir "$UNION"
-#[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\e[0m"
-   else
 rmdir "$UNION" 2> /dev/null
-[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\e[0m"
-   fi
-#rm -rf /.unionfs 2> /dev/null
-   fi
-	fi
+[ "$?" -eq 0 ] && echo -e "\e[0;32mchroot directories succesfully unmounted\e[0m"
+}
+export -f unmount_union
 
+# Function to cleanly unmount if the script is interrupted
+exitfn() {
+trap SIGINT # Resore signal handling for SIGINT
+echo -e "\e[0;31mScript was interrupted, or there were errors\e[0m"
+
+[ "$UNIONCREATED" ] && unmount_union
 # Remove working directory
-  if [ -f "$SQFS" ]; then
-	if [[ -n "$SFS" && -n "$DRV" ]]; then
-	rm -rf "$WORK"-w
-	rm -rf "$WORK"
-	rm -f "$SQFS"
-if [ "$?" -eq 0 ]; then 
-msg="Script was interrupted. \nDirectory $WORK has been removed. \nModule $SFS.squashfs has been removed. "
-echo -e "\e[0;33m$msg\e[0m"
-	xmessage "`echo -e $msg`"
+if [ -d "$WRITE" ]; then
+	rm -rf "$WRITE"-w
+	rm -f "$WRITE"/exit_
+	[ "$RMDIR" ] && rm -rf "$WRITE"
 fi
-	fi
-   else
-	if [[ -n "$SFS" && -n "$DRV" ]]; then
-	rm -rf "$WORK"-w
-	rm -rf "$WORK"
-if [ "$?" -eq 0 ]; then 
-msg="Script was interrupted. \nDirectory $WORK has been removed. \nModule $SFS.squashfs not created. "
-echo -e "\e[0;33m$msg\e[0m"
-	xmessage "`echo -e $msg`"
-fi
-	fi
-   fi
-fi
-rm -f /tmp/notrap_
-exit 0
+
+echo -en "\nExit. "
+[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ." || echo ''
+exit 1
 }
 export -f exitfn
 
-[ "$NOTRAP" = "" ] && trap "exitfn" 1 2 15           # Set up SIGINT trap to call function 'exitfn'.
+MODNAME="`echo "$1" | cut -d= -f1 | tr -d ' '`"
+MODNAME="`basename "$MODNAME"`"
 
-restore() {
-# Unmount everything
-#umount "$UNION"/tmp
-umount "$UNION"/proc
-umount "$UNION"/dev/pts
-umount "$UNION"/dev
-umount "$UNION"/sys
-umount "$UNION"
-   if [ "$?" -ne 0 ]; then # Try the -l umount option (lazy) in this case
-echo "Try to gently force unmounting of $UNION..."
-#umount -l "$UNION"/tmp 2> /dev/null
-umount -l "$UNION"/proc 2> /dev/null
-umount -l "$UNION"/dev/pts 2> /dev/null
-umount -l "$UNION"/dev 2> /dev/null
-umount -l "$UNION"/sys 2> /dev/null
-umount -l "$UNION"
-# As last resort use brute force in this (rare) case
-#[ "$?" -ne 0 ] && killall unionfs-fuse && echo "Forced unmounting of $UNION"
-#rmdir "$UNION"
-#[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\e[0m"
-   else
-rmdir "$UNION" 2> /dev/null
-[ "$?" -eq 0 ] && echo -e "\e[0;32mSuccesfully unmounted and cleaned up!\e[0m"
-   fi
-#rm -rf /.unionfs 2> /dev/null
+export WRITE="$WORK"/"$MODNAME"
 
-sleep 2
-kill $pd 2> /dev/null
+[ "$RMDIR" ] && rm -rf "$WRITE"
 
-   if [ -f "$WORK/tmp/_exit" ]; then
-	if [[ -n "$SFS" && -n "$DRV" ]]; then
-	rm -rf "$WORK"-w
-	rm -rf "$WORK"
-[ "$?" -eq 0 ] && echo -e "\e[0;32mDirectory $WORK has been removed.\e[0m"
-	fi
-read -s -n 1 -p "Press any key to close . . ."
-	exit
-   fi
-}
-export -f restore
-
-check_network() {
-echo -e "\e[0;36mChecking network connection...\e[0m"
-if ping -c1 debian.org 2>&1 | grep unknown; then 
-echo -e "\e[0;33mThere is no network connection. Exiting...\e[0m"
-sleep 3
-touch /tmp/_exit
-else
-echo -e "\e[0;32mOK\e[0m"
-sleep 1
-fi
-}
-export -f check_network
-
-update_repo() {
-echo -e "\e[0;36mUpdating package lists...\e[0m"
-apt-get update
-ret=$?
-if [[ $ret -eq 100 ]]; then
-[ "$?" -eq 0 ] && echo -e "\e[0;33m There are one or more errors with updating. \n Check your /etc/apt/sources.list.\e[0m"
-read -p "Still continue? (Y/n)?" choice
-
-case "$choice" in 
-  y|Y|"")
-echo -e "\e[0;32mOK, Continue\e[0m"
-;;
-  n|N)
-touch /tmp/_exit
-exit 0
-;;
-*)
-echo -e "\e[0;31mNot a valid choice, exiting....\e[0m"
-touch /tmp/_exit
-exit 0
-;;
-esac
-else
-echo -e "\e[0;32mOK\e[0m"
-sleep 1
-fi
-}
-export -f update_repo
-
-install_packages() {
-echo -e "\e[0;36mInstalling to working directory: $SFS\e[0m"
-sleep 1
-# Install the packages.
-apt-get install -y $INSTALL | tee /tmp/aptout
-ret=`echo $PIPESTATUS`
-if [ "$ret" -eq 100 ]; then
-touch /tmp/_exit
-else
-CNT=`wc -l < /tmp/aptout`
-TEXT=`cat /tmp/aptout`
-if [ "$CNT" -lt 8 ]; then
-echo -e "\e[0;33mNothing has been installed or something unexpected occurred, apt-get output: \n $TEXT \n Will restore back to previous state now..\e[0m" 
-touch /tmp/_exit
-fi
-fi
-}
-export -f install_packages
-
-# Set variable for available and status file from the main module.
-if [ -f /mnt/live/tmp/modules ]; then # For porteus-boot
-NUM=$(find $(ls -d -1 /mnt/live/memory/images/*/var/lib/dpkg) \( ! -path "/mnt/live/memory/images/changes-exit/*" \)  -type f -name 'status' | wc -l)
-
-   if [ $NUM -gt 1 ]; then
-ALL=$(find $(ls -d -1 /mnt/live/memory/images/*/var/lib/dpkg) \( ! -path "/mnt/live/memory/images/changes-exit/*" \)  -type f -name 'status')
-   else
-AVAIL=$(find $(ls -d -1 /mnt/live/memory/images/*/var/lib/dpkg) \( ! -path "/mnt/live/memory/images/changes-exit/*" \)  -type f -name 'available' | head -1)
-STAT=$(find $(ls -d -1 /mnt/live/memory/images/*/var/lib/dpkg) \( ! -path "/mnt/live/memory/images/changes-exit/*" \)  -type f -name 'status' | head -1)
-   fi
-ALLMOD=$(find $(ls -d -1 /mnt/live/memory/images/*) -maxdepth 0 \( ! -path "/mnt/live/memory/images/changes-exit" \)  -type d)
-for i in $ALLMOD; do
-#CHROOTFS=$i=RO:$CHROOTFS
-LOWLIST=$i:$LOWLIST
-done
+if [ -d "$WRITE" ]; then
+	echo -e "Directory\e[1;33m ${WRITE} \e[0malready exists,\nPlease rename and run again."
+	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+	exit 1
 fi
 
-LOWLIST=`echo $LOWLIST | sed 's/:$//'`
-
-# jd7654, make possible to add version number of package, e.g. mpv=0.23.0-2+b2
-# export SFS=$(for i in "$INSTALL"; do echo $(echo $i | sed 's| |_|g'); done)
-export SFS=$(for i in "$INSTALL"; do echo $(echo $i | sed 's| |_|g; s|=||g'); done)
-# truncate working directory to 100 characters
-if [ $(echo $SFS | wc -c) -gt 100 ]; then
-echo "Truncating directory name to 100 characters..."
-export SFS=$(echo $SFS | cut -c 1-99 | sed 's/$/...../')
+if [ "$WORK" = "/mnt/live" ]; then SQFS='/tmp/'"$MODNAME".squashfs
+else SQFS="$WORK/$MODNAME".squashfs
 fi
 
-# Check for choice /tmp, / or drive and set new variable 'WORK' and 'SQFS'
-	if [ "$DRV" = "/mnt/live" ]; then
-WORK="/mnt/live/$SFS"
-SQFS="/mnt/live/$SFS".squashfs
-	else
-WORK="/mnt/$DRV/$SFS"
-SQFS="/mnt/$DRV/$SFS".squashfs
-mkdir "/mnt/$DRV" 2> /dev/null
-mount /dev/$DRV /mnt/$DRV 2> /dev/null
-	fi
-
-# Check for existing directory.
-if [ -d "$WORK" ] || [ -d "$WORK"-w ]; then
-echo -e "Directory "$WORK" already exists,\nPlease rename and run again."
-touch /tmp/notrap_
-read -s -n 1 -p "Press any key to close . . ."
-rm -f /tmp/notrap_
-exit 0
-fi
-
-# Check if module already exists.
 if [ -f "$SQFS" ]; then
-echo -e "Module: "$SQFS" already exists,\nPlease rename and run again."
-touch /tmp/notrap_
-read -s -n 1 -p "Press any key to close . . ."
-rm -f /tmp/notrap_
-exit 0
+	echo -e "Module\e[1;33m ${SQFS} \e[0malready exists,\nPlease rename and run again."
+	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+	exit 1
 fi
 
-
-# Copy status and available from one of the main (mounted) module(s).
-if [ $NUM -gt 1 ]; then # If there are more than one status files found.
-
-echo $ALL | tr ' ' '\n' > /tmp/dpkgchoice
-echo
-echo -e " There are more then one dpkg registration 'status' files found in the loaded modules. \n The 'status' file lists all packages installed. \n Please choose the one you wish to use as base (starting point). \n For example in case: You have the last module in this list loaded at boot everytime. \n It's then recommended to use that. "
-
-
-cat -n /tmp/dpkgchoice
-echo "Type the number of your choice"
-read n
-number=$(cat -n /tmp/dpkgchoice | wc -l)
-if [ ${n} -gt $number ] || [ ${n} -lt 1 ]; then
-echo -e "\e[0;33mError, please type a number from following choice:\e[0m"
-cat -n /tmp/dpkgchoice
-read n
-	if [ ${n} -gt $number ] || [ ${n} -lt 1 ]; then
-echo -e "\e[0;33mError, please type a number from following choice:\e[0m"
-cat -n /tmp/dpkgchoice
-read n
-   if [ ${n} -gt $number ] || [ ${n} -lt 1 ]; then
-echo -e "\e[0;33mGiving up now, exiting...\e[0m"
-read -s -n 1 -p "Press any key to close . . ."
-exit 0
-   fi
-	fi
+if [ ! -x /mnt/live/memory/images/01-filesystem.squashfs/bin/bash ]; then
+	echo "/mnt/live/memory/images/01-filesystem.squashfs/"
+	echo "Directory is empty, something went wrong. Exit."
+	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+	exit 1
 fi
-DPKGDIR="$(dirname "$(echo "$ALL" | tr ' ' '\n' | sed -n "${n}p")")"
-echo dpkgdir="$DPKGDIR"
-AVAIL="$DPKGDIR/available"
-STAT="$DPKGDIR/status"
-
-fi
-
-export INSTALL=$INSTALL
 
 # Setup temp directories for mounting
-export UNION=/tmp/unionsfs_$RANDOM; mkdir -p "$UNION"
-WRITE="$WORK"; mkdir -p "$WRITE"
-mkdir -p "$WRITE"-w
+rm -rf "$WRITE"-w
+export UNION=/tmp/apt2sfs_chroot_$$
+mkdir -p "$UNION" "$WRITE" "$WRITE"-w
 
-echo -e "\e[0;36mMount bind the main module, prepare the chroot.\e[0m"
+LOWLIST="/mnt/live/memory/images/01-filesystem.squashfs"
+
+echo -e "\e[0;32mMount the directories, prepare the chroot\e[0m"
 # Mount the directories, prepare the chroot
-#unionfs-fuse -o nonempty -o allow_other,suid,dev -o cow $WRITE=RW:"$CHROOTFS" "$UNION" 2> /dev/null
 mount -t overlay -o lowerdir=$LOWLIST,upperdir=$WRITE,workdir=$WRITE-w overlay "$UNION" 2> /dev/null
 if [ $? -eq 0 ]; then 
-echo -e "\e[0;32mOK\e[0m"
-sleep 1
+	export UNIONCREATED=yes
 else
-echo -e "\e[0;31mSorry, something went wrong, exiting...\e[0m"
-rmdir "$UNION"
-rmdir "$WRITE"
-rm -rf "$WRITE"-w
-read -s -n 1 -p "Press any key to close . . ."
-exit 0
+	echo -e "\e[0;31mSorry, something went wrong. Exit.\e[0m"
+	rmdir "$UNION" "$WRITE" "$WRITE"-w 2> /dev/null
+	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+	exit 1
 fi
 
-export UNIONCREATED=yes
+# Set up SIGINT trap to call function 'exitfn'
+trap "exitfn" 1 2 15
 
-echo -e "\e[0;36mCopy contents /etc/resolv.conf to provide network connection.\e[0m"
-rm -f $UNION/etc/resolv.conf && touch $UNION/etc/resolv.conf #20160918 saintless - without this the script fails after remaster
-echo -en "`cat /etc/resolv.conf`" > $UNION/etc/resolv.conf
-#cp -a /etc/resolv.conf $UNION/etc/
-cp -a /etc/apt/sources.list $UNION/etc/apt/ 2> /dev/null
-cp -ra /etc/apt/sources.list.d $UNION/etc/apt/ 2> /dev/null
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m"
-sleep 1
-echo -e "\e[0;36mCopy status and available files.\e[0m"
-cp -a "$AVAIL" "$UNION"/var/lib/dpkg/available
-cp -a "$STAT" "$UNION"/var/lib/dpkg/status
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m"
-sleep 1
-echo -e "\e[0;36mDo the required mount binds for chroot.\e[0m"
 # Do the required mount binds for chroot
 mount --bind /proc "$UNION"/proc
-#mount --bind /tmp "$UNION"/tmp
 mount --bind /dev "$UNION"/dev
 mount --bind /sys "$UNION"/sys
 mount -t devpts devpts "$UNION"/dev/pts
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m"
-sleep 1
-xhost +local:
-chroot "$UNION" /bin/bash -c check_network
-[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\e[0m" && restore 
-if [ -f /var/cache/apt/pkgcache.bin ]; then
-	echo -e "\e[0;36mCopy apt/*pkgcache.bin and apt/lists/* files.\e[0m"
-	cp -a /var/cache/apt/*pkgcache.bin "$UNION"/var/cache/apt/
-	find /var/lib/apt/lists -type f ! -name lock -exec cp {} "$UNION"/var/lib/apt/lists/ \;
-	[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m"
-else
-	chroot "$UNION" /bin/bash -c update_repo
-	[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\e[0m" && restore 
-fi
-chroot "$UNION" /bin/bash -c install_packages
-[ -f "$UNION"/tmp/_exit ] && echo -e "\e[0;31mRestoring now, there were errors\e[0m" && restore 
 
-sleep 2
+# Copy /etc/resolv.conf to provide network connection
+[ -e "$UNION/etc/resolv.conf" ] && rm -f "$UNION"/etc/resolv.conf
+cat /etc/resolv.conf > "$UNION"/etc/resolv.conf
 
-restore
-export RESTOREDONE=yes
+# Copy apt/*pkgcache.bin and apt/lists/* files
+cp -a /var/cache/apt/*pkgcache.bin "$UNION"/var/cache/apt/
+find /var/lib/apt/lists -type f ! -name lock -exec cp {} "$UNION"/var/lib/apt/lists/ \;
 
+# Copy status and available files
+#cp -a /var/lib/dpkg/{available,status} "$UNION"/var/lib/dpkg/
+
+# chroot and exec apt_install
+chroot "$UNION" /bin/bash -c apt_install
+
+# do not continue if there were errors
+[ -f "$UNION/exit_" ] && exitfn
+
+# Unmount overlayfs and rmdir /tmp/unionsfs-
+unmount_union
+
+echo -e "\nCleaning..."
+
+# Remove overlayfs workdir
 rm -rf "$WRITE"-w
 
-cd "$WORK"
-
-echo -e "\e[0;36mCleaning... (removing and zerosizing files in working-directory: $SFS)\e[0m"
-
-if [ "$DISDPKG" = "TRUE" ]; then
-mv -f "$WORK"/var/lib/dpkg/info "$WORK"/var/lib/dpkg/infonew
-mv -f "$WORK"/var/lib/dpkg/available "$WORK"/var/lib/dpkg/availablenew
-mv -f "$WORK"/var/lib/dpkg/status "$WORK"/var/lib/dpkg/statusnew
+if [ "$NOPKG" ]; then
+	mv -f "$WRITE"/var/lib/dpkg/info "$WRITE"/var/lib/dpkg/infonew 2> /dev/null
+	mv -f "$WRITE"/var/lib/dpkg/status "$WRITE"/var/lib/dpkg/statusnew 2> /dev/null
+	mv -f "$WRITE"/var/lib/dpkg/available "$WRITE"/var/lib/dpkg/availablenew 2> /dev/null
 fi
 
-rm -f "$WORK"/etc/apt/sources.list
-rm -rf "$WORK"/etc/apt/sources.list.d
+. /usr/local/lib/cleanup
 
-cleanup 2> /dev/null
+cd "$WRITE" && cleanup 2> /dev/null
+cd ..
 
-#    chown -R man:root usr/share/man
+if [ "$GUI" ]; then
+	echo -e "\n\e[36mNow you may want to review files in:\e[1;33m ${WRITE}"
+	echo -e "\e[0;36mAnd do some extra cleaning before creating module\e[0m\n"
+fi
 
-echo
-echo -e "\e[0;32mOK\e[0m"
-
-#cd "/mnt/$DRV"
+if [ "$PAUSE" ]; then
+	read -s -n 1 -p "Press any key to run mksquashfs"
+	echo ''
+fi
 
 grep -sq ^MKSFSCMP= /root/*.conf && \
 MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | head -1 | cut -d= -f2 | sed s/\"//g`
 
-msg="Now you may want to do some extra cleaning to save more space before creating module with mksquashfs.\n
-For example: ~/.mozilla
-Open filemanager in $WORK to do so.
-Press OK to finally create: $SQFS"
-
-echo -e "$msg" | yad --title="$YADTITLE" --window-icon=tap-create --width=450 \
- --height=200 --center --text-info --wrap --button=OK\!gtk-ok
-
-trap 'rm -f "$SQFS"' 1 2 15; mksquashfs "$WORK" "$SQFS" -b 1M $MKSFSCMP
-
-# Remove working directory?
-if [ -f "$SQFS" ]; then
-yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center --fixed \
- --text="Done creating '$SFS.squashfs'\nDo you want to remove '$WORK'?" \
- --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
+mksquashfs "$WRITE" "$SQFS" -b 1M $MKSFSCMP
 ret=$?
-[[ $ret -ne 0 ]] && exit 0
-if [[ -n "$SFS" && -n "$DRV" ]]; then
-rm -rf "$WORK"-w
-rm -rf "$WORK"
-fi
+
+[ "$RMDIR" ] && rm -rf "$WRITE"
+
+if [ $ret -eq 0 ]; then
+	echo -e "\n\e[1mModule created:\e[33m ${SQFS}\e[0m"
 else
-yad --title="$YADTITLE" --window-icon=tap-create --width=450 --borders=6 --center --fixed \
- --text="Error: '$SQFS' is not created.\nDo you want to remove '$WORK'?" \
- --button=Yes\!gtk-yes:0 --button=No\!gtk-no:1
-ret=$?
-[[ $ret -ne 0 ]] && exit 0
-if [[ -n "$SFS" && -n "$DRV" ]]; then
-rm -rf "$WORK"-w
-rm -rf "$WORK"
+	echo -en "\nFAILED. "
 fi
-fi
-exit 0
-}
-export -f run_xterm
 
-xterm -T "$YADTITLE" -e /bin/bash -c run_xterm
+[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ." || echo ''
 
-exit 0
+exit $ret
