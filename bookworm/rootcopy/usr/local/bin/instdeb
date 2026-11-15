@@ -3,8 +3,10 @@
 # instdeb: script to install local deb(s) with dependencies from filemanager
 # by gumanzoy https://github.com/PocketHandyBox
 
-if [ "`whoami`" != "root" ] && which pkexec > /dev/null; then
-	PKEXEC=pkexec
+if [ "`whoami`" != "root" ]; then
+	if which pkexec > /dev/null; then PKEXEC=pkexec
+	elif which sudo > /dev/null; then PKEXEC=sudo
+	fi
 fi
 
 if [ "$1" != "-runterm" ]; then
@@ -20,6 +22,7 @@ fi
 
 if [ "`whoami`" != "root" ]; then
 	[ -z "`which pkexec`" ] && echo "pkexec is not installed"
+	[ -z "`which sudo`" ] && echo "sudo is not installed"
 	echo "This script should be run as root"
 	read -s -n 1 -p "Press any key to close . . ."
 	exit 1

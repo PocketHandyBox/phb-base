@@ -28,7 +28,7 @@ echo "$INFODPKGREG" | yad --title='Info dpkg registration' --window-icon=tap-cre
 export -f info_dpkg_reg
 
 show_gui() {
-MNTPT="`findmnt -k -n --raw --real --uniq -o TARGET,FSTYPE,OPTIONS | grep ' rw,' | cut -d' ' -f1,2 | egrep -v 'fuse|fat$' | cut -d' ' -f1`"
+MNTPT="`findmnt -k -n --raw --real --uniq -O rw -o TARGET,FSTYPE | egrep -v 'fuse|fat$' | cut -d' ' -f1`"
 MNTPT="`echo $MNTPT | sed 's/ /!/g'`"
 
 TEXT="Create a module from the changes you made to the system.\n
@@ -80,8 +80,10 @@ yad --title="$YADTITLE" --window-icon=tap-create --image=dialog-question --cente
 [ $? -ne 0 ] && exit 1
 fi
 
-if [ "`whoami`" != "root" ] && which pkexec > /dev/null; then
-	PKEXEC=pkexec
+if [ "`whoami`" != "root" ]; then
+	if which pkexec > /dev/null; then PKEXEC=pkexec
+	elif which sudo > /dev/null; then PKEXEC=sudo
+	fi
 fi
 
 if which run-in-terminal > /dev/null; then
@@ -121,11 +123,12 @@ if [ -z "$WORK" ] || [ "`dirname "$WORK" 2> /dev/null`" = "/" ]; then
 	echo " -pause Pause before run mksquashfs"
 	echo " -nopkg Disable dpkg registration"
 	echo " -rmdir Remove working directory"
-	exit
+	exit 1
 fi
 
 if [ "`whoami`" != "root" ]; then
 	[ -z "`which pkexec`" ] && echo "pkexec is not installed"
+	[ -z "`which sudo`" ] && echo "sudo is not installed"
 	echo "This script should be run as root"
 	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
 	exit 1
@@ -145,18 +148,19 @@ fi
 
 if [ -z "$(ls $CHANGES 2> /dev/null)" ]; then
 	echo -e "Changes directory is empty $CHANGES\nSomething went wrong. Exit."
+	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
 	exit 1
 fi
 
 [ "$RMDIR" ] && rm -rf "$WORK"
 
 if [ -d "$WORK" ]; then
-	echo -e "Directory '$WORK' already exists,\nPlease rename and run again."
+	echo -e "Directory\e[1;33m ${WORK} \e[0malready exists,\nPlease rename and run again."
 	exit 1
 fi
 
 if [ -f "$WORK".squashfs ]; then
-	echo -e "Module '$WORK.squashfs' already exists,\nPlease rename and run again."
+	echo -e "Module\e[1;33m ${WORK}.squashfs \e[0malready exists,\nPlease rename and run again."
 	exit 1
 fi
 
@@ -170,7 +174,7 @@ DIRFREEMB=$(df -m --output=avail "$WORKDIR" | tail -1 | tr -d ' ')MB
 echo "Changes data to copy: $CHNUSEDMB / available free space: $DIRFREEMB"
 
 if [ "$DIRFREE" -lt "$CHNUSED" ]; then
-	echo -e "Not enough free space available in $WORKDIR\n"
+	echo -e "Not enough free space available in\e[1;33m ${WORKDIR}\e[0m\n"
 	[ $GUI ] && read -s -n 1 -p "Press any key to close . . ."
 	exit 1
 fi
@@ -197,7 +201,10 @@ if [ "$GUI" ]; then
 	echo -e "\e[0;36mAnd do some extra cleaning before creating module\e[0m\n"
 fi
 
-[ "$PAUSE" ] && read -s -n 1 -p "Press any key to run mksquashfs"
+if [ "$PAUSE" ]; then
+	read -s -n 1 -p "Press any key to run mksquashfs"
+	echo ''
+fi
 
 grep -sq ^MKSFSCMP= /root/*.conf && \
 MKSFSCMP=`grep ^MKSFSCMP= /root/*.conf | head -1 | cut -d= -f2 | sed s/\"//g`
@@ -208,11 +215,11 @@ ret=$?
 [ "$RMDIR" ] && rm -rf "$WORK"
 
 if [ $ret -eq 0 ]; then
-	echo -e "\n\e[1mModule created: \e[33m${WORK}.squashfs\e[0m"
+	echo -e "\n\e[1mModule created:\e[33m ${WORK}.squashfs\e[0m"
 else
 	echo -en "\nFAILED. "
 fi
 
-[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
+[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ." || echo ''
 
 exit $ret
