@@ -179,12 +179,11 @@ export -f apt_install
 export LIBMOUNT_FORCE_MOUNT2=always
 
 unmount_union() {
-umount -l "$UNION"/proc 2> /dev/null
-umount -l "$UNION"/dev/pts 2> /dev/null
-umount -l "$UNION"/dev 2> /dev/null
-umount -l "$UNION"/sys 2> /dev/null
-umount -l "$UNION" 2> /dev/null
-rmdir "$UNION" 2> /dev/null
+for DIR in proc dev/pts dev sys; do
+	umount "$UNION"/"$DIR" || umount -l "$UNION"/"$DIR"
+done
+umount "$UNION" || umount -l "$UNION"
+rmdir "$UNION"
 [ "$?" -eq 0 ] && echo -e "\e[0;32mchroot directories succesfully unmounted\e[0m"
 }
 export -f unmount_union
@@ -277,8 +276,8 @@ find /var/lib/apt/lists -type f ! -name lock -exec cp {} "$UNION"/var/lib/apt/li
 # chroot and exec apt_install
 chroot "$UNION" /bin/bash -c apt_install || exitfn
 
-# Unmount overlayfs and rmdir /tmp/unionsfs-
-unmount_union
+# Unmount overlayfs and rmdir /tmp/apt2sfs_chroot_$$
+unmount_union 2> /dev/null
 
 echo -e "\nCleaning..."
 
