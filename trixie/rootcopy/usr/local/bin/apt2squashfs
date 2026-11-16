@@ -108,7 +108,7 @@ WORK="`realpath -e "$1" 2> /dev/null | cut -d' ' -f1`" # Do not allow spaces in 
 # Check WORKDIR is on mounted linux filesystem
 [ -n "`findmnt -k -n --raw --real --uniq -O rw -o FSTYPE --target "$WORK" | egrep -v 'fuse|fat$'`" ] && return 0
 # If fail - check WORKDIR is on tmpfs
-findmnt -k -n --raw --pseudo --uniq -O rw -t tmpfs --target "$WORK" 2> /dev/null && return 0
+findmnt -k -n --raw --pseudo --uniq -O rw -t tmpfs --target "$WORK" > /dev/null && return 0
 show_help
 }
 
@@ -243,7 +243,7 @@ LOWLIST="/mnt/live/memory/images/01-filesystem.squashfs"
 
 echo -e "\e[0;32mMount the directories, prepare the chroot\e[0m"
 # Mount the directories, prepare the chroot
-mount -t overlay -o lowerdir=$LOWLIST,upperdir=$WRITE,workdir=$WORKDIR overlay "$UNION" 2> /dev/null
+mount -t overlay -o lowerdir=$LOWLIST,upperdir=$WRITE,workdir=$WORKDIR overlay "$UNION"
 if [ $? -eq 0 ]; then 
 	export UNIONCREATED=yes
 else
