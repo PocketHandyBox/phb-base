@@ -21,11 +21,18 @@ if [ "`whoami`" != "root" ]; then
 	exit
 fi
 
+# Export some color functions
+export RED=`echo -e '\e[0;31m'`
+export GREEN=`echo -e '\e[0;32m'`
+export YELLOW=`echo -e '\e[0;33m'`
+export CYAN=`echo -e '\e[0;36m'`
+export RST=`echo -e '\e[0m'` # Reset Color
+
 if [ -z "$PL_BASE" ] || [ -z "$INSTALL" ]; then
-	echo -e "\e[0;31mThis config file cannot be used, sorry, exiting...\e[0m"
-	exit
+	echo "${RED}This config file cannot be used, sorry, exiting...${RST}"
+	exit 1
 else
-	echo -e "\e[0;36mRunning with configuration:\e[0m $(readlink -f $config)"
+	echo "${CYAN}Running with configuration:${RST} $(readlink -f $config)"
 fi
 
 export LD_LIBRARY_PATH=
@@ -33,88 +40,109 @@ export LAUNCHDIR="$PWD"
 
 export DIST=`basename "$config" | cut -d- -f1`
 if [ ! -d "$DIST" ]; then
-	echo -e "\e[0;33mDirectory '""$DIST""' not exist, exiting...\e[0m"
-	exit
+	echo "${RED}Directory '$DIST' not exist, exiting...${RST}"
+	exit 1
 fi
 
-echo -e "\e[0;33mBuild base filesystem '01-filesystem.squashfs' for 'PocketHandyBox'\e[0m"
-echo -e "\e[0;33m\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4\e[0m"
-echo -e "\e[0;32mBuilding will be done in:\e[0m $LAUNCHDIR/$DIST"
+echo "${YELLOW}Build base filesystem '01-filesystem.squashfs' for 'PocketHandyBox'${RST}"
+echo -e "${YELLOW}\nIt's required to have at least 3 GB free space\nand to run this script on a Linux filesystem, e.g. ext4${RST}"
+echo "${GREEN}Building will be done in:${RST} $LAUNCHDIR/$DIST"
 
 if [ $(command -v apt-get 2>/dev/null) ]; then
-	#echo -e "\e[0;36mUpdate the package lists...\e[0m"
+	#echo "${CYAN}Update the package lists...${RST}"
 	#apt-get update
-	echo -e "\e[0;36mInstall required packages:\e[0m debootstrap squashfs-tools xz-utils zstd"
+	echo "${CYAN}Install required packages:${RST} debootstrap squashfs-tools xz-utils zstd"
 	apt-get install debootstrap squashfs-tools xz-utils zstd -y
 fi
 
 if [ -z `which debootstrap` ] || [ ! -e /usr/share/debootstrap/scripts/"$DIST" ]; then
-	echo -e "\e[0;31mFile /usr/share/debootstrap/scripts/$DIST not found, exiting..."
-	echo -e "\e[0;36mPlease install required packages:\e[0m debootstrap (>=1.0.134) squashfs-tools xz-utils zstd"
+	echo "${RED}File /usr/share/debootstrap/scripts/$DIST not found, exiting..."
+	echo "${CYAN}Please install required packages:${RST} debootstrap (>=1.0.134) squashfs-tools xz-utils zstd"
 	exit
 fi
 
 ########### Functions ###########
 
-# This makes sure when the script is interrupted, that all mount 'binds' will unmount
-exitfn () {
-trap SIGINT              # Resore signal handling for SIGINT
-echo -e "\e[0;36mUnmounting mount binds in chroot\e[0m"
-umount -l "$LAUNCHDIR/$DIST"/chroot/proc 2> /dev/null
-umount -l "$LAUNCHDIR/$DIST"/chroot/sys 2> /dev/null
-umount -l "$LAUNCHDIR/$DIST"/chroot/dev/pts 2> /dev/null
-umount -l "$LAUNCHDIR/$DIST"/chroot/dev 2> /dev/null
+unmount_chroot() {
+for DIR in proc sys dev/pts dev; do
+	if mountpoint -q "$LAUNCHDIR/$DIST"/chroot/"$DIR"; then
+	umount "$LAUNCHDIR/$DIST"/chroot/"$DIR" || umount -l "$LAUNCHDIR/$DIST"/chroot/"$DIR"
+	fi
+done
+for DIR in proc sys dev/pts dev; do
+	mountpoint -q "$LAUNCHDIR/$DIST"/chroot/"$DIR" && return 1
+done
+return 0
+}
+export -f unmount_chroot
 
-rm -f "$LAUNCHDIR/$DIST"/apt/archives/lock 2> /dev/null
-
-if mountpoint -q "$LAUNCHDIR/$DIST"/chroot/dev; then     # just in case check dev
-	echo -e "\e[0;31mSomething went wrong, directory chroot cannot be removed\e[0m"
-	echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\e[0m"
-	exit
-else
-	rm -f "$LAUNCHDIR/$DIST"/*.conf 2> /dev/null
+save_apt_cache() {
+# Move apt cache from $DIST/chroot to $DIST/apt
+if [ -n "$(ls "$LAUNCHDIR/$DIST"/chroot/var/cache/apt/archives/*.deb 2> /dev/null)" ]; then
+	echo -n "${CYAN}Move apt cache from $DIST/chroot to $DIST/apt ${RST}"
+	mkdir -p "$LAUNCHDIR/$DIST"/apt/archives
+	mv "$LAUNCHDIR/$DIST"/chroot/var/cache/apt/archives/*.deb "$LAUNCHDIR/$DIST"/apt/archives/ 2> /dev/null
+	[ $? -eq 0 ] && echo "${GREEN}OK${RST}" || echo "${RED}FAILED${RST}"
 fi
-exit
+}
+export -f save_apt_cache
+
+# This makes sure when the script is interrupted, that all mount 'binds' will unmount
+exitfn() {
+trap SIGINT # Resore signal handling for SIGINT
+
+echo "${RED}Script was interrupted, or there were errors${RST}"
+echo "${CYAN}Unmounting mount binds in chroot${RST}"
+unmount_chroot 2> /dev/null
+ret=$?
+
+# Move apt cache from $DIST/chroot to $DIST/apt
+save_apt_cache
+
+if [ $ret -ne 0 ]; then
+	echo "${RED}Something went wrong, mount binds in $DIST/chroot cannot be unmounted${RST}"
+	echo "${RED}Make sure it's not in use by some process and try again, exiting...${RST}"
+	exit
+fi
+exit 1
 }
 export -f exitfn
 
-trap "exitfn" 1 2 3 15    # Set up SIGINT trap to call function 'exitfn'
+trap "exitfn" 1 2 3 15 # Set up SIGINT trap to call function 'exitfn'
 
 # OK or FAILED
-ok_or_failed () {
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m" || echo -e "\e[0;31mFAILED\e[0m"
+ok_or_failed() {
+ret=$?
+if [ $ret -eq 0 ]; then echo "${GREEN}OK${RST}"
+else echo "${RED}FAILED, exiting...${RST}"
+exit $ret
+fi
 }
 export -f ok_or_failed
 
-ok_or_failed_chroot () {
-[ $? -eq 0 ] && echo -e "\e[0;32mOK\e[0m" && return 0
-echo -e "\e[0;31mFAILED\e[0m"
-touch /exit_
-exit
-}
-export -f ok_or_failed_chroot
-
-apt_get () {
-DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" $@
+apt_get() {
+DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" $@ && return 0
+ret=$?
 # try again if failed
-if [ $? -ne 0 ]; then
-DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" $@
-ok_or_failed_chroot
+if [ $ret -ne 0 ]; then
+DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" $@ && return 0
+ret=$?
 fi
+exit $ret
 }
 export -f apt_get
 
 ########### Options (configuration)  ###########
 
 if [ "$(uname -m)" = "i686" ]; then
-	echo -e "\e[0;32mOK, running 32-bit OS, building live system for 32-bit: $(uname -m)\e[0m"
+	echo "${GREEN}OK, running 32-bit OS, building live system for 32-bit: $(uname -m)${RST}"
 	export ARCH="i386"
 elif [ "$(uname -m)" = "x86_64" ]; then
 	if [ "$BUILD686" = "TRUE" ]; then
-		echo -e "\e[0;32mOK, running 64-bit OS, building live system for 32-bit: i686\e[0m"
+		echo "${GREEN}OK, running 64-bit OS, building live system for 32-bit: i686${RST}"
 		export ARCH="i386"
 	else
-		echo -e "\e[0;32mOK, running 64-bit OS, building live system for 64-bit: $(uname -m)\e[0m"
+		echo "${GREEN}OK, running 64-bit OS, building live system for 64-bit: $(uname -m)${RST}"
 		export ARCH="amd64"
 	fi
 fi
@@ -126,8 +154,8 @@ else
 fi
 export DECONFDIR="$DE_CONFIG"'conf'
 if [ ! -d "$DIST/$DECONFDIR" ]; then
-	echo -e "\e[0;33mDirectory '""$DIST/$DECONFDIR""' not exist, exiting...\e[0m"
-	exit
+	echo "${RED}Directory '$DIST/$DECONFDIR' not exist, exiting...${RST}"
+	exit 1
 fi
 
 [ -z "$GUESTUSER" ] && GUESTUSER=guest
@@ -152,28 +180,28 @@ export PL_SYSTEMD="$PL_SYSTEMD"
 export INSTALL="$INSTALL"
 
 ########## Set up debootstrap ##########
-echo -e "\e[0;36mSetting up debootstrap in $DIST/chroot, this will take a few minutes\e[0m"
+echo "${CYAN}Setting up debootstrap in $DIST/chroot, this will take a few minutes${RST}"
 
 if [ -d "$DIST/chroot" ]; then
-	echo -e "\e[0;36mUnmount mount binds and remove $DIST/chroot...\e[0m"
-	umount -l $DIST/chroot/proc 2> /dev/null
-	umount -l $DIST/chroot/sys 2> /dev/null
-	umount -l $DIST/chroot/dev/pts 2> /dev/null
-	umount -l $DIST/chroot/dev 2> /dev/null
+	echo "${CYAN}Unmount mount binds and remove $DIST/chroot...${RST}"
+	unmount_chroot 2> /dev/null
+	ret=$?
 
-	mv $DIST/chroot/var/cache/apt $DIST/ 2> /dev/null
-	if mountpoint -q $DIST/chroot/dev; then      # just in case check dev
-		echo -e "\e[0;31mSomething went wrong, directory $DIST/chroot cannot be removed\e[0m"
-		echo -e "\e[0;31mMake sure it's not in use by some process and try again, exiting...\e[0m"
-		exit
-	else
-		rm -rf $DIST/chroot
-	fi
-	mkdir -p $DIST/chroot/var/cache
-	mv $DIST/apt $DIST/chroot/var/cache/ 2> /dev/null
-	echo -e "\e[0;32mOK, continue...\e[0m"
+	# Move apt cache from $DIST/chroot to $DIST/apt
+	save_apt_cache
+
+	[ $ret -ne 0 ] && exitfn
+	rm -rf $DIST/chroot
 else
 	mkdir -p $DIST/chroot
+fi
+
+# Move apt cache from $DIST/apt back to $DIST/chroot
+if [ -n "$(ls $DIST/apt/archives/*.deb 2> /dev/null)" ]; then
+	echo -n "${CYAN}Move apt cache from $DIST/apt to $DIST/chroot ${RST}"
+	mkdir -p $DIST/chroot/var/cache/apt/archives
+	mv $DIST/apt/archives/*.deb $DIST/chroot/var/cache/apt/archives/ 2> /dev/null
+	[ $? -eq 0 ] && echo "${GREEN}OK${RST}" || echo "${RED}FAILED${RST}"
 fi
 
 # Copy config co chroot/root
@@ -184,11 +212,9 @@ grep -v ^GUESTPASS "$config" > $DIST/chroot/root/`basename "$config"`
 cd $DIST && debootstrap --arch=$ARCH --variant=minbase \
 --include=gpgv,apt-transport-https,ca-certificates,adduser "$DIST" chroot "$MIRRORURL"
 ret=$?
-echo $ret
 if [ $ret -ne 0 ]; then
-	echo -e "\e[0;31mFailed to install the base system\e[0m"
-	echo -e "\e[0;32mThis can happen sometimes, please try again, exiting now...\e[0m"
-	exit
+	echo -e "${RED}Failed to install the base system\nThis can happen sometimes, please try again, exiting now...${RST}"
+	exit $ret
 fi
 
 # Cleaning after debootstrap
@@ -215,11 +241,13 @@ done
 fi
 
 # Remove debootstrap sources.list. Will use deb822 style /etc/apt/sources.list.d/debian.sources instead
-rm chroot/etc/apt/sources.list
+rm -f chroot/etc/apt/sources.list
 
+echo -n "${CYAN}Copy $DIST/rootcopy/* to $DIST/chroot/ ${RST}"
 cp --preserve=mode,timestamps -rf rootcopy/* chroot/
 ok_or_failed
 
+echo -n "${CYAN}Copy $DIST/$DECONFDIR/* to $DIST/chroot/de_conf/ ${RST}"
 mkdir chroot/de_conf
 cp --preserve=mode,timestamps -rf "$DECONFDIR"/* chroot/de_conf/
 ok_or_failed
@@ -262,12 +290,12 @@ mount --bind /dev chroot/dev
 mount --bind /sys chroot/sys
 mount -t devpts devpts chroot/dev/pts
 # provide a network connection in chroot
-echo -en "`cat /etc/resolv.conf`" > chroot/etc/resolv.conf
+cat /etc/resolv.conf > chroot/etc/resolv.conf
 
 #################################################
 ############ Start running in chroot ############
 #################################################
-chroot_in () {
+chroot_in() {
 
 export HOME=/root
 export LC_ALL=C
@@ -306,7 +334,7 @@ else
 fi
 
 ############ Start installing packages ############
-echo -e "\e[0;36mInstall sysvinit/systemd required packages\e[0m"
+echo "${CYAN}Install sysvinit/systemd required packages${RST}"
 apt_get install $PL_SYS
 
 # Run 'apt-get upgrade' to force update packages from security.debian.org
@@ -327,17 +355,14 @@ apt-get install --yes sqv-dummy && apt-get purge --yes sqv
 fi
 
 # Simulate install first to check for errors, if there are, exit
-echo -e "\e[0;36mChecking packages . . .\e[0m"
+echo "${CYAN}Checking packages . . .${RST}"
 apt-get install -s -y $INSTALL
 ret=$?
-if [ $ret -eq 100 ]; then
-	echo -e "\e[0;31mSorry, there are one or more errors, see above.\e[0m"
-	echo -e "\e[0;31mCould be a typo in a package name.\e[0m"
-	echo -e "\e[0;36mExiting . . .\e[0m"
-	touch /exit_
-	exit
+if [ $ret -ne 0 ]; then
+	echo -e "${RED}Sorry, there are one or more errors, see above\nCould be a typo in a package name${RST}"
+	exit $ret
 else
-	echo -e "\e[0;32mAll packages checked OK, continue now to install packages...\e[0m"
+	echo "${GREEN}All packages checked OK, continue now to install packages...${RST}"
 fi
 
 ### Do the real installing
@@ -407,13 +432,13 @@ fi
 
 if [ -s /etc/X11/default-display-manager ]; then
 # Disable tty1 autologin, using display-manager
-	echo -en "\e[0;32mDisable tty1 autologin, using display-manager: \e[0m"
+	echo -n "${CYAN}Disable tty1 autologin, using display-manager: ${RST}"
 	cat /etc/X11/default-display-manager
 	rm -f /etc/systemd/system/graphical.target.wants/getty@tty1.service
 	rm -f /etc/systemd/system/getty.target.wants/getty@tty1.service
 elif [ -n "$LOGINUSER" ]; then
 # Enable tty1 auto login for non-root user
-	echo -e "\e[0;32mEnable autologin for $LOGINUSER user\e[0m"
+	echo "${CYAN}Enable autologin for $LOGINUSER user${RST}"
 	[ "$SYSTEMD" = "FALSE" ] && sed -i "s/getty --noclear/getty --noclear -a $LOGINUSER/" /etc/inittab
 	sed -i "s/--noclear -a root/--noclear -a $LOGINUSER/" /etc/systemd/system/getty@tty1.service
 elif [ "$SYSTEMD" = "FALSE" ]; then
@@ -501,7 +526,7 @@ fi
 # Enable /etc/fonts/conf.d/10-hinting-full.conf
 [ -f etc/fonts/conf.d/10-hinting-full.conf ] && rm -f etc/fonts/conf.d/10-hinting-slight.conf
 
-echo "Cleaning..."
+echo "${CYAN}Cleaning...${RST}"
 rm -f var/cache/apt/*.bin
 rm -f var/cache/debconf/*-old
 
@@ -522,26 +547,15 @@ touch etc/resolv.conf
 }
 export -f chroot_in
 
-if [ "$(which chroot)" = "/bin/chroot" ]; then
-CHROOT="/usr/sbin/chroot"
-else
-CHROOT="chroot"
-fi
-
-$CHROOT chroot /bin/bash -c chroot_in
-
-# do not continue if there were errors
-[ -f "chroot/exit_" ] && exitfn
+# Run chroot, do not continue if there were errors
+chroot chroot /bin/bash -c chroot_in || exitfn
 
 ################################################
 ############ End running in chroot #############
 ################################################
 
-echo -e "\e[0;36mUnmounting mount binds in chroot\e[0m"
-umount -l chroot/proc
-umount -l chroot/dev/pts
-umount -l chroot/dev
-umount -l chroot/sys
+echo "${CYAN}Unmounting mount binds in chroot${RST}"
+unmount_chroot 2> /dev/null || exitfn
 
 cd "$LAUNCHDIR/$DIST/"
 
@@ -570,21 +584,20 @@ if [ -n "$LOGO" ]; then
 	sed -i s/phblogo/"$LOGO"/g chroot/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
 fi
 
-# Move apt cache away from chroot
-mkdir -p apt/archives
-mv -f chroot/var/cache/apt/archives/*.deb ./apt/archives/
+# Move apt cache from $DIST/chroot to $DIST/apt
+save_apt_cache
 
-rm -f "$ARCH"/01-filesystem.squashfs # just in case it exists remove first
+rm -f "$LAUNCHDIR/$DIST/$ARCH"/01-filesystem.squashfs # just in case it exists remove first
 
 mkdir -p "$ARCH"
-echo -e "\e[0;36mCreating filesystem '01-filesystem.squashfs' . . .\e[0m"
+echo "${CYAN}Creating filesystem '01-filesystem.squashfs' . . .${RST}"
 mksquashfs chroot "$ARCH"/01-filesystem.squashfs -b 512k $MKSFSCMP
-ok_or_failed
+ret=$?
 
-# Move back the cache to chroot
-mv -f ./apt/archives/*.deb chroot/var/cache/apt/archives/ 2> /dev/null
-rm -rf apt 2> /dev/null
+if [ $ret -eq 0 ]; then
+	echo "${GREEN}Finished. Squashfs file '$LAUNCHDIR/$DIST/$ARCH/01-filesystem.squashfs' successfully created${RST}"
+else
+	echo "${RED}Finished. Squashfs file creation FAILED${RST}"
+fi
 
-echo -e "\e[0;32mFinished! If all went well, '01-filesystem.squashfs' file are in ""$ARCH"" folder \n\nHave a good day!\e[0m"
-
-exit 0
+exit $ret
