@@ -28,7 +28,7 @@ echo "$INFODPKGREG" | yad --title='Info dpkg registration' --window-icon=tap-cre
 export -f info_dpkg_reg
 
 show_gui() {
-MNTPT="`findmnt -k -n --raw --real --uniq -O rw -o TARGET,FSTYPE | egrep -v 'fuse|fat$' | cut -d' ' -f1`"
+MNTPT="`findmnt -k -n --raw --real --uniq -O rw -o TARGET,FSTYPE | egrep -v '/mnt/live|fuse|fat$' | cut -d' ' -f1`"
 MNTPT="`echo $MNTPT | sed 's/ /!/g'`"
 
 TEXT="Create a module from the changes you made to the system.\n
