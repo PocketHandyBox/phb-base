@@ -14,6 +14,8 @@
 # Copy to chroot apt/*pkgcache.bin and apt/lists/* files
 # Re-write, support CLI mode, support non-root user by pkexec
 
+MODPTH="/mnt/live/memory/images"
+
 YADTITLE="Apt2squashfs (create module from package(s))"
 
 info_dpkg_reg() {
@@ -32,7 +34,9 @@ echo "$INFODPKGREG" | yad --title='Info dpkg registration' --window-icon=tap-cre
 export -f info_dpkg_reg
 
 show_gui() {
-MNTPT="`findmnt -k -n --raw --real --uniq -O rw -o TARGET,FSTYPE | egrep -v 'fuse|fat$' | cut -d' ' -f1`"
+[ -z "$LDIRS" ] && get_ldirs
+
+MNTPT="`findmnt -k -n --raw --real --uniq -O rw -o TARGET,FSTYPE | egrep -v '/mnt/live|fuse|fat$' | cut -d' ' -f1`"
 MNTPT="`echo $MNTPT | sed 's/ /!/g'`"
 
 TEXT="Create module from temporary installed package(s) by apt-get.\n
@@ -42,6 +46,7 @@ For no dpkg registration check the box 'Disable dpkg registration'"
 
 SETUP=`yad --title="$YADTITLE" --window-icon=tap-create --text="$TEXT" --form --width=500 \
  --field="*** Click for info about dpkg registration ***:BTN" "bash -c info_dpkg_reg" \
+ --field="Choose base level module directory\nor overlay /:CB" "$LDIRS" \
  --field="Choose where to create new module::CB" "/mnt/live!$MNTPT" \
  --field="Packagename(s) separated by a space:" "" \
  --field="Disable dpkg registration:CHK" "TRUE" \
@@ -49,17 +54,25 @@ SETUP=`yad --title="$YADTITLE" --window-icon=tap-create --text="$TEXT" --form --
  --button=Quit\!gtk-quit:1 --button=OK\!gtk-ok:0`
 [ $? -eq 0 ] || exit 0
 
-MNTPT="`echo $SETUP | cut -d "|" -f 2`"
-INSTALL="`echo $SETUP | cut -d "|" -f 3 | tr -s ' '`"
-NOPKG="`echo $SETUP | cut -d "|" -f 4`"
-RMDIR="`echo $SETUP | cut -d "|" -f 5`"
+LDIR="`echo $SETUP | cut -d "|" -f 2`"
+MNTPT="`echo $SETUP | cut -d "|" -f 3`"
+INSTALL="`echo $SETUP | cut -d "|" -f 4 | tr -s ' '`"
+NOPKG="`echo $SETUP | cut -d "|" -f 5`"
+RMDIR="`echo $SETUP | cut -d "|" -f 6`"
 
+OPTIONS=""
 [ "$NOPKG" = "TRUE" ] && OPTIONS="-nopkg"
 [ "$RMDIR" = "TRUE" ] && OPTIONS="$OPTIONS -rmdir"
 
 if [ -z "$INSTALL" ] || [ "$INSTALL" = ' ' ]; then
 	INSTALL=""
 	return 1
+fi
+
+if [ "$LDIR" = "/" ] && [ "$(ls $MODPTH/SFS 2> /dev/null)" ]; then
+yad --title="$YADTITLE" --window-icon=tap-create --image=dialog-question --center --fixed \
+ --text="Required is to unload modules that were manually loaded,\notherwise your module will include broken symlinks.\n\nContinue ?"
+[ $? -ne 0 ] && exit 1
 fi
 
 if [ "`whoami`" != "root" ]; then
@@ -70,14 +83,55 @@ fi
 
 if which run-in-terminal > /dev/null; then
 	export WNAME=apt2squashfs
-	exec run-in-terminal ${PKEXEC} ${0} -dir "$MNTPT" -runterm $OPTIONS "$INSTALL"
+	exec run-in-terminal ${PKEXEC} ${0} -base="$LDIR" -dir="$MNTPT" -runterm $OPTIONS "$INSTALL"
 elif which xterm > /dev/null; then
-	exec xterm -T apt2squashfs -e ${PKEXEC} ${0} -dir "$MNTPT" -runterm $OPTIONS "$INSTALL"
+	exec xterm -T apt2squashfs -e ${PKEXEC} ${0} -base="$LDIR" -dir="$MNTPT" -runterm $OPTIONS "$INSTALL"
 else
-	exec x-terminal-emulator -T apt2squashfs -e ${PKEXEC} ${0} -dir "$MNTPT" -runterm $OPTIONS "$INSTALL"
+	exec x-terminal-emulator -T apt2squashfs -e ${PKEXEC} ${0} -base="$LDIR" -dir="$MNTPT" -runterm $OPTIONS "$INSTALL"
 fi
 
 exit 0
+}
+
+get_ldirs() {
+# Cut LDIRS= module directory list in case of pfull= is used
+if [ -x "$MODPTH/changes-exit/filesystem/bin/bash" ]; then
+if grep -qs '/changes-exit/filesystem$' /mnt/live/tmp/lowerdir; then	
+	LDIRS='changes-exit/filesystem!/'
+	return 0 # in case of pfull=EXIT:/ is used
+fi; fi
+
+if [ -x "/mnt/live/memory/changes/filesystem/bin/bash" ]; then
+	LDIRS='/'
+	return 0 # in case of pfull= is used
+fi
+
+if [ -f /mnt/live/tmp/lowerdir ]; then
+MODULES="`tac /mnt/live/tmp/lowerdir | grep -v '/01-filesystem.squashfs$' | sed 's@/memory/images/@@g'`"
+for MODULE in $MODULES; do
+	if [ -f "$MODPTH/$MODULE/var/lib/dpkg/status" ]; then
+		STATUS="$MODULE"
+		break
+	fi
+done
+for MODULE in $MODULES; do
+	if [ -z "$LDIRS" ] && [ "$MODULE" = "$STATUS" ]; then LDIRS='^'"$MODULE"
+	elif [ "$MODULE" = "$STATUS" ]; then LDIRS='^'"$MODULE"'!'"$LDIRS"
+	elif [ -z "$LDIRS" ]; then LDIRS="$MODULE"
+	else LDIRS="$MODULE"'!'"$LDIRS"
+	fi
+done
+fi
+
+if [ -x "$MODPTH/01-filesystem.squashfs/bin/bash" ]; then
+	if [ -z "$LDIRS" ]; then LDIRS="01-filesystem.squashfs"
+	else LDIRS="01-filesystem.squashfs"'!'"$LDIRS"
+	fi
+fi
+
+if [ -z "$LDIRS" ]; then LDIRS='/'
+else LDIRS="$LDIRS"'!/'
+fi
 }
 
 if [ "$1" = "-gui" ]; then
@@ -90,8 +144,10 @@ echo -e "# apt2squashfs script for creating module from package(s)\n"
 show_help() {
 echo "Usage:"
 echo "apt2squashfs -gui Show YAD GUI"
-echo "apt2squashfs [-dir WORKDIR] [options] INSTALL"
-echo -e "\n -dir WORKDIR - Temporary writeable directory to copy module files
+echo "apt2squashfs [-base=MOD] [-dir=WORKDIR] [options] INSTALL"
+echo -e "\n -base=MOD - Base level MOD module directory or overlay /
+ by default 01-filesystem.squashfs is used"
+echo -e "\n -dir=WORKDIR - Temporary writeable directory to copy module files
  must be mounted tmpfs or linux filesystem, overlayfs are excluded
  by default /mnt/live is used"
 echo -e "\n INSTALL - Packagename(s) separated by a space"
@@ -102,38 +158,91 @@ echo " -rmdir Remove working directory"
 exit 1
 }
 
+lowlist() {
+if [ "$LDIR" = "/" ]; then LOWLIST="/"; return 0
+fi
+
+if [ -x "$MODPTH/01-filesystem.squashfs/bin/bash" ]; then
+	LOWLIST="$MODPTH/01-filesystem.squashfs"
+fi
+
+[ "$LDIR" = "01-filesystem.squashfs" ] && return 0
+
+if [ ! -d "$MODPTH/$LDIR" ]; then
+	echo -e "Base level module directory\e[1;33m $MODPTH/$LDIR \e[0mnot exist,"
+	echo -e "Please correct \e[1m-base=\e[0m$LDIR option\n"
+	show_help
+fi
+
+if ! grep -qs '/'"$LDIR"'$' /mnt/live/tmp/lowerdir; then
+	echo -e "Base level module \e[1m $LDIR \e[0mnot exist in \e[1;33m/mnt/live/tmp/lowerdir\e[0m list,"
+	echo -e "Please correct \e[1m-base=\e[0m$LDIR option\n"
+	show_help
+fi
+
+MODULES="`grep -v '/01-filesystem.squashfs$' /mnt/live/tmp/lowerdir | sed 's@/memory/images/@@g'`"
+
+for MODULE in $MODULES; do
+	if [ -z "$LOWLIST" ]; then LOWLIST="$MODPTH/$MODULE"
+	else LOWLIST="$MODPTH/$MODULE"':'"$LOWLIST"
+	fi
+	[ "$MODULE" = "$LDIR" ] && break
+done
+}
+
 find_mnt() {
-WORK="`realpath -e "$1" 2> /dev/null | cut -d' ' -f1`" # Do not allow spaces in the path
-[ -z "$WORK" ] && show_help
+WORK="`realpath -e "$1" 2> /dev/null`"
+
+if [ -z "$WORK" ]; then
+	echo -e "Directory\e[1;33m $1 \e[0mnot exist,"
+	echo -e "Please correct \e[1m-dir=\e[0m$1 option"
+	echo -e "Note: spaces in the path is not allowed\n"
+	show_help
+fi
+
 # Check WORKDIR is on mounted linux filesystem
 [ -n "`findmnt -k -n --raw --real --uniq -O rw -o FSTYPE --target "$WORK" | egrep -v 'fuse|fat$'`" ] && return 0
 # If fail - check WORKDIR is on tmpfs
 findmnt -k -n --raw --pseudo --uniq -O rw -t tmpfs --target "$WORK" > /dev/null && return 0
+
+echo -e "Please correct \e[1m-dir=\e[0m$1 option"
+echo -e "Note: spaces in the path is not allowed\n"
 show_help
 }
 
-if [ "$1" = "-dir" ]; then shift
-	if [ -d "$1" ]; then find_mnt "$1" && shift
-	else show_help
-	fi
-fi
-
-[ -z "$WORK" ] && WORK=/mnt/live
-
-for PARAM in $@
-do case "$PARAM" in
--h) show_help ;;
---help) show_help ;;
--runterm) export GUI=1; PAUSE=1; shift ;;
+PKGS=()
+until [ "$#" -eq 0 ]; do case "$1" in
+-h|--help) show_help ;;
+-gui|-runterm) export GUI=1; PAUSE=1; shift ;;
 -pause) PAUSE=1; shift ;;
 -nopkg) NOPKG=1; shift ;;
 -rmdir) export RMDIR=1; shift ;;
+-base=*) LDIR="`echo "$1" | cut -d= -f2- | cut -d' ' -f1`"; shift; lowlist ;;
+-dir=*) find_mnt "`echo "$1" | cut -d= -f2- | cut -d' ' -f1`"; shift ;;
+-*) echo -e "Unknown option:\e[1m $1 \e[0m\n"; show_help ;;
+*) PKGS+=("$1"); shift ;;
 esac; done
 
-export INSTALL="`echo "$@" | tr -s ' '`"
+if [ -z "$LOWLIST" ] && [ -x "$MODPTH/01-filesystem.squashfs/bin/bash" ]; then
+	LOWLIST="$MODPTH/01-filesystem.squashfs"
+elif [ -z "$LOWLIST" ]; then
+	LOWLIST="/"
+fi
 
-[ "$INSTALL" = ' ' ] && INSTALL=""
-[ -z "$INSTALL" ] && show_help
+[ -z "$WORK" ] && WORK="/mnt/live"
+
+if [ "${#PKGS[@]}" -eq 0 ]; then
+	echo -e "Package name missing\n"
+	show_help
+fi
+
+# Setup INSTALL string
+export INSTALL="`echo ${PKGS[@]}`"
+# Exit in case of only empty arguments passed
+if [ -z "$INSTALL" ]; then
+	echo -e "Package name missing\n"
+	show_help
+fi
 
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
@@ -152,7 +261,7 @@ apt-get update
 echo ''
 fi
 
-echo -e "apt install\e[33m $INSTALL\e[0m"
+echo -e "apt install\e[33m $INSTALL\e[0m\n"
 APT_ERRMSG="`apt-get -s -y --allow-downgrades install $INSTALL`"
 ret=$?
 if [ $ret -ne 0 ]; then
@@ -206,8 +315,39 @@ exit 1
 }
 export -f exitfn
 
-MODNAME="`echo "$1" | cut -d= -f1 | tr -d ' '`"
-MODNAME="`basename "$MODNAME"`"
+# Setup module name: cut file paths and .deb extensions, add versions
+NUM=0
+for PKG in $INSTALL; do VERSION=""; DEB_INFO=""
+	case "$PKG" in
+	-*) continue ;;
+	*.deb)
+		DEB_INFO="$(dpkg-deb --field "$PKG" Package Version)"
+		if [ $? -eq 0 ]; then
+			PKG="$(echo "$DEB_INFO" | grep -m1 '^Package:' | cut -d' ' -f2)"
+			VERSION="$(echo "$DEB_INFO" | grep -m1 '^Version:' | cut -d' ' -f2)"
+		else
+			PKG="$(basename -s .deb "$PKG")"
+		fi ;;
+	*=*)
+		VERSION="$(echo $PKG | cut -d= -f2)"
+		PKG="$(echo $PKG | cut -d= -f1)"
+		;;
+	*)
+		VERSION="$(LANG=C apt-cache --no-all-versions show $PKG 2>/dev/null | grep -m1 '^Version:')"
+		VERSION="$(echo "$VERSION" | cut -d' ' -f2)"
+		;;
+	esac
+	if [ -n "$VERSION" ]; then
+		VERSION="$(echo $VERSION | cut -d: -f2 | cut -d- -f1 | cut -d+ -f1)"
+		MODNAME+="${PKG}-${VERSION}_"
+	else
+		MODNAME+="${PKG}_"
+	fi
+	let NUM=NUM+1
+	# Cut module name length (stop at 5 package names)
+	[ "$NUM" -ge 5 ] && break
+done
+MODNAME="${MODNAME%_}"
 
 export WRITE="$WORK"/"$MODNAME"
 
@@ -227,19 +367,18 @@ if [ -e "$SQFS" ]; then
 	exit 1
 fi
 
-if [ ! -x /mnt/live/memory/images/01-filesystem.squashfs/bin/bash ]; then
-	echo "/mnt/live/memory/images/01-filesystem.squashfs/"
-	echo "Directory is empty, something went wrong. Exit."
-	[ "$GUI" ] && read -s -n 1 -p "Press any key to close . . ."
-	exit 1
+if [ "$LOWLIST" = "/" ]; then
+	echo -e "Overlay\e[1;31m / \e[0mis used as base level"
+	# Unload manually activated sfs modules and remove leftover symlinks
+	sfsunload
+else
+	echo -e "Base level module\e[0;36m $LDIR \e[0mis used"
 fi
 
 # Setup temp directories for mounting
 export UNION=/tmp/apt2sfs_chroot_$$
 export WORKDIR="$WORK"/apt2sfs_workdir_$$
 mkdir -p "$UNION" "$WRITE" "$WORKDIR"
-
-LOWLIST="/mnt/live/memory/images/01-filesystem.squashfs"
 
 echo -e "\e[0;32mMount the directories, prepare the chroot\e[0m"
 # Mount the directories, prepare the chroot
@@ -267,11 +406,10 @@ mount -t devpts devpts "$UNION"/dev/pts
 cat /etc/resolv.conf > "$UNION"/etc/resolv.conf
 
 # Copy apt/*pkgcache.bin and apt/lists/* files
-cp -a /var/cache/apt/*pkgcache.bin "$UNION"/var/cache/apt/
-find /var/lib/apt/lists -type f ! -name lock -exec cp {} "$UNION"/var/lib/apt/lists/ \;
-
-# Copy status and available files
-#cp -a /var/lib/dpkg/{available,status} "$UNION"/var/lib/dpkg/
+if [ "$LOWLIST" != "/" ]; then
+	cp -a /var/cache/apt/*pkgcache.bin "$UNION"/var/cache/apt/
+	find /var/lib/apt/lists -type f ! -name lock -exec cp {} "$UNION"/var/lib/apt/lists/ \;
+fi
 
 # chroot and exec apt_install
 chroot "$UNION" /bin/bash -c apt_install || exitfn
